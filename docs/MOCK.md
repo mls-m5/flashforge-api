@@ -65,7 +65,7 @@ A frame is always **4112 wire bytes**:
 
 Non-final logical blocks are 4096 bytes. The last carries the remaining count and is zero-padded on the wire. Headers/padding do not count toward the declared file size. After validation the mock sends `N0 ok`, `N1 ok`, etc. It retains surplus bytes when a frame, padding and next command share one read. Payload strings such as `~M29`, `~M26` and `ok` are never executed as commands.
 
-Observed reference transfer: 102989 logical bytes, 26 frames, last logical length 589. All source headers, CRCs, padding and ACKs were checked offline. Other firmware variants and retry behavior are not established.
+Observed reference transfers: 102989 logical bytes / 26 frames (last logical length 589), and 3668165 bytes / 896 frames (last logical length 2245). All 922 source headers, CRCs, padding and ACKs were checked offline. The second transfer also demonstrates unquoted filenames containing spaces. Other firmware variants and retry behavior are not established.
 
 Invalid magic, index, length, CRC or padding gives a mock error and closes the session. No retransmission/resume behavior is invented. Disconnect/timeout before `M29` discards the temporary file; a previous committed version remains intact. After all data arrives, finish with `M29` or discard with `M602`. During a partial frame, command bytes are still data; disconnect to abort.
 
@@ -81,7 +81,7 @@ Uploads/new starts while a virtual job is active are rejected rather than replac
 
 ## Limits and storage
 
-Default limits (CLI-configurable): 8 MiB per file, 32 MiB committed + pending logical content, 32 committed names, eight active clients, 4096-byte command lines including CRLF, 30-second inactivity/read/write timeout. Names are one ASCII component, 1–128 characters: letter/digit/underscore first, then letters/digits/underscores/dots/hyphens; `..` is rejected. Exact path prefix: `0:/user/`. No remote path is opened on the host filesystem.
+Default limits (CLI-configurable): 8 MiB per file, 32 MiB committed + pending logical content, 32 committed names, eight active clients, 4096-byte command lines including CRLF, 30-second inactivity/read/write timeout. Names are one ASCII component, 1–128 characters: letter/digit/underscore first, then letters/digits/underscores/dots/hyphens. The framed `finder-v1.5` profile also accepts internal ASCII spaces, preserving them exactly; `M28` splits only the size from the path and `M23` treats the entire remainder as its path. Legacy raw profiles still reject spaces. Leading/trailing spaces, tabs, control characters, path separators and `..` are rejected as mock safety policy. Exact path prefix: `0:/user/`. No remote path is opened on the host filesystem.
 
 Storage quota counts the old version while receiving its replacement. Python/transport overhead and the temporary commit copy consume additional bounded memory. Empty files are rejected. Excess clients are closed; timeout closes silently; overlong lines receive an error and close. These limits/error policies are mock conventions.
 

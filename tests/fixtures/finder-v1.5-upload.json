@@ -25,6 +25,21 @@
   "start_reply": "CMD M23 Received.\r\nFile opened: 0:/user/test_box.gx Size: 102989\r\nFile selected\r\nok\r\n",
   "cancel_request": "~M26\r\n",
   "cancel_reply": "CMD M26 Received.\r\nok\r\n",
+  "larger_transfer": {
+    "source_capture": "20261112T193539Z-f39c040f886a",
+    "source_session": "s0001",
+    "source_complete": true,
+    "wire_range": [2237, 3686589],
+    "file_size": 3668165,
+    "frame_count": 896,
+    "last_block_length": 2245,
+    "final_padding_length": 1851,
+    "first_ack": "N0 ok\r\n",
+    "last_ack": "N895 ok\r\n",
+    "filename_has_spaces": true,
+    "validation": "All headers, lengths, sequence indexes, CRC32 values, padding and ACK indexes verified offline; no error replies or unparsed wire bytes",
+    "note": "Only framing facts retained. Tests generate payloads and use a synthetic filename; no original filename or model bytes included."
+  },
   "synthetic_crc_vector": {
     "payload_ascii": "123456789",
     "header_hex": "5a5aa5a50000000000000009cbf43926",

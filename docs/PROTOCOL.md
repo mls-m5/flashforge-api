@@ -62,9 +62,35 @@ After `M23`, status became `BUILDING_FROM_SD`, first `HOMING`, later `WAIT_ON_TO
 
 Implementation: `finder-v1.5` validates the captured framing and returns ACKs, saves only on `M29`, starts a **virtual** job only on `M23`, and cancels only on `M26`. There is no automatic print-start, abort, timed completion, motion or heating. Virtual active status uses representative captured shapes; progress stays zero over logical file size. Thermal/homing/cancel transients are not replayed. Release/disconnect does not cancel a virtual job.
 
-Limits of evidence: one successful file-transfer capture, not all sizes/firmware variants. Bad-CRC handling/retries were not observed; the mock deliberately errors and closes rather than inventing retransmission behavior. It requires the observed full-block/final-block lengths and zero padding. The existing raw uploader does **not** implement this framing or ACK format and remains unchanged.
+Limits of this initial observation: one successful file-transfer capture; FINDER-UPLOAD-006 below adds a second, larger transfer. Neither establishes all sizes/firmware variants. Bad-CRC handling/retries were not observed; the mock deliberately errors and closes rather than inventing retransmission behavior. It requires the observed full-block/final-block lengths and zero padding. The existing raw uploader does **not** implement this framing or ACK format and remains unchanged.
 
 `tests/fixtures/finder-v1.5-upload.json` stores reviewed framing facts and command/reply frames, not model content. Tests generate deterministic payloads, include an independent CRC32 test vector and separately test upload-only, start-without-cancel, and explicit cancel. A broader sanitized trace corpus and reusable replay tooling are planned, not implemented by these tests.
+
+## FINDER-UPLOAD-006 — Larger transfer independently confirms CRC/framing
+
+Source: finalized proxy capture `20261112T193539Z-f39c040f886a`, session `s0001`, 2026-11-12 19:35–19:40 UTC. Observed firmware remains `V1.5 20170419`; FlashPrint version is unknown. Both raw stream sizes/SHA-256 and all event byte ranges match the manifest. The complete client stream was parsed without unexplained bytes.
+
+| Check | Result |
+| --- | --- |
+| Advertised/logical file size | 3668165 bytes |
+| Upload wire interval | Client `[2237,3686589)`, 3684352 bytes |
+| Frames | 896 × 4112 bytes |
+| Indexes | Exactly 0–895, no duplicates/gaps; crosses the 255 boundary |
+| Logical lengths | 4096 for blocks 0–894; 2245 for block 895 |
+| Last padding | 1851 zero bytes |
+| CRC32 over logical data | **896/896 match** |
+| CRC32 including the 12 header bytes before the CRC field | **0/896 match** |
+| Final CRC32 including padding | Does **not** match the stored CRC |
+| ACKs | Exactly `N0 ok` through `N895 ok`, in order |
+| Error/resend replies or recorder errors | None |
+
+The existing big-endian header / unpadded-data CRC32 hypothesis therefore needs no change. This independently confirms the same framing on two differently sized real files (922 verified blocks in total), including a different final-block length. It still does not establish behavior on corrupt/missing blocks, retries or other firmware.
+
+Command sequence remains explicit: `M28` at 19:37:44.036 UTC, `M29` at 19:39:14.398, `M23` at 19:39:14.622, and `M26` at 19:39:22.083. Save/start/cancel reply shapes match FINDER-UPLOAD-005. No `M24`/`M25` or automatic stop command appears in the transfer. Stop is a later client command, not a required upload suffix.
+
+**New finding:** the actual filename contains spaces and hyphens. The printer accepts the complete remainder of `M28 <size> <path>` and `M23 <path>` as a path, without quotes. The original mock's generic whitespace splitting/name restriction was too strict. The framed profile now preserves internal spaces (including repeated spaces), while retaining its bounded ASCII/path/control-character safety policy. Legacy raw profiles keep their earlier no-space policy. The private filename and model bytes are not committed.
+
+A compact `larger_transfer` entry in `tests/fixtures/finder-v1.5-upload.json` retains framing facts and source ranges. The regression test uploads generated content at the observed size with a synthetic spaced filename, checks all 896 ACKs, and verifies exact filename lookup/start without an implicit cancel. This is a local mock test, not replay of the private model or a new hardware test.
 
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 

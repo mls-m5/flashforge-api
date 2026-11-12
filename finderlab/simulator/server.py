@@ -14,11 +14,13 @@ from .profile import DEFAULT_PROFILE, PROFILES, response
 
 LOG = logging.getLogger(__name__)
 NAME = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}\Z")
+NAME_WITH_SPACES = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_. -]{0,127}\Z")
 
 
-def virtual_name(path):
+def virtual_name(path, *, allow_spaces=False):
     name = path.removeprefix("0:/user/")
-    if path.startswith("0:/user/") and NAME.fullmatch(name) and ".." not in name:
+    pattern = NAME_WITH_SPACES if allow_spaces else NAME
+    if path.startswith("0:/user/") and pattern.fullmatch(name) and ".." not in name and not name.endswith(" "):
         return name
     return None
 
@@ -249,11 +251,13 @@ class _Session:
         if not text.startswith("~"):
             await self.error("Expected ~ command prefix")
             return
-        parts = text[1:].split()
+        parts = text[1:].split(maxsplit=1)
         if not parts:
             await self.error("Empty command")
             return
-        cmd, args = parts[0], parts[1:]
+        cmd = parts[0]
+        raw_args = parts[1] if len(parts) == 2 else ""
+        args = raw_args.split()
         if self.pending_name is not None and cmd not in {"M29", "M602"}:
             await self.error("Upload pending; expected M29 or M602")
             return
@@ -290,12 +294,13 @@ class _Session:
                 lines.append("End file list")
                 await self.send(response(cmd, "\r\n".join(lines)))
         elif cmd in {"M23", "M26"} and self.printer.profile.supports_jobs:
-            await self.job_command(cmd, args)
+            # M23's complete remainder is a path, not whitespace-delimited flags.
+            await self.job_command(cmd, [raw_args] if cmd == "M23" and raw_args else args)
         elif cmd in {"M28", "M29"}:
             if self.printer._owner is not self:
                 await self.error("Control required; send M601 S1")
             elif cmd == "M28":
-                await self.begin_upload(args)
+                await self.begin_upload(raw_args.split(maxsplit=1))
             elif args:
                 await self.error("M29 takes no arguments")
             elif self.pending_name is None:
@@ -318,7 +323,7 @@ class _Session:
             return
         size = int(args[0])
         path = args[1]
-        name = virtual_name(path)
+        name = virtual_name(path, allow_spaces=self.printer.profile.upload_mode == "framed")
         if name is None:
             await self.error("Invalid virtual filename")
             return
@@ -373,7 +378,7 @@ class _Session:
         elif len(args) != 1:
             await self.error("Expected M23 0:/user/<filename>")
         else:
-            name = virtual_name(args[0])
+            name = virtual_name(args[0], allow_spaces=True)
             if name not in self.printer._files:
                 await self.error("Unknown virtual file")
             elif self.printer.active_file is not None:

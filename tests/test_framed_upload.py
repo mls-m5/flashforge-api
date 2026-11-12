@@ -111,6 +111,39 @@ class FramedUploadTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(b"MachineStatus: READY", await self.command(pair, "~M119"))
         self.assertIn(b"T0:21 /0", await self.command(pair, "~M105"))
 
+    async def test_larger_capture_size_with_spaces_and_same_framing(self):
+        observed = REFERENCE["larger_transfer"]
+        size = observed["file_size"]
+        self.assertEqual((size + 4095) // 4096, observed["frame_count"])
+        self.assertEqual(size % 4096, observed["last_block_length"])
+        self.assertEqual(4096 - size % 4096, observed["final_padding_length"])
+        self.assertEqual(observed["wire_range"][1] - observed["wire_range"][0], observed["frame_count"] * 4112)
+        pair = await self.connect()
+        await self.claim(pair)
+        data = (bytes(range(256)) * ((size + 255) // 256))[:size]
+        name = "large  sample - copy.gx"  # Generated name; double spaces must survive.
+        await self.upload(pair, name, data)
+        self.assertIsNone(self.mock.active_file)
+        self.assertIn(b"Unknown virtual file", await self.command(pair, "~M23 0:/user/large sample - copy.gx"))
+        self.assertIsNone(self.mock.active_file)
+        self.assertEqual(
+            await self.command(pair, f"~M23 0:/user/{name}"),
+            f"CMD M23 Received.\r\nFile opened: 0:/user/{name} Size: {size}\r\nFile selected\r\nok\r\n".encode(),
+        )
+        self.assertEqual(self.mock.active_file, name)
+        self.assertIn(b"BUILDING_FROM_SD", await self.command(pair, "~M119"))
+        # Deliberately no M26: this new reference must not cause an implicit abort.
+
+    async def test_spaced_names_do_not_allow_paths_or_control_characters(self):
+        pair = await self.connect()
+        await self.claim(pair)
+        for name in (" leading.gx", "trailing.gx ", "a ../b.gx", "a /b.gx", "a \\b.gx", "a\tb.gx", "a\x00b.gx"):
+            self.assertTrue((await self.command(pair, f"~M28 9 0:/user/{name}")).startswith(b"Error:"), repr(name))
+        self.assertFalse(self.mock.files)
+        self.assertIsNone(self.mock.active_file)
+        # A rejected command must not enter payload mode or poison the session.
+        await self.upload(pair, "valid sample.gx", b"123456789")
+
     async def test_captured_start_and_cancel_reply_frames(self):
         pair = await self.connect()
         await self.claim(pair)

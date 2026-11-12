@@ -1,4 +1,4 @@
-"""Upload framing observed in FINDER-UPLOAD-005, not a universal firmware spec."""
+"""Framing verified in FINDER-UPLOAD-005/006, not a universal firmware spec."""
 
 import struct
 import zlib
