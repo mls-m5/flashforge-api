@@ -152,6 +152,12 @@ Deferred until upload is reliable. Keep independent stages: model → CLI slicer
 - GX wrapping and a miniature preview are separate from toolpath safety. Establish exact header/offset/BMP/thumbnail requirements from the user's actual GX samples before generating containers. Do not simply rename G-code or assume another FlashForge model's format.
 - Current uploads preserve existing container/preview bytes unchanged; they neither validate nor fix unsafe slicer output. The first real-client trial should use the user's known-working FlashPrint GX.
 
+## Offline slicing investigation: SLICING-001
+
+The user supplied the holder STL, working FlashPrint GX, and a problematic PrusaSlicer 2.9.7 G-code for a different model. Start/end inspection found copied job-specific values, not a transport problem: the Prusa custom end requests an absolute E jump of +363.30675 mm before parking, while prime/body handoff requests a −19.4017 mm retract without an E reset. The user confirmed pasting these blocks and noted the end symptom may have been excess extrusion rather than a collision.
+
+Other differences include 150×150×160 profile dimensions versus nominal 140×140×140, 0.15/0.35 mm layer settings instead of requested 0.18/about 0.27, requested Z travel at 130 mm/s versus 7 mm/s in the reference, and hardcoded layer count/park height/coordinates. See [SLICING_ANALYSIS.md](SLICING_ANALYSIS.md) for exact line references, assumptions, a bounded E-origin correction candidate and what cannot yet be concluded. No modified/print-ready output or profile has been generated; hardware validation remains blocked. Full model toolpaths cannot be compared one-to-one because the examples are different models.
+
 ## Deferred work
 
 Virtual print-progress simulation, additional firmware/client profiles, richer fault injection, exportable reports and optional separate print controls can follow. Print controls require a new safety/design decision rather than being added as a side effect of upload support.

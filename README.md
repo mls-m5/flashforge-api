@@ -106,6 +106,7 @@ New documentation is English; older Swedish sections will be translated incremen
 - [docs/CAPTURES.md](docs/CAPTURES.md): implemented logs, history, recording format and privacy.
 - [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md): reverse-engineering procedures.
 - [docs/ROADMAP.md](docs/ROADMAP.md): milestones and acceptance criteria.
+- [docs/SLICING_ANALYSIS.md](docs/SLICING_ANALYSIS.md): offline analysis of supplied FlashPrint/Prusa samples, extrusion-state errors and remaining profile risks (not a print-ready replacement).
 - [docs/QUESTIONS.md](docs/QUESTIONS.md): environment and product decisions still needed.
 
 ## Safety
