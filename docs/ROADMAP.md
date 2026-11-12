@@ -158,6 +158,12 @@ The user supplied the holder STL, working FlashPrint GX, and a problematic Prusa
 
 Other differences include 150×150×160 profile dimensions versus nominal 140×140×140, 0.15/0.35 mm layer settings instead of requested 0.18/about 0.27, requested Z travel at 130 mm/s versus 7 mm/s in the reference, and hardcoded layer count/park height/coordinates. See [SLICING_ANALYSIS.md](SLICING_ANALYSIS.md) for exact line references, assumptions, a bounded E-origin correction candidate and what cannot yet be concluded. No modified/print-ready output or profile has been generated; hardware validation remains blocked. Full model toolpaths cannot be compared one-to-one because the examples are different models.
 
+## Prusa offline iteration 01
+
+The user will paste a documented candidate into a copy of the Prusa profile and return fresh output for analysis. [PRUSA_ITERATION_01.md](PRUSA_ITERATION_01.md) records the exact start/end text and prerequisites: absolute E, explicit resets before/after the working reference's fixed purge path, nominal centered 140 mm envelope, explicit Z speed and requested layer/temperature settings. The end candidate retains the reference homing/shutdown suffix but removes copied job-specific E/Z/XY values; it relies on the generated body's reviewed retract rather than injecting another one.
+
+This is **offline only**, not an approved printer profile. M118 omission/semantics, the changed end transition, physical clearances, slicer-added commands/hooks and actual nozzle/material still need review. The current uploader accepts GX, and GX generation is not implemented; renaming Prusa G-code is not conversion. CLI integration remains proposed until the actual host executable is checked with --help. No new slicer install or hardware command was performed here.
+
 ## Deferred work
 
 Virtual print-progress simulation, additional firmware/client profiles, richer fault injection, exportable reports and optional separate print controls can follow. Print controls require a new safety/design decision rather than being added as a side effect of upload support.

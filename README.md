@@ -107,6 +107,7 @@ New documentation is English; older Swedish sections will be translated incremen
 - [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md): reverse-engineering procedures.
 - [docs/ROADMAP.md](docs/ROADMAP.md): milestones and acceptance criteria.
 - [docs/SLICING_ANALYSIS.md](docs/SLICING_ANALYSIS.md): offline analysis of supplied FlashPrint/Prusa samples, extrusion-state errors and remaining profile risks (not a print-ready replacement).
+- [docs/PRUSA_ITERATION_01.md](docs/PRUSA_ITERATION_01.md): user-requested start/end candidates and settings for offline re-slicing/review only; not hardware-validated.
 - [docs/QUESTIONS.md](docs/QUESTIONS.md): environment and product decisions still needed.
 
 ## Safety

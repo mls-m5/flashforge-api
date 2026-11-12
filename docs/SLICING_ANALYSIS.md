@@ -81,4 +81,4 @@ The GX declares `(0,58,14512,14512)` as its four little-endian 32-bit values at 
 
 Prusa supports custom-code variables such as `max_layer_z` and `total_layer_count`, which may help remove literals; exact availability/syntax must be checked in the actual installed version. Reference: [Prusa placeholder documentation](https://help.prusa3d.com/article/list-of-placeholders_205643). Macro support does not itself validate Finder firmware semantics.
 
-No additional installation was needed for this inspection (Python standard library only). There is no new slicer/GX generator yet.
+No additional installation was needed for this inspection (Python standard library only). There is no new slicer/GX generator yet. The next user-run **offline export/review** candidate is recorded in [PRUSA_ITERATION_01.md](PRUSA_ITERATION_01.md); it is not a validated hardware profile.
