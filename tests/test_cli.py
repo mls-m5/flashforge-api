@@ -14,6 +14,51 @@ from helpers import workspace_tempdir
 
 @unittest.skipUnless(os.name == "posix", "CLI Ctrl+C lifecycle uses POSIX signals")
 class CLITests(unittest.IsolatedAsyncioTestCase):
+    async def test_upload_cli_is_upload_only_and_records_history(self):
+        root = Path(__file__).resolve().parents[1]
+        with workspace_tempdir() as directory:
+            path = Path(directory) / "CLI thumbnail sample.gx"
+            payload = b"synthetic GX test only\x00BM\x00\xff" + bytes(range(256)) * 20
+            path.write_bytes(payload)
+            async with MockPrinter(MockConfig(port=0)) as mock:
+                process = await asyncio.create_subprocess_exec(
+                    sys.executable, "-m", "finderlab", "upload", str(path),
+                    "--port", str(mock.address[1]), "--capture-dir", directory,
+                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                    cwd=root, env={**os.environ, "TMPDIR": str(root / ".tmp")},
+                )
+                try:
+                    stdout, stderr = await asyncio.wait_for(process.communicate(), 8)
+                    self.assertEqual(process.returncode, 0, stderr.decode())
+                    self.assertEqual(stderr, b"")
+                    self.assertIn(b"Save confirmed:", stdout)
+                    self.assertEqual(mock.files[path.name], payload)
+                    self.assertIsNone(mock.active_file)
+                    manifest_path = next(Path(directory).glob("*/manifest.json"))
+                    manifest = json.loads(manifest_path.read_text())
+                    self.assertEqual(manifest["mode"], "client")
+                    self.assertEqual(manifest["metadata"]["operation"], "upload")
+                    self.assertTrue(manifest["complete"])
+                    self.assertEqual(len(manifest["sessions"]), 1)
+                finally:
+                    if process.returncode is None:
+                        process.kill()
+                        await process.communicate()
+
+    async def test_job_confirmations_and_hardware_guard_fail_before_connect(self):
+        root = Path(__file__).resolve().parents[1]
+        with workspace_tempdir() as directory:
+            for arguments in (("start", "sample.gx"), ("stop",), ("status", "--host", "192.0.2.10")):
+                process = await asyncio.create_subprocess_exec(
+                    sys.executable, "-m", "finderlab", *arguments, "--capture-dir", directory,
+                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                    cwd=root, env={**os.environ, "TMPDIR": str(root / ".tmp")},
+                )
+                stdout, stderr = await asyncio.wait_for(process.communicate(), 5)
+                self.assertEqual(process.returncode, 2, stderr.decode())
+                self.assertNotIn(b"Target:", stdout)
+            self.assertFalse(list(Path(directory).iterdir()))
+
     async def test_proxy_cli_records_local_mock_replies(self):
         root = Path(__file__).resolve().parents[1]
         with workspace_tempdir() as directory:

@@ -8,12 +8,31 @@ Implemented:
 
 - An **offline TCP printer mock**, using Python 3.11+ and the standard library only. Its default `finder-v1.5` profile supports captured-style idle replies and framed upload, plus explicit virtual start/cancel. Earlier profiles remain selectable.
 - Identity/status replies, control ownership, bounded RAM-only virtual upload storage and a mock file listing.
-- **Persistent traffic logs and connection history** for both CLI modes, with exact request/reply streams.
+- **Persistent traffic logs and connection history** for mock, proxy and client commands, with exact request/reply streams.
 - A **recording TCP proxy** for comparing FlashPrint traffic with the real printer's responses.
+- A **GX upload CLI and reusable async client**, with exact block ACKs/CRC32, upload-only defaults, and separately confirmed start/stop actions.
 - Automated localhost tests, including the existing uploader, recording failures and proxy transport behavior.
 - The original experimental [`upload.py`](upload.py), unchanged.
 
-Not implemented: UDP discovery, replay/standalone analysis tooling, physical job dynamics, or the web interface. **FlashPrint connection and idle polling have been observed with the captured baseline.** Framed upload/job-response support now matches a real transfer's format in local tests; its FlashPrint-to-dummy acceptance still needs verification.
+Not implemented: UDP discovery, replay/standalone analysis tooling, physical job dynamics, or the web interface. **FlashPrint connection, upload and explicit virtual start/stop have now been observed against the dummy.** The new client has also uploaded the user's 3.67 MB GX to a fresh dummy with an exact byte match and no job started. A subsequent user-run host/proxy trial confirmed the new client's real-printer upload-only flow: all blocks, final save and release acknowledged, no start/stop sent. Other firmware, errors/retries and physical job-control actions remain separately bounded; mock success alone is not hardware evidence.
+
+## Upload a GX file (dummy first)
+
+Terminal 1:
+
+```sh
+python3 -m finderlab mock
+```
+
+Terminal 2:
+
+```sh
+python3 -m finderlab upload upload/test1.gx
+```
+
+The client defaults to `127.0.0.1:8899`. Confirm this is the **dummy**, not a proxy to hardware. It preserves all GX bytes/embedded thumbnails, validates block ACKs and final save, and sends **no start or stop**. Use `--port` for a different endpoint and `--remote-name "client sample.gx"` for an ASCII destination basename. Only observed Finder firmware `V1.5 20170419` is enabled.
+
+Read [docs/CLIENT.md](docs/CLIENT.md) for proxy/direct hardware trials, safety confirmations, status/start/stop commands, errors and persistent client logs. A hardware trial requires physical supervision and explicit approval; non-loopback targets also require `--allow-hardware`. Slicing/GX/thumbnail generation is deferred—use a known-working FlashPrint file first. The old `upload.py` remains unchanged and is not the new client.
 
 ## Run the dummy printer
 
@@ -80,6 +99,7 @@ New documentation is English; older Swedish sections will be translated incremen
 
 - [DESIGN.md](DESIGN.md): architecture, realism goals and safety boundaries.
 - [AGENTS.md](AGENTS.md): contributor/agent rules, including milestone commits.
+- [docs/CLIENT.md](docs/CLIENT.md): upload program, manual printer trials and separate job controls.
 - [docs/MOCK.md](docs/MOCK.md): implemented mock behavior and usage.
 - [docs/PROXY.md](docs/PROXY.md): recording proxy and real-response comparison.
 - [docs/PROTOCOL.md](docs/PROTOCOL.md): evidence, hypotheses and open protocol questions.
@@ -92,4 +112,4 @@ New documentation is English; older Swedish sections will be translated incremen
 
 The mock has no outgoing printer connection and never executes G-code. Bind to loopback by default; use an explicit host address only when deliberately exposing the mock on a trusted LAN. Do not expose any project service or the real printer to the internet.
 
-Hardware experiments require explicit approval and physical supervision. The existing uploader is experimental and is not a verified Finder 2 client. The implemented transparent proxy forwards dangerous commands too; it is not a safety filter.
+Hardware experiments require explicit approval and physical supervision. The old uploader is incompatible with the observed framing. The new client's upload-only workflow is dummy-tested and now has one successful user-run physical-printer trial; other firmware, physical job controls and failure cases require their own verification. Uploading does not validate G-code safety or fix incompatible slicer output. The implemented transparent proxy forwards dangerous commands too; it is not a safety filter.

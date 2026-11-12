@@ -2,7 +2,7 @@
 
 ## Implemented behavior
 
-Both CLI modes (`mock` and `proxy`) now record by default. Every invocation creates a new private subdirectory under `captures/`, printed at startup. Every accepted session gets its own ID and two raw streams. Restarting the program never overwrites older runs.
+The `mock`, `proxy`, and client commands (`upload`, `status`, `start`, `stop`) record by default. Every invocation creates a new private subdirectory under `captures/`, printed at startup. Every accepted or outgoing session gets its own ID and two raw streams. Client manifests use mode `client` and include the operation in metadata. Restarting the program never overwrites older runs.
 
 ```text
 captures/<UTC-start>-<random-id>/
@@ -30,7 +30,7 @@ Tell the assistant the printed capture path when it exists in the same accessibl
 
 ## Format version 1
 
-`client` is the incoming client (usually FlashPrint); `server` is the proxy target or the mock. Raw files contain the concatenated observed bytes for that session/direction, not PCAP packets.
+`client` is the incoming client (usually FlashPrint) for proxy/mock captures, or the new upload application for mode `client`; `server` is the selected target/mock in all cases. Raw files contain the concatenated observed bytes for that session/direction, not PCAP packets.
 
 Event types currently emitted:
 
@@ -46,18 +46,18 @@ Event types currently emitted:
 
 Each event includes `v`, monotonically increasing `seq`, `session_id` (or null for run-level events), UTC timestamp and `monotonic_ns` elapsed since capture start. Sequence order is logging order, not proof of causality between simultaneous directions.
 
-A data event records bytes the application read (or, for mock replies, generated). It does not prove the peer received or accepted them. `forward_complete` means a transport write/drain completed without a known error; it does not prove the remote application processed the data. On write failure, already forwarded byte count may be unknown.
+A data event records bytes the application read, or generated for outgoing client requests/mock replies. It does not prove the peer received or accepted them. `forward_complete` means a transport write/drain completed without a known error; it does not prove the remote application processed the data. On write failure, already forwarded byte count may be unknown.
 
 A socket read is not a protocol message or a TCP packet. Proxy recordings include only bytes the relay actually read: data still buffered by the OS when a connect failure/shutdown occurs may not appear. Mock parsing happens after recording, so partial/invalid commands and binary payloads that were read are retained.
 
-No per-command success inference, protocol decoding, PCAP export, replay or standalone capture validator is implemented yet. Hashes and offsets are checked in automated tests. A separate host packet capture is useful for transport-level verification.
+The recorder itself does not infer command success; the new client parses its own replies separately. PCAP export, general protocol decoding, replay and a standalone capture validator remain unimplemented. Hashes and offsets are checked in automated tests. A separate host packet capture is useful for transport-level verification.
 
 ## Limits and failure behavior
 
 Defaults:
 
 - `--max-capture-bytes 268435456`: 256 MiB **per run**, shared by raw streams, JSON events and the human log;
-- `--max-sessions 1000`: maximum recorded sessions per run, bounding manifest/history metadata;
+- `--max-sessions 1000`: server-mode maximum recorded sessions per run, bounding manifest/history metadata (a client invocation makes one session);
 - active clients and connection timeouts are limited separately by the mock/proxy configuration.
 
 The manifest and small filesystem metadata are outside the byte counter. Repeated runs accumulate: there is **no automatic deletion, rotation or total-directory quota**. Review disk space and manually archive/delete old runs as appropriate.

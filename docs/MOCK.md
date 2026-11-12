@@ -21,7 +21,7 @@ python3 -m finderlab mock --profile synthetic-v1
 - `finder-v1.5-idle`: earlier captured idle replies, with the original experimental **raw** upload and no job controls.
 - `synthetic-v1`: original invented identity/status and raw-upload conventions.
 
-Connection and idle polling with the captured baseline have a user-recorded success. New upload/job support is tested against reference reply formats and generated payloads, but still needs a FlashPrint-to-mock trial. This is not firmware emulation or a physical model. See [PROTOCOL.md](PROTOCOL.md), FINDER-IDLE-003 through FINDER-UPLOAD-005.
+The user's finalized FlashPrint-to-mock run now includes connection, a 3668165-byte upload, virtual start and explicit cancel (FINDER-MOCK-007). The new upload CLI has also sent the provided GX to a fresh dummy with exact byte equality and no job started (CLIENT-UPLOAD-008). This is not firmware emulation or a physical model. See [PROTOCOL.md](PROTOCOL.md), FINDER-IDLE-003 through FINDER-UPLOAD-005.
 
 ## Commands
 
@@ -40,7 +40,7 @@ Commands are ASCII, prefixed with `~` and terminated by CRLF. Success replies us
 | `M29` | Owner only: commit a fully received file and reply `Done saving file.` **Does not start printing.** |
 | `M23 0:/user/<name>` | Owner only: select an existing file and start a virtual job; captured `File opened: ... Size: ...` / `File selected` reply. |
 | `M26` | Owner only: explicitly cancel the virtual job. Does not delete its file. |
-| `M602` | Release control/discard pending upload. Does **not** cancel an active virtual job. Reply/control policy is synthetic. |
+| `M602` | Release control/discard pending upload. Does **not** cancel an active virtual job. Release success reply is now hardware-observed (CLIENT-UPLOAD-009); discard/ownership policies remain synthetic. |
 | `M20` | Mock-only sorted `name size` listing; not an evidenced Finder listing format. |
 
 Read-only queries/listing do not require control in the mock. A second session cannot steal/release another's control. Ownership/error policies, unsupported arguments, idempotent cancel and busy rejection are not firmware-verified.
@@ -69,7 +69,7 @@ Observed reference transfers: 102989 logical bytes / 26 frames (last logical len
 
 Invalid magic, index, length, CRC or padding gives a mock error and closes the session. No retransmission/resume behavior is invented. Disconnect/timeout before `M29` discards the temporary file; a previous committed version remains intact. After all data arrives, finish with `M29` or discard with `M602`. During a partial frame, command bytes are still data; disconnect to abort.
 
-**The original `upload.py` does not implement this framing/ACK format.** Use FlashPrint for a captured-profile trial. For testing the old uploader locally, explicitly select `synthetic-v1`; passing against that profile is not hardware validation.
+**The original `upload.py` does not implement this framing/ACK format.** The new `python3 -m finderlab upload FILE` does; see [CLIENT.md](CLIENT.md). FlashPrint is another supported trial client. For testing the old uploader locally, explicitly select `synthetic-v1`; passing against that profile is not hardware validation.
 
 ## Virtual jobs: never automatically cancel
 
@@ -97,4 +97,4 @@ python3 -m unittest discover -s tests -v
 
 Tests use ephemeral loopback endpoints and `.tmp/` only. They cover byte-for-byte idle fixtures, both raw and framed profiles, CRC vectors, fragmentation/coalescing, boundary sizes, interrupted/corrupt uploads, commit semantics, explicit start/cancel and persistent jobs **without** a cancel step. Payloads are generated, not copied from the user's model.
 
-Next: verify FlashPrint upload/start/cancel against the updated dummy; record missing queries and client version. A broader reviewed scenario corpus/replay system is planned separately, as is the web interface. Physical-printer tests remain opt-in.
+The new client's user-run physical upload-only trial has now succeeded through the proxy (CLIENT-UPLOAD-009). Next: record missing queries/client version and separately scope any additional physical job-control tests. A broader reviewed scenario corpus/replay system is planned separately, as is the web interface. Physical-printer tests remain opt-in.

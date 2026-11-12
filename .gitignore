@@ -15,6 +15,7 @@ dist/
 
 # Private recordings, models, and runtime storage
 /captures/
+/upload/
 /uploads/
 /storage/
 /local-profiles/

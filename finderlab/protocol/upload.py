@@ -9,6 +9,13 @@ HEADER = struct.Struct("!4sIII")
 FRAME_SIZE = HEADER.size + BLOCK_SIZE
 
 
+def encode_frame(index: int, data: bytes) -> bytes:
+    """Encode one logical block without modifying GX/container/thumbnail bytes."""
+    if not 0 <= index <= 0xFFFFFFFF or not 1 <= len(data) <= BLOCK_SIZE:
+        raise ValueError("Invalid upload block index or logical length")
+    return HEADER.pack(MAGIC, index, len(data), zlib.crc32(data)) + data.ljust(BLOCK_SIZE, b"\x00")
+
+
 def decode_frame(frame: bytes, expected_index: int, remaining: int) -> bytes:
     """Validate one captured-style frame and return only its logical file bytes.
 

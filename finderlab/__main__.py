@@ -6,6 +6,7 @@ from dataclasses import asdict
 import logging
 
 from .capture import Capture, CaptureError
+from .cli_client import CLIENT_COMMANDS, add_client_commands, client_main
 from .proxy import ProxyConfig, RecordingProxy
 from .simulator import MockConfig, MockPrinter
 from .simulator.profile import PROFILES
@@ -16,6 +17,7 @@ def parser() -> argparse.ArgumentParser:
         prog="python3 -m finderlab", description="Finder 2 offline protocol lab",
     )
     commands = cli.add_subparsers(dest="command", required=True)
+    add_client_commands(commands)
     mock = commands.add_parser("mock", help="run the offline TCP dummy printer")
     defaults = MockConfig()
     mock.add_argument("--profile", choices=tuple(PROFILES), default=defaults.profile,
@@ -87,6 +89,8 @@ def main():
     cli = parser()
     args = vars(cli.parse_args())
     mode = args.pop("command")
+    if mode in CLIENT_COMMANDS:
+        return client_main(cli, mode, args)
     verbose = args.pop("verbose")
     capture_options = {key: args.pop(key) for key in (
         "capture_dir", "max_capture_bytes", "max_sessions", "flashprint_version", "experiment_id",

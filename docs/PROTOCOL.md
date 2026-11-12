@@ -92,6 +92,34 @@ Command sequence remains explicit: `M28` at 19:37:44.036 UTC, `M29` at 19:39:14.
 
 A compact `larger_transfer` entry in `tests/fixtures/finder-v1.5-upload.json` retains framing facts and source ranges. The regression test uploads generated content at the observed size with a synthetic spaced filename, checks all 896 ACKs, and verifies exact filename lookup/start without an implicit cancel. This is a local mock test, not replay of the private model or a new hardware test.
 
+## FINDER-MOCK-007 — FlashPrint transfer/start/cancel against the dummy
+
+Finalized mock capture `20261112T194950Z-63207ef4669d`, session `s0001`, uses `finder-v1.5`. User reports the dummy trial working. Client commands include one 3668165-byte `M28` upload, `M29`, separate `M23`, later `M26`, and 105 each of `M27`, `M119`, `M105`. The recording also contains one `G91` request (motion-related commands remain unsupported by deliberate mock policy). This is evidence for the observed file/job workflow, not every FlashPrint UI operation, physical dynamics or hardware safety. Client version remains unknown.
+
+## CLIENT-UPLOAD-008 — New upload CLI, provided GX, fresh dummy
+
+Actual application trial: `python3 -m finderlab upload upload/test1.gx` targeted a newly started dummy on an ephemeral loopback port, **not** the user's existing listener/proxy. Client capture `20261112T201030Z-a4de769f3bb2`, dummy capture `20261112T201030Z-56895924baa7`, experiment `provided-gx-client-dummy`. Both recordings were finalized.
+
+The file was 3668165 bytes; the dummy received 896 framed blocks, saved the file, and its exact bytes/SHA-256 matched the original (including existing binary GX/preview data). The wire command sequence was `M601 S1 → M115 → M119 → M28 → M29 → M602`. **No M23/start or M26/stop was sent**, and no virtual job became active. Original model bytes/file hashes are not added to Git.
+
+New client implementation is separate from unchanged `upload.py`. It checks the observed machine type/firmware, requires READY for upload/start, checks exact block ACK indexes, and requires a complete command echo / final save body / CRLF-terminated `ok`. It performs no blind retry or automatic start/cancel. During a failed binary transfer, close instead of injecting a cleanup command into expected payload. Missing final save confirmation reports UNKNOWN rather than success. See [CLIENT.md](CLIENT.md).
+
+Independent scripted-server tests use the reviewed reply frames and a standard CRC vector, not just a mutually agreeing mock/client encoder. Generated-payload and CLI tests also cover failure/cancellation cases. These tests do not prove that minimal handshake, release behavior or timing work against physical firmware; the next planned trial at that point was an explicitly approved upload-only run through the host-side proxy, subsequently completed in CLIENT-UPLOAD-009. The coding environment's loopback did not expose that proxy, so the agent did not attempt a hardware connection. A host-side command is documented separately.
+
+## CLIENT-UPLOAD-009 — Host-side client uploads to real printer through proxy
+
+The user started a host-side proxy and ran the new client manually after the agent confirmed that the host's loopback listener was not exposed inside the coding environment. No physical connection was made by the agent. Finalized client capture: `20261112T201621Z-f246bc35b6d3`, session `s0001`; proxy capture: `20261112T201223Z-6d126b24ea19`, matching session `s0001`. Transfer window: 2026-11-12 20:16:21–20:18:21 UTC; observed firmware `V1.5 20170419`.
+
+- Source GX: 3668165 bytes, 896 framed blocks, ACKs `N0` through `N895`.
+- Existing production decoder validates all recorded frames; reconstructed logical bytes match the provided `upload/test1.gx` exactly.
+- Client and proxy raw streams are byte-identical in **both directions**; the client manifest's raw lengths/hashes match.
+- Command sequence: `M601 S1 → M115 → M119 → M28 → M29 → M602`. No `M650`/`M114` prerequisite was needed in this successful minimal client workflow.
+- `M29` reply: `CMD M29 Received.\r\nDone saving file.\r\nok\r\n`.
+- `M602` reply: `CMD M602 Received.\r\nControl Release.\r\nok\r\n` (the release success shape is now directly observed, not just a mock convention).
+- No client errors, automatic retries, `M23` or `M26`. No fixed pre-M29 sleep was used by this client.
+
+This supports successful save/release on the observed hardware/firmware and file. It is not remote file read-back/hash verification, a printer-screen/preview check, a hardware emergency-stop guarantee, or validation of unrelated slicer output. No new-client start/stop command was tested physically in this trial. Original file, name/hash details and raw recordings remain outside Git.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.
