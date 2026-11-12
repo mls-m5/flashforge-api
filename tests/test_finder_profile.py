@@ -14,7 +14,7 @@ class FinderProfileTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.reference = json.loads(FIXTURE.read_text())
         self.exchanges = self.reference["exchanges"]
-        self.mock = await MockPrinter(MockConfig(port=0)).start()
+        self.mock = await MockPrinter(MockConfig(port=0, profile=self.reference["profile_id"])).start()
         self.clients = []
 
     async def asyncTearDown(self):

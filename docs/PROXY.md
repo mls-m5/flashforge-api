@@ -6,7 +6,7 @@ The proxy relays FlashPrint to an explicit target IP/port and records both byte 
 
 **It is not a safety filter.** All commands, including heating, movement, deletion and print-start, pass through. Hardware testing requires explicit approval and physical supervision. Closing a network connection is not an emergency stop.
 
-The implementation has been tested only with localhost fake servers. Finder 2/FlashPrint compatibility, real-world timing and discovery behavior are unverified. No physical printer was contacted during development.
+Automated tests use only localhost fake servers; the coding agent has not contacted hardware. User-collected proxy runs now establish connection/status and one file-transfer/start/cancel workflow on the user's Finder. Those bounded observations do not establish all firmware variants, error handling, timing requirements or discovery behavior.
 
 ## Start against a real printer (manual, supervised use only)
 
@@ -65,8 +65,8 @@ Stop with Ctrl+C before asking for final hashes/summaries. Keep the run director
 
 The proxy preserves byte order/content per direction, not packet boundaries or precise timing. If a connection differs from a direct FlashPrint connection, compare bytes and host packet captures before changing protocol behavior.
 
-## Diagnosing the current FlashPrint disconnect
+## What the proxy comparison established
 
-The latest reported mock sequence is `M601 S1 → M115 → M650 → M115 → M602 → disconnect`. No command in this sequence is now unsupported. The second identity query does **not** prove FlashPrint accepted the synthetic identity; it may be rechecking a response and then releasing control.
+The old synthetic identity led to `M601 S1 → M115 → M650 → M115 → M602 → disconnect`. Real-printer replies differed in control-success text, machine type/firmware fields, whitespace, offsets and status formatting. After adopting the reviewed idle bytes (name/serial anonymized), the user's mock recording showed sustained polling without protocol errors. The repeated identity query also occurs in a successful real-printer session; it is not itself a failure indicator. No single field was isolated as the cause.
 
-Possible causes include identity/model recognition, synthetic firmware/version formatting, required response fields, or an offset-response mismatch. These are hypotheses, not a diagnosis. The useful next experiment is a successful real-printer connection through this proxy using the same FlashPrint version/profile, then a field-by-field and byte-for-byte comparison with a recorded mock attempt.
+A later user run captured framed file transfer and distinct `M23` start / `M26` cancel. See FINDER-IDLE-003 through FINDER-UPLOAD-005 in [PROTOCOL.md](PROTOCOL.md) for provenance and limits. Upload is not raw file bytes on this firmware. Do not blindly replay the whole run: the cancel is optional, and a print-start may heat/move the real printer. The updated default dummy handles these as separate virtual operations.

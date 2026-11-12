@@ -4,7 +4,7 @@ This is a working journal, **not a complete Finder 2 specification**. A user-col
 
 ## Implemented profiles
 
-The default `finder-v1.5-idle` reproduces captured control-acquisition and idle replies with only the name/serial anonymized. The original `synthetic-v1` remains selectable. See [MOCK.md](MOCK.md) for scope. Listing, errors, release/control policy and raw-length upload remain mock conventions, not established printer behavior. The unchanged uploader passing against a mock validates only internal interoperability, not hardware upload framing.
+The default `finder-v1.5` combines captured connection/idle replies with observed block upload and job-command reply formats. Name/serial are anonymized. `finder-v1.5-idle` retains the earlier connection-only profile with experimental raw upload; `synthetic-v1` retains the original mock. See [MOCK.md](MOCK.md) for scope. Errors, release/control policy, listing and virtual job dynamics are still mock conventions. The original `upload.py` is incompatible with the framed upload now observed on this printer.
 
 ## FINDER-IDLE-003 — Real-printer connection and status baseline
 
@@ -32,6 +32,39 @@ User-reported successful connection, supported by `captures/20261112T191332Z-4bd
 The client sent 57 commands: one control claim, two identity queries, one offset query, one position query, and 52 status queries (`M27`: 17, `M119`: 18, `M105`: 17). Every command has a corresponding successful reply; no error events or error replies were recorded. Polling lasted about 17 seconds until recording shutdown (`capture_shutdown`), rather than the previous immediate release/disconnect. Raw stream sizes and hashes match the manifest.
 
 This validates manual connection and idle polling in the user's setup (FlashPrint version still unknown), not uploads or printing. No single field has been isolated as the cause of the earlier failure.
+
+## FINDER-UPLOAD-005 — Framed upload, explicit start and cancel
+
+Source: `captures/20261112T191450Z-2b04f784b894`, session `s0001`, 2026-11-12 19:15 UTC. Same observed machine type and firmware as FINDER-IDLE-003. The user reports saving a file, starting the job and aborting it. FlashPrint version remains unknown. The following complete transfer interval was inspected offline; the full recording was still unfinalized at inspection.
+
+The client sent `M28 102989 0:/user/<name>.gx`, then **26 frames of 4112 bytes**, then `M29`, then **separate** `M23` start and later **separate** `M26` cancel. No `M24` was sent in this workflow. Filename in checked-in examples is anonymized to `test_box.gx`.
+
+Wire data interval: client bytes `[745,107657)`, totaling 106912 bytes. Each frame:
+
+| Offset | Length | Meaning |
+| --- | --- | --- |
+| 0 | 4 | Magic bytes `5a 5a a5 a5` |
+| 4 | 4 | Zero-based block index, unsigned big-endian |
+| 8 | 4 | Logical file-byte count in this block, unsigned big-endian |
+| 12 | 4 | CRC32 of **logical payload bytes only**, unsigned big-endian |
+| 16 | 4096 | Payload plus zero padding to fixed wire size |
+
+All 26 headers, indexes, CRCs and padding were checked against the actual raw bytes. Logical lengths were 4096 for blocks 0–24 and 589 for block 25; last-block padding was 3507 zero bytes. CRC matches Python `zlib.crc32` over unpadded data, not the header or padding. Reconstructed logical byte count equals the advertised 102989. All block acknowledgements were `N<index> ok\r\n`, indexes 0–25.
+
+Captured reply bodies (standard `CMD ... Received.` / `ok` envelope):
+
+- `M28`: `Writing to file: 0:/user/test_box.gx  Length: 102989` (two spaces before `Length`).
+- `M29`: `Done saving file.`
+- `M23`: `File opened: 0:/user/test_box.gx Size: 102989`, then `File selected`.
+- `M26`: no additional body.
+
+After `M23`, status became `BUILDING_FROM_SD`, first `HOMING`, later `WAIT_ON_TOOL`; the temperature target was 220. After `M26`, intermediate `PAUSED`/building status appeared before `READY` and a zero target. These transitions are observations, not proof of safe emergency-stop behavior. Actual execution progress used a denominator of 88477 rather than the GX file size 102989; interpreting GX headers/execution offsets remains open.
+
+Implementation: `finder-v1.5` validates the captured framing and returns ACKs, saves only on `M29`, starts a **virtual** job only on `M23`, and cancels only on `M26`. There is no automatic print-start, abort, timed completion, motion or heating. Virtual active status uses representative captured shapes; progress stays zero over logical file size. Thermal/homing/cancel transients are not replayed. Release/disconnect does not cancel a virtual job.
+
+Limits of evidence: one successful file-transfer capture, not all sizes/firmware variants. Bad-CRC handling/retries were not observed; the mock deliberately errors and closes rather than inventing retransmission behavior. It requires the observed full-block/final-block lengths and zero padding. The existing raw uploader does **not** implement this framing or ACK format and remains unchanged.
+
+`tests/fixtures/finder-v1.5-upload.json` stores reviewed framing facts and command/reply frames, not model content. Tests generate deterministic payloads, include an independent CRC32 test vector and separately test upload-only, start-without-cancel, and explicit cancel. A broader sanitized trace corpus and reusable replay tooling are planned, not implemented by these tests.
 
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 

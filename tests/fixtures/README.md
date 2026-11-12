@@ -22,4 +22,18 @@ The fixture was compared offline against these actual raw stream ranges with onl
 
 The source was still running when the prefix was first extracted; its subsequently finalized manifest has `complete: true`. This fixture covers only the specified **prefix**, not every later exchange. The original capture is preserved unchanged under ignored `captures/`.
 
-Not evidenced by this fixture: `M602` release, control conflicts, error responses, file listing, upload framing/CRC, printing, discovery, dynamic temperatures or timing requirements. Those parts of the mock remain synthetic policies. Observed response latency is not reproduced; tests compare application bytes, not packet segmentation or scheduling.
+Not evidenced by this idle fixture: `M602` release, control conflicts, error responses, file listing, upload framing/CRC, printing, discovery, dynamic temperatures or timing requirements. Observed response latency is not reproduced; tests compare application bytes, not packet segmentation or scheduling.
+
+## `finder-v1.5-upload.json`
+
+Reviewed facts and command/reply frames from user capture `20261112T191450Z-2b04f784b894`, session `s0001`, 2026-11-12 19:15 UTC, firmware `V1.5 20170419`. Client version remains unknown. The inspected upload/start/cancel exchanges were complete while the overall recording was still running.
+
+The client wire interval `[745,107657)` contains 26 frames. Offline checks verified every header/index/CRC, logical length, zero padding and matching `N0` through `N25` ACK. Logical file size: 102989; final block length: 589. No original model payload, addresses or device identity are included. Filename is replaced with `test_box.gx` (11 bytes, unchanged length).
+
+Tests generate byte-ramp or repeated-byte payloads at runtime. They do not claim those generated CRCs/data were captured. A separate standard CRC32 vector (`123456789` → `cbf43926`) checks the algorithm/header layout independently. The command/reply samples preserve captured wording and spacing with the filename substitution.
+
+The recorded `M26` is only an explicit cancel example, never an automatic scenario suffix. Tests separately exercise upload-only and an active job that survives polling/release/reconnect without cancellation. Error handling and simplified virtual job dynamics are labeled mock policies, not captured firmware guarantees.
+
+## Scope and future organization
+
+These are deliberately small reviewed regression artifacts, not a raw-log archive or general replay framework. The future systematic scenario catalog/trace selection/replay plan is in `docs/ROADMAP.md`. Runtime data belongs in ignored `.tmp/`; private raw captures stay in ignored `captures/`.

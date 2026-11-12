@@ -272,7 +272,7 @@ class ConfigTests(unittest.TestCase):
         defaults = parser().parse_args(["mock"])
         self.assertEqual(defaults.host, "127.0.0.1")
         self.assertEqual(defaults.port, 8899)
-        self.assertEqual(defaults.profile, "finder-v1.5-idle")
+        self.assertEqual(defaults.profile, "finder-v1.5")
         custom = parser().parse_args(["mock", "--port", "0", "--max-files", "2", "--profile", "synthetic-v1"])
         self.assertEqual(custom.port, 0)
         self.assertEqual(custom.max_files, 2)

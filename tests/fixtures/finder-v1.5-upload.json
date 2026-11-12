@@ -1,0 +1,33 @@
+{
+  "profile_id": "finder-v1.5",
+  "source_capture": "20261112T191450Z-2b04f784b894",
+  "source_session": "s0001",
+  "observed_firmware": "V1.5 20170419",
+  "flashprint_version": null,
+  "redactions": ["Filename replaced with test_box.gx (same 11-byte length)", "No model payload or private identity/address included"],
+  "file_size": 102989,
+  "wire_range": [745, 107657],
+  "frame_count": 26,
+  "frame_size": 4112,
+  "header_size": 16,
+  "block_size": 4096,
+  "magic_hex": "5a5aa5a5",
+  "header_layout": "!4sIII: magic, index, logical length, CRC32 of logical data",
+  "last_block_length": 589,
+  "final_padding_length": 3507,
+  "first_ack": "N0 ok\r\n",
+  "last_ack": "N25 ok\r\n",
+  "begin_request": "~M28 102989 0:/user/test_box.gx\r\n",
+  "begin_reply": "CMD M28 Received.\r\nWriting to file: 0:/user/test_box.gx  Length: 102989\r\nok\r\n",
+  "finish_request": "~M29\r\n",
+  "finish_reply": "CMD M29 Received.\r\nDone saving file.\r\nok\r\n",
+  "start_request": "~M23 0:/user/test_box.gx\r\n",
+  "start_reply": "CMD M23 Received.\r\nFile opened: 0:/user/test_box.gx Size: 102989\r\nFile selected\r\nok\r\n",
+  "cancel_request": "~M26\r\n",
+  "cancel_reply": "CMD M26 Received.\r\nok\r\n",
+  "synthetic_crc_vector": {
+    "payload_ascii": "123456789",
+    "header_hex": "5a5aa5a50000000000000009cbf43926",
+    "note": "Independent standard CRC32 test vector, not original model bytes"
+  }
+}

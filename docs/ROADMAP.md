@@ -18,6 +18,12 @@ A user-collected real-printer proxy capture establishes the `V1.5 20170419` conn
 
 This advances M2/M3, not completion: client version remains unknown; upload, printing, errors, discovery and the remaining acceptance criteria still need evidence and implementation.
 
+## Implementation update: framed upload and explicit virtual jobs
+
+A second user-collected proxy run contains a 102989-byte file transfer, `M23` start and later `M26` cancel. All 26 fixed frames/ACKs, big-endian fields, CRC32 over logical payload and final zero padding were verified offline. Default `finder-v1.5` now supports that framing and captured command/reply shapes. Earlier profiles remain available.
+
+Generated-payload tests cover boundaries, corruption, interruption, upload-only, start without cancel and explicit cancel. No model bytes are committed. This is not full M3/M5 completion: FlashPrint-to-dummy upload acceptance, actual job dynamics and error/retry behavior remain unverified. The original raw uploader is incompatible with the observed physical protocol and is unchanged. Do not automatically replay the captured abort.
+
 ## M0 — Agree on the test setup
 
 - Confirm the model, firmware, FlashPrint version, host OS and GitHub reference.
@@ -107,6 +113,22 @@ Implement local drag-and-drop/file selection, explicit upload confirmation, conf
 - Target address comes from trusted server configuration, not arbitrary browser input.
 - End-to-end tests use the simulator; physical-printer tests remain opt-in.
 - Loopback is the default; LAN serving is documented as a separate security configuration.
+
+## Future: systematic reviewed scenario corpus and replay
+
+Requested as future work, not part of the present protocol patch. The current small `tests/fixtures/` artifacts support regression tests; they are not a complete log archive or replay tool.
+
+Plan:
+
+- Keep a versioned catalog of scenarios with stable IDs, firmware/client/OS metadata (unknown fields explicit), source capture/session/byte ranges, transformation notes and integrity hashes.
+- Preserve raw originals locally outside Git. Review selected derivatives; remove serials, MAC/IP, private names and proprietary model payloads. Prefer small owned/shareable models or explicitly labeled generated payloads.
+- Separate connect/idle, upload-only, upload-plus-start, and explicit cancel. The cancel is an optional scenario, never a mandatory suffix or a timed replay side effect.
+- Distinguish captured bytes, parameterized response templates, generated test content and mock-policy fault cases. Keep provenance even when extracting a small representative subset of repetitive polling.
+- Provide offline validation and a stream-aware runner against the dummy, then a scripted reference endpoint for testing the future network client. Match byte streams rather than socket-read/packet boundaries; test fragmentation and reordered safe queries separately.
+- Do not permit default replay against physical hardware: traces may contain heating, deletion or print-start. Any future hardware replay requires an explicit separate safety decision.
+- Link accepted manual mock runs back to scenario IDs so improvements and regressions are traceable across firmware/client versions.
+
+**Acceptance:** reviewed connection and independently optional upload/start/cancel scenarios can be checked reproducibly in CI without private captures or hardware, with clear mismatch offsets and no accidental auto-abort. Actual replay commands will be documented only once implemented.
 
 ## Deferred work
 

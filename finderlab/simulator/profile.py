@@ -1,15 +1,16 @@
 """Versioned response profiles: captured idle replies and the original mock.
 
-The captured profile covers identity/control acquisition and idle queries only.
-Upload framing, errors, control policy and release remain synthetic conventions.
-See docs/PROTOCOL.md, observation FINDER-IDLE-003, for evidence and redactions.
+finder-v1.5 adds captured block upload/job-command reply formats to the idle
+baseline. Job dynamics, errors, control policy and release are mock conventions.
+See docs/PROTOCOL.md, FINDER-IDLE-003 and FINDER-UPLOAD-005, for evidence.
 """
 
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Mapping
 
-DEFAULT_PROFILE = "finder-v1.5-idle"
+DEFAULT_PROFILE = "finder-v1.5"
+IDLE_PROFILE = "finder-v1.5-idle"
 
 SYNTHETIC_RESPONSES = {
     "M115": (
@@ -68,6 +69,8 @@ class Profile:
     status_responses: Mapping[str, str]
     control_success: str
     source_capture: str | None = None
+    upload_mode: str = "raw"
+    supports_jobs: bool = False
 
 
 PROFILES = MappingProxyType({
@@ -75,9 +78,14 @@ PROFILES = MappingProxyType({
         "synthetic-v1", "synthetic-v1", MappingProxyType(SYNTHETIC_RESPONSES),
         "Control Success V2.1.",
     ),
+    IDLE_PROFILE: Profile(
+        IDLE_PROFILE, "V1.5 20170419", MappingProxyType(FINDER_IDLE_RESPONSES),
+        "Control Success.", "20261112T190818Z-31ded6e5f0a5",
+    ),
     DEFAULT_PROFILE: Profile(
         DEFAULT_PROFILE, "V1.5 20170419", MappingProxyType(FINDER_IDLE_RESPONSES),
-        "Control Success.", "20261112T190818Z-31ded6e5f0a5",
+        "Control Success.", "20261112T191450Z-2b04f784b894",
+        upload_mode="framed", supports_jobs=True,
     ),
 })
 

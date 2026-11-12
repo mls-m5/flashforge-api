@@ -1,4 +1,4 @@
-"""Stateful, memory-only synthetic printer; never connects to hardware."""
+"""Stateful offline printer with memory-only virtual files/jobs; no hardware."""
 
 from .server import MockConfig, MockPrinter
 

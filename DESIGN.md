@@ -10,7 +10,7 @@ Vi ska inte bygga slicer, molntjänst eller fjärrstyrning av rörelse/värme i 
 
 ## 2. Utgångsläge och principer
 
-Current implementation: the unchanged experimental `upload.py`, a synthetic TCP mock in `finderlab/simulator/`, per-run recording in `finderlab/capture.py` and a byte-preserving TCP proxy in `finderlab/proxy.py`. See [docs/MOCK.md](docs/MOCK.md), [docs/PROXY.md](docs/PROXY.md) and [docs/CAPTURES.md](docs/CAPTURES.md). The default `finder-v1.5-idle` profile now uses capture-derived, anonymized control/identity/idle replies, with independent golden-byte tests and a user-recorded successful FlashPrint idle connection. The original `synthetic-v1` remains selectable. The uploader's transfer framing and the mock's other behaviors remain hypotheses, not a verified full specification. Automated proxy/recording tests use only localhost fake servers. Discovery, replay/standalone analysis and web support remain planned.
+Current implementation: the unchanged experimental `upload.py`, a synthetic TCP mock in `finderlab/simulator/`, per-run recording in `finderlab/capture.py` and a byte-preserving TCP proxy in `finderlab/proxy.py`. See [docs/MOCK.md](docs/MOCK.md), [docs/PROXY.md](docs/PROXY.md) and [docs/CAPTURES.md](docs/CAPTURES.md). Default `finder-v1.5` combines captured connection/idle replies with framed upload and explicit virtual job commands. The earlier idle baseline has a user-recorded FlashPrint success. Upload framing (big-endian 16-byte header, CRC32, fixed padded blocks and ACKs) was checked against all 26 frames of a real transfer, but updated dummy upload/job acceptance still needs a client trial. Earlier `finder-v1.5-idle` and `synthetic-v1` remain selectable. The original uploader is not compatible with the observed framing. Virtual jobs are not physical/thermal simulation and never cancel automatically; M29 saves, M23 starts, M26 cancels. Other behavior remains bounded mock policy, not a verified full specification. Automated proxy/recording tests use only localhost fake servers. Discovery, replay/standalone analysis and web support remain planned.
 
 - Råa byte är primär evidens; textavkodning är en härledd vy.
 - Skilj lokal observation, extern uppgift och oprövad hypotes åt.
@@ -40,7 +40,7 @@ TCP-kommunikation och UDP-discovery är olika delsystem. Att TCP-porten fungerar
 
 The implemented baseline uses Python 3.11+, `asyncio` for networking and standard-library `unittest` for tests. The mock runs without installation or third-party dependencies; `pytest` was an initial suggestion, not a requirement. Proxy and simulator must remain usable without web dependencies. FastAPI/Uvicorn with static HTML/JavaScript remains a possible later web stack, not a current dependency.
 
-Current tools use a flat `finderlab/` package (`__main__.py`, `simulator/`, `capture.py`, `proxy.py`) and `tests/` so they can run without installation. Runtime test files use ignored project-local `.tmp/`; recordings use ignored `captures/`. The following remains a proposed longer-term structure rather than a current tree:
+Current tools use a flat `finderlab/` package (`__main__.py`, `simulator/`, `protocol/upload.py`, `capture.py`, `proxy.py`) and `tests/` so they can run without installation. Runtime test files use ignored project-local `.tmp/`; recordings use ignored `captures/`. The following remains a proposed longer-term structure rather than a current tree:
 
 ```text
 src/finderlab/

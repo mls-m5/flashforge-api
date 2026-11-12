@@ -63,7 +63,7 @@ async def run(config, mode, capture_options):
             print(f"Capture directory: {capture.path.resolve()}", flush=True)
             if mode == "mock":
                 if profile.source_capture:
-                    print("Capture-derived idle replies; name/serial anonymized. FlashPrint acceptance needs a new test.", flush=True)
+                    print("Capture-derived replies; name/serial anonymized. Compatibility is limited to observed workflows.", flush=True)
                 else:
                     print("Synthetic replies, not verified against Finder 2 or FlashPrint.", flush=True)
                 print("No discovery. Upload protocol remains experimental; virtual files are RAM-only.", flush=True)

@@ -1,108 +1,100 @@
 # Offline printer mock
 
-## Status and provenance
+## Profiles and evidence
 
-Default profile **`finder-v1.5-idle`** uses real-printer control-acquisition, identity and idle-status replies from firmware `V1.5 20170419`. Formatting and values match the selected capture except for an anonymized machine name and serial. The original **`synthetic-v1`** remains available with `--profile synthetic-v1`.
-
-The user has successfully connected FlashPrint and polled idle status with the new profile; see observations FINDER-IDLE-003 and FINDER-MOCK-004 in [PROTOCOL.md](PROTOCOL.md). Reviewed reference bytes live in `tests/fixtures/finder-v1.5-idle.json`. Upload, errors, listing, release and control-policy behavior remain experimental mock conventions, not validated printer behavior. No response delays or physical dynamics are replayed.
-
-## Start
-
-Requires Python 3.11+. Run from the repository root:
+The default **`finder-v1.5`** combines observed connection/idle replies and framed upload/job-command responses from the user's Finder (reported as Finder 2), firmware `V1.5 20170419`. Private identity is replaced with name `Mock Find` and synthetic serial `F1AB0001`.
 
 ```sh
 python3 -m finderlab mock --verbose
-python3 -m finderlab mock --help
 ```
 
-Default endpoint: `127.0.0.1:8899/TCP`. No UDP sockets or discovery announcements are created. Port `0` requests an available port, printed on startup. Ctrl+C closes sessions and finalizes the capture manifest. All virtual files are lost on process exit, but their bytes remain in persistent captures.
+Requires Python 3.11+, no installation/dependencies. Default endpoint: `127.0.0.1:8899/TCP`. Stop the proxy first if it uses that port. Manually connect FlashPrint to this address. No UDP discovery is implemented. Use `--host YOUR_LAN_ADDRESS` only for deliberate exposure on a trusted LAN.
 
-For manual testing from a separate FlashPrint machine, explicitly bind to the mock host's LAN address:
+Other profiles:
 
 ```sh
-python3 -m finderlab mock --host 192.0.2.20 --port 8899 --verbose
+python3 -m finderlab mock --profile finder-v1.5-idle
+python3 -m finderlab mock --profile synthetic-v1
 ```
 
-`192.0.2.20` is a documentation placeholder: replace it with your machine's actual address. This exposes an unauthenticated mock on that interface; use a trusted network and suitable firewall rules. Bind options do not connect to a printer.
+- `finder-v1.5`: captured-style idle replies, block upload and explicit virtual start/cancel.
+- `finder-v1.5-idle`: earlier captured idle replies, with the original experimental **raw** upload and no job controls.
+- `synthetic-v1`: original invented identity/status and raw-upload conventions.
 
-If your FlashPrint version supports manual IP connection, point it at the mock. Connection and idle polling have been observed in the user's setup; compatibility with other client versions/profiles is unknown. Watch verbose output for unsupported commands and keep the FlashPrint version/UI error in your notes. Unknown commands produce an error rather than a misleading generic `ok`. Automatic discovery is not supported yet.
+Connection and idle polling with the captured baseline have a user-recorded success. New upload/job support is tested against reference reply formats and generated payloads, but still needs a FlashPrint-to-mock trial. This is not firmware emulation or a physical model. See [PROTOCOL.md](PROTOCOL.md), FINDER-IDLE-003 through FINDER-UPLOAD-005.
 
-## Commands implemented
+## Commands
 
-All commands must be ASCII, prefixed with `~`, and terminated by **CRLF** (`\r\n`). Commands are case-sensitive. Success replies have a `CMD <code> Received.` line, optional body, and an `ok` line. Errors are one `Error: ...` line with **no** `ok`.
+Commands are ASCII, prefixed with `~` and terminated by CRLF. Success replies use `CMD <code> Received.`, optional body, then `ok`, all CRLF-terminated. Block ACKs are different: `N<index> ok\r\n`. Errors are mock-policy `Error: ...` lines without `ok`.
 
-| Command | Default captured-idle profile (other behavior remains synthetic) |
+| Command | Default `finder-v1.5` behavior |
 | --- | --- |
-| `~M115` | `Flashforge Finder`, firmware `V1.5 20170419`, anonymized name/serial, captured field spacing and no MAC line. |
-| `~M650` | Captured `X: 34 Y: 0`; read-only. |
-| `~M105` | Fixed captured idle temperature `T0:21 /0 B:0 /0`; no heating. |
-| `~M114` | Captured `X:0 Y:0 Z:0 A:0 B:0`; no movement. |
-| `~M119` | Fixed ready/idle state with no current print. |
-| `~M27` | Idle print progress (`0/0`). |
-| `~M601 S1` | Captured success body `Control Success.`; device-wide ownership/conflict policy is synthetic. |
-| `~M602` | Release owned control and discard pending upload; releasing with no owner is harmless. Cannot release another session's control. |
-| `~M28 <size> 0:/user/<name>` | Owner only: validate limits and begin receiving exactly `<size>` raw bytes. |
-| `~M29` | Owner only: atomically commit a fully received pending upload. No upload pending is an error. |
-| `~M20` | Mock listing: `Begin file list`, sorted `name size` lines, `End file list`. Not verified Finder syntax. |
+| `M601 S1` | Captured `Control Success.` body; acquire control. |
+| `M115` | Captured field order/spacing, `Flashforge Finder`, real firmware text, anonymized name/serial, no MAC line. |
+| `M650` | Captured `X: 34 Y: 0`. |
+| `M114` | Captured `X:0 Y:0 Z:0 A:0 B:0`; no movement. |
+| `M105` | Idle `T0:21 /0 B:0 /0`; virtual active job `T0:21 /220 B:0 /0`. |
+| `M119` | Captured idle status, or representative virtual `BUILDING_FROM_SD` / `WAIT_ON_TOOL` status. |
+| `M27` | Idle `0/0`; virtual active job `0/<logical file size>`. No simulated progress. |
+| `M28 <size> 0:/user/<name>` | Owner only: validate limits, reply `Writing to file: ...  Length: ...`, receive block frames. |
+| `M29` | Owner only: commit a fully received file and reply `Done saving file.` **Does not start printing.** |
+| `M23 0:/user/<name>` | Owner only: select an existing file and start a virtual job; captured `File opened: ... Size: ...` / `File selected` reply. |
+| `M26` | Owner only: explicitly cancel the virtual job. Does not delete its file. |
+| `M602` | Release control/discard pending upload. Does **not** cancel an active virtual job. Reply/control policy is synthetic. |
+| `M20` | Mock-only sorted `name size` listing; not an evidenced Finder listing format. |
 
-Identity/offset/status queries and listing do not require control. Arguments to status/listing/release/finish commands are rejected. Unsupported commands, including movement, heating and print-start, are logged as warnings and rejected. Nothing is physically or virtually printed in this version.
+Read-only queries/listing do not require control in the mock. A second session cannot steal/release another's control. Ownership/error policies, unsupported arguments, idempotent cancel and busy rejection are not firmware-verified.
 
-`M119` describes a non-printing device; it does not simulate busy/temperature/movement dynamics. Files are reflected in `M20`, not in the current-print field.
+Unknown commands (including generic motion/heating commands) are logged and rejected, not silently acknowledged. The mock has **no outgoing printer connection and never executes G-code**. Temperature targets and endstops are virtual response values only.
 
-## Connection troubleshooting: M650
-
-A user-reported FlashPrint attempt sent `M601 S1`, `M115`, `M650`, then released control and disconnected after the old mock rejected `M650`. The mock now answers that query with fixed synthetic XY values instead of an unsupported-command error. See observation **FP-M650-001** in [PROTOCOL.md](PROTOCOL.md) for evidence and limitations.
-
-Restart the mock after updating and retry with `--verbose`. This removes one known unsupported command; it does not guarantee that FlashPrint will accept the response or complete connection. Report the next command sequence, any UI error and your FlashPrint version if it still disconnects.
-
-## Upload state machine
+## Captured block-upload mode
 
 ```text
-M601 S1 → M28 <N> <path> → exactly N raw bytes → M29 → committed virtual file
+M601 S1 → M28 <N> <path> → framed blocks + per-block ACKs → M29 → saved file
+                                                                │
+                                      optional M23 → virtual job → optional M26
 ```
 
-- No escaping, per-block ACK, CRC or fixed delay is implemented. This matches the current uploader's hypothesis, not an established Finder 2 protocol.
-- Raw payload may contain nulls, arbitrary non-ASCII bytes, `ok`, CRLF and `~M29`; none are interpreted as commands.
-- Surplus bytes after the Nth payload byte are retained for command parsing, including when payload and `M29` arrive in one socket read.
-- After all N bytes arrive, only `M29` or `M602` is accepted until the pending upload is finished/discarded.
-- Before all N bytes arrive, **every byte is payload**. A premature `M29` or `M602` cannot cancel it. Disconnect to abort, or wait for the idle timeout.
-- Disconnect, timeout and server shutdown discard pending uploads and release session control.
-- A replacement does not overwrite the old file until `M29`. Limits count the existing file plus the pending replacement, so an otherwise full device cannot replace a file in place.
-- There is no resume or automatic retry. There is no distinction between syntactically valid G-code and arbitrary binary file contents.
+A frame is always **4112 wire bytes**:
 
-Names are a single ASCII component, 1–128 characters: start with a letter, digit or underscore, followed by letters, digits, underscores, dots or hyphens; `..` anywhere is rejected. Paths must use the exact `0:/user/` prefix. No virtual path is opened on the host filesystem. Empty files are rejected.
+- 4 magic bytes `5a 5a a5 a5`;
+- 4-byte unsigned big-endian block index, starting at zero;
+- 4-byte unsigned big-endian logical data length;
+- 4-byte unsigned big-endian CRC32 (`zlib.crc32`) over logical data only;
+- 4096 bytes containing logical data followed by zero padding.
 
-## Resource limits
+Non-final logical blocks are 4096 bytes. The last carries the remaining count and is zero-padded on the wire. Headers/padding do not count toward the declared file size. After validation the mock sends `N0 ok`, `N1 ok`, etc. It retains surplus bytes when a frame, padding and next command share one read. Payload strings such as `~M29`, `~M26` and `ok` are never executed as commands.
 
-Defaults, all configurable through CLI flags:
+Observed reference transfer: 102989 logical bytes, 26 frames, last logical length 589. All source headers, CRCs, padding and ACKs were checked offline. Other firmware variants and retry behavior are not established.
 
-| Flag | Default |
-| --- | --- |
-| `--idle-timeout` | 30 seconds, applied per command read, payload read and reply drain |
-| `--max-file-size` | 8,388,608 bytes |
-| `--storage-limit` | 33,554,432 bytes of committed + pending file content |
-| `--max-files` | 32 committed names |
-| `--max-clients` | 8 active TCP sessions |
-| `--max-command-size` | 4,096 bytes, including CRLF |
+Invalid magic, index, length, CRC or padding gives a mock error and closes the session. No retransmission/resume behavior is invented. Disconnect/timeout before `M29` discards the temporary file; a previous committed version remains intact. After all data arrives, finish with `M29` or discard with `M602`. During a partial frame, command bytes are still data; disconnect to abort.
 
-Excess connections are closed without a protocol reply. Overlong command lines receive an error and are closed; timeout closes silently. These are deliberate mock policies, not claims about firmware behavior.
+**The original `upload.py` does not implement this framing/ACK format.** Use FlashPrint for a captured-profile trial. For testing the old uploader locally, explicitly select `synthetic-v1`; passing against that profile is not hardware validation.
 
-The storage limit measures file content, not process RSS. Python object overhead, transport buffers and a temporary copy during commit consume additional bounded memory. There is one pending upload at a time because there is one control owner.
+## Virtual jobs: never automatically cancel
 
-## Logs and inspection
+Saving, starting and cancelling are independent operations. Upload-only stays idle. A virtual job starts only after `M23`, persists through control release/disconnect/repeated polling, and is cancelled only by `M26` (or disappears with process exit). There is no recorded-script cursor that automatically reaches the captured abort, and no timed completion.
 
-Both requests and replies are now recorded automatically to a per-run directory under `captures/`, printed at startup. `traffic.log` provides timestamped, session-tagged escaped previews; `events.jsonl` provides structured events; per-session `.bin` files preserve exact bytes, including binary uploads and partial commands. New runs retain all previous connection history. See [CAPTURES.md](CAPTURES.md) for format, privacy, metadata flags and limits.
+The active-job status is a fixed representative snapshot. It does not reproduce homing phases, thermal dynamics, cancellation transients or GX execution offsets. In the real capture, progress denominator differed from GX size; the mock deliberately reports zero over file size instead of pretending to understand that execution layout. Cancelling returns immediately to virtual idle, unlike the real printer's transient states.
 
-`--verbose` additionally shows commands/replies on the console. No full binary upload dump is printed there, but persistent captures contain the payload. Unknown commands and abnormal termination produce console warnings even without verbose mode. Logs can contain private names, model content and addresses.
+Uploads/new starts while a virtual job is active are rejected rather than replacing/cancelling it implicitly. Stored bytes are never parsed or executed.
 
-Python embedding is opt-in: pass `capture=Capture(...)` to `MockPrinter` and close the recorder after closing the server. Without that argument, embedding stays memory-only, as used by the original unit tests. `MockPrinter.files` remains a read-only mapping of committed names to bytes. Replay and standalone capture inspection/validation tools are not implemented yet.
+## Limits and storage
 
-## Testing
+Default limits (CLI-configurable): 8 MiB per file, 32 MiB committed + pending logical content, 32 committed names, eight active clients, 4096-byte command lines including CRLF, 30-second inactivity/read/write timeout. Names are one ASCII component, 1–128 characters: letter/digit/underscore first, then letters/digits/underscores/dots/hyphens; `..` is rejected. Exact path prefix: `0:/user/`. No remote path is opened on the host filesystem.
+
+Storage quota counts the old version while receiving its replacement. Python/transport overhead and the temporary commit copy consume additional bounded memory. Empty files are rejected. Excess clients are closed; timeout closes silently; overlong lines receive an error and close. These limits/error policies are mock conventions.
+
+Files and jobs are memory-only and disappear with the process. **Capture files persist uploaded bytes on disk.** Each CLI run prints its private capture directory under `captures/`, containing `traffic.log`, `events.jsonl`, manifest and per-session binary streams. Ctrl+C finalizes it. See [CAPTURES.md](CAPTURES.md) for privacy/quotas. `--verbose` also prints requests/replies on the console.
+
+Embedding is opt-in for recording: pass a `Capture` to `MockPrinter` and close it after the server. `MockPrinter.files` is read-only; `active_file` identifies only the virtual job. No general replay tool is implemented yet.
+
+## Tests and next steps
 
 ```sh
 python3 -m unittest discover -s tests -v
 ```
 
-The suite uses `unittest.IsolatedAsyncioTestCase`, standard-library clients and ephemeral loopback endpoints. It covers parsing/fragmentation, pipelined commands, binary uploads, commit/discard, replacement, control conflicts, limits, timeout, shutdown and the unchanged uploader. No physical printer or FlashPrint instance is used.
+Tests use ephemeral loopback endpoints and `.tmp/` only. They cover byte-for-byte idle fixtures, both raw and framed profiles, CRC vectors, fragmentation/coalescing, boundary sizes, interrupted/corrupt uploads, commit semantics, explicit start/cancel and persistent jobs **without** a cancel step. Payloads are generated, not copied from the user's model.
 
-Independent fixture tests compare the captured connection/polling prefix byte-for-byte, including coalesced commands and reordered polling. Existing synthetic-profile tests remain explicit. Next evidence needed: upload framing and job control, error handling and discovery; the idle baseline alone does not establish those behaviors.
+Next: verify FlashPrint upload/start/cancel against the updated dummy; record missing queries and client version. A broader reviewed scenario corpus/replay system is planned separately, as is the web interface. Physical-printer tests remain opt-in.

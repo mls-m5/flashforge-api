@@ -6,14 +6,14 @@ Reverse-engineer the Finder 2 network protocol, build a realistic offline simula
 
 Implemented:
 
-- An **offline TCP printer mock**, using Python 3.11+ and the standard library only. Its default `finder-v1.5-idle` profile matches captured idle replies; `--profile synthetic-v1` retains the original test profile.
+- An **offline TCP printer mock**, using Python 3.11+ and the standard library only. Its default `finder-v1.5` profile supports captured-style idle replies and framed upload, plus explicit virtual start/cancel. Earlier profiles remain selectable.
 - Identity/status replies, control ownership, bounded RAM-only virtual upload storage and a mock file listing.
 - **Persistent traffic logs and connection history** for both CLI modes, with exact request/reply streams.
 - A **recording TCP proxy** for comparing FlashPrint traffic with the real printer's responses.
 - Automated localhost tests, including the existing uploader, recording failures and proxy transport behavior.
 - The original experimental [`upload.py`](upload.py), unchanged.
 
-Not implemented: UDP discovery, replay/standalone analysis tooling, virtual printing, or the web interface. **FlashPrint connection and idle polling have been observed with the captured profile.** Upload framing and other behavior remain unverified; the idle baseline is not a complete printer emulator.
+Not implemented: UDP discovery, replay/standalone analysis tooling, physical job dynamics, or the web interface. **FlashPrint connection and idle polling have been observed with the captured baseline.** Framed upload/job-response support now matches a real transfer's format in local tests; its FlashPrint-to-dummy acceptance still needs verification.
 
 ## Run the dummy printer
 
@@ -23,13 +23,17 @@ From the project directory, no installation required:
 python3 -m finderlab mock --verbose
 ```
 
-It listens on **127.0.0.1:8899** by default. In another terminal, test the existing uploader against this local mock:
+It listens on **127.0.0.1:8899** by default. Connect FlashPrint manually to that address. The mock saves only after `M29`, starts a virtual job only after `M23`, and cancels only after an explicit `M26`. It never heats, moves, executes G-code or connects to hardware.
+
+The original `upload.py` uses raw bytes and **does not implement the observed block/CRC/ACK protocol**. To test that old script locally, explicitly run the legacy profile instead of the default:
 
 ```sh
+python3 -m finderlab mock --profile synthetic-v1
+# In another terminal:
 python3 upload.py 127.0.0.1 path/to/model.gx
 ```
 
-This tests the synthetic protocol only; it does not validate a model or prove hardware compatibility. Virtual files disappear when the mock exits, but **recorded payload bytes persist on disk**. Every run prints its capture directory under `captures/`: start with `traffic.log` for timestamped requests/replies and connection history. Raw streams preserve bytes beyond the log's bounded previews. Recording is enabled even without `--verbose`; Ctrl+C finalizes the manifest.
+That legacy test does not validate a model or prove hardware compatibility. Virtual files disappear when the mock exits, but **recorded payload bytes persist on disk**. Every run prints its capture directory under `captures/`: start with `traffic.log` for timestamped requests/replies and connection history. Raw streams preserve bytes beyond the log's bounded previews. Recording is enabled even without `--verbose`; Ctrl+C finalizes the manifest.
 
 Logs in this workspace can be inspected directly by the assistant when you provide their path. Logs on another computer must be copied here deliberately. See [docs/CAPTURES.md](docs/CAPTURES.md) for privacy and storage limits.
 
@@ -68,7 +72,7 @@ Tests use ephemeral loopback ports and never connect to a physical printer. Gene
 | Analysis and replay | Inspect captures, compare experiments and generate regression fixtures. |
 | Upload client and web UI | Use the verified protocol for local drag-and-drop transfer, without print-start. |
 
-A real-printer connection/status capture now supplies independent regression fixtures, with private identity fields anonymized. The user's subsequent mock recording confirms sustained FlashPrint idle polling. Further captures are needed for file transfer, job control, errors and discovery.
+A real-printer connection/status capture now supplies independent regression fixtures, with private identity fields anonymized. The user's subsequent mock recording confirms sustained FlashPrint idle polling. A second capture now establishes the observed upload framing and start/cancel reply formats. Dynamic job behavior, error/retry handling and discovery still need evidence. Small regression fixtures are retained; a broader systematic log corpus/replay system is future work.
 
 ## Documentation
 
