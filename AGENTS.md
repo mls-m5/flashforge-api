@@ -8,9 +8,9 @@ Läs `README.md`, `DESIGN.md`, `docs/PROTOCOL.md` och aktuell etapp i `docs/ROAD
 
 ## Current status
 
-Implemented: the original experimental `upload.py` and a synthetic TCP mock in `finderlab/simulator/`, launched with `python3 -m finderlab mock`. The mock uses a flat package layout so it runs from the repository root without installation. It is not verified against Finder 2 or FlashPrint. Read `docs/MOCK.md` before changing its behavior.
+Implemented: the original experimental `upload.py`, a synthetic TCP mock (`python3 -m finderlab mock`), persistent per-run recording (`finderlab/capture.py`), and a byte-preserving recording proxy (`python3 -m finderlab proxy --target-host IP`). Both CLI modes record to ignored `captures/` by default. The flat package runs from the repository root without installation. Read `docs/MOCK.md`, `docs/PROXY.md` and `docs/CAPTURES.md` before changing their behavior.
 
-Run the dependency-free test suite with `python3 -m unittest discover -s tests -v`. Tests use only ephemeral loopback endpoints. Proxy, capture/replay, discovery, evidence-based profiles and the web UI remain planned. Inspect the actual tree before describing functionality as implemented.
+Run the dependency-free test suite with `python3 -m unittest discover -s tests -v`. Tests use only ephemeral loopback endpoints and project-local `.tmp/` files. FlashPrint/Finder compatibility remains unverified; replay/standalone analysis, discovery, evidence-based profiles and the web UI remain planned. Inspect the actual tree before describing functionality as implemented.
 
 ## Säkerhet: fysisk skrivare
 
@@ -42,6 +42,10 @@ Run the dependency-free test suite with `python3 -m unittest discover -s tests -
 - Bevara `upload.py` som experiment tills ersättningen är testad; ändra inte dess säkerhetsbeteende tyst.
 
 När en testsvit finns ska dess faktiska kommando dokumenteras i README och köras efter relevanta ändringar. Rapportera vad som körts och vad som inte kunnat verifieras. Hävda aldrig FlashPrint-/hårdvarukompatibilitet utifrån enbart syntetiska tester.
+
+## Temporary files
+
+Use the project-local `.tmp/` directory for all temporary files, test fixtures generated at runtime, scratch scripts and command-output files. It is ignored by Git. Do not use `/tmp` or the system default temporary directory for project work. Pass an explicit project-local directory to `tempfile` APIs; set `TMPDIR="$PWD/.tmp"` when invoking tools that otherwise use system temporary storage. Create the directory first and clean up per-test temporary directories when finished.
 
 ## Data och dokumentation
 

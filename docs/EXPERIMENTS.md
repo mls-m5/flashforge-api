@@ -43,7 +43,7 @@ Inspect both TCP streams and original packet timings. TCP segmentation, retransm
 
 ## 3. Proxy experiment
 
-Once implemented, run the proxy with an explicit printer target. Configure FlashPrint to connect to the proxy's reachable address, using manual IP connection if supported. The proxy and printer can both use port 8899 on different hosts. On the same host, a different bind address or port may be needed; whether FlashPrint accepts a different port is still unknown.
+The recording proxy is now implemented and localhost-tested; see [PROXY.md](PROXY.md) for actual commands and limitations. For an explicitly approved hardware experiment, run it with an explicit printer target. Configure FlashPrint to connect to the proxy's reachable address, using manual IP connection if supported. The proxy and printer can both use port 8899 on different hosts. On the same host, a different bind address or port may be needed; whether FlashPrint accepts a different port is still unknown.
 
 Verify the route using both proxy logs and, when possible, a host packet capture. FlashPrint might bypass the proxy by rediscovering the real printer. A connection appearing in the UI alone does not prove interception.
 

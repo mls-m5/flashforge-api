@@ -10,7 +10,7 @@ Vi ska inte bygga slicer, molntjänst eller fjärrstyrning av rörelse/värme i 
 
 ## 2. Utgångsläge och principer
 
-Current implementation: the unchanged experimental `upload.py`, plus a synthetic TCP mock in `finderlab/simulator/`. See [docs/MOCK.md](docs/MOCK.md) for implemented behavior. Neither the uploader's transfer framing nor the mock's responses are verified Finder 2 protocol specifications. Proxy, discovery, capture/replay and web support are still planned.
+Current implementation: the unchanged experimental `upload.py`, a synthetic TCP mock in `finderlab/simulator/`, per-run recording in `finderlab/capture.py` and a byte-preserving TCP proxy in `finderlab/proxy.py`. See [docs/MOCK.md](docs/MOCK.md), [docs/PROXY.md](docs/PROXY.md) and [docs/CAPTURES.md](docs/CAPTURES.md). Neither the uploader's transfer framing nor the mock's responses are verified Finder 2 protocol specifications. Proxy/recording tests use only localhost fake servers. Discovery, replay/standalone analysis and web support remain planned.
 
 - Råa byte är primär evidens; textavkodning är en härledd vy.
 - Skilj lokal observation, extern uppgift och oprövad hypotes åt.
@@ -40,7 +40,7 @@ TCP-kommunikation och UDP-discovery är olika delsystem. Att TCP-porten fungerar
 
 The implemented baseline uses Python 3.11+, `asyncio` for networking and standard-library `unittest` for tests. The mock runs without installation or third-party dependencies; `pytest` was an initial suggestion, not a requirement. Proxy and simulator must remain usable without web dependencies. FastAPI/Uvicorn with static HTML/JavaScript remains a possible later web stack, not a current dependency.
 
-The initial mock uses a flat `finderlab/` package (including `__main__.py` and `simulator/`) and `tests/` so it can run without installation. The following remains a proposed longer-term structure; its other components do not exist yet:
+Current tools use a flat `finderlab/` package (`__main__.py`, `simulator/`, `capture.py`, `proxy.py`) and `tests/` so they can run without installation. Runtime test files use ignored project-local `.tmp/`; recordings use ignored `captures/`. The following remains a proposed longer-term structure rather than a current tree:
 
 ```text
 src/finderlab/

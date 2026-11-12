@@ -4,12 +4,12 @@ import asyncio
 from contextlib import redirect_stdout
 import io
 from pathlib import Path
-import tempfile
 import unittest
 from unittest.mock import patch
 
 from finderlab.__main__ import parser
 from finderlab.simulator import MockConfig, MockPrinter
+from helpers import workspace_tempdir
 import upload
 
 
@@ -190,7 +190,7 @@ class MockTests(unittest.IsolatedAsyncioTestCase):
         await self.claim(pair)
         for args in (
             "0 0:/user/a.gx", "-1 0:/user/a.gx", "9999999999999 0:/user/a.gx",
-            "8388609 0:/user/a.gx", "abc 0:/user/a.gx", "1 /tmp/a.gx",
+            "8388609 0:/user/a.gx", "abc 0:/user/a.gx", "1 /outside/a.gx",
             "1 0:/user/../a.gx", "1 0:/user/a/b.gx", "1 0:/user/.hidden",
             "1 0:/user/a\\b.gx", "1 0:/user/a b.gx",
         ):
@@ -247,7 +247,7 @@ class MockTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_existing_upload_script_against_mock(self):
         # Patch only the destination port, not the uploader's parser or timing.
-        with tempfile.TemporaryDirectory() as directory:
+        with workspace_tempdir() as directory:
             path = Path(directory) / "sample.gx"
             data = b"; synthetic test file\n\x00\xff~M29\r\n"
             path.write_bytes(data)

@@ -16,6 +16,15 @@ The mock now implements `synthetic-v1`; see [MOCK.md](MOCK.md) for its exact com
 - **Regression:** `test_reported_connection_sequence_with_m650` checks the reported command order against the mock; `test_m650_is_read_only_and_rejects_arguments` checks repeatable replies and unchanged control ownership/storage.
 - **Next validation:** restart the updated mock and retry FlashPrint. Record the next commands/UI outcome and FlashPrint version. A real-printer reply capture is still needed to validate formatting and values.
 
+## FP-IDENTITY-002 — Second identity query followed by disconnect
+
+- **Evidence:** subsequent user-provided mock log dated `2026-11-12 14:34:08` (timezone unknown). Client version, OS, selected machine profile and UI error remain unknown.
+- **Observed sequence:** `~M601 S1` → `~M115` → `~M650` → `~M115` → `~M602` → disconnect, all within milliseconds. No unsupported-command warning appears.
+- **Conclusion:** adding `M650` changed the client's observed progression, but did not produce a sustained connection. The log alone cannot establish why FlashPrint released control or whether any particular reply was accepted.
+- **Hypotheses:** model/identity recognition, firmware string parsing, required identity fields or offset reply formatting. Do not silently change identity fields based on this log alone.
+- **Next experiment:** record both this mock attempt and a successful real-printer connection with the same client/profile through the new [recording proxy](PROXY.md), then compare exact request/reply bytes. Persistent [captures](CAPTURES.md) now make replies and historical sessions available without copying terminal logs. Hardware experiments remain manual and explicitly approved.
+- **Local validation:** `test_reported_second_m115_sequence_has_full_reply_history` checks recording of two sessions using the reported command order; it is not a FlashPrint acceptance test.
+
 ## Evidensnivåer
 
 - **Kodobservation:** vad projektets befintliga program gör; bevisar inte skrivarens beteende.

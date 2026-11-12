@@ -10,6 +10,9 @@ venv/
 build/
 dist/
 
+# Project-local temporary files (never use /tmp for project work)
+/.tmp/
+
 # Private recordings, models, and runtime storage
 /captures/
 /uploads/

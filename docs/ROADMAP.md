@@ -6,7 +6,11 @@ Everything below is planned unless explicitly marked complete.
 
 At the user's request, a synthetic TCP mock has been implemented ahead of the recording proxy and real-printer captures. It provides the first offline-testable server, control ownership, fixed identity/status replies, bounded RAM uploads, commit/discard semantics and a mock listing. See [MOCK.md](MOCK.md). Run it with `python3 -m finderlab mock`; run tests with `python3 -m unittest discover -s tests -v`.
 
-This is a partial foundation for M1/M3, **not completion of either milestone**: no proxy/capture output exists, and no FlashPrint or physical Finder compatibility has been verified. The package is flat (`finderlab/`) and uses standard-library tests so it runs without installation. Capture-derived profiles, discovery and remaining milestone criteria still apply.
+## Implementation update: recording and proxy
+
+Both CLI modes now write persistent per-run logs, structured events, per-session binary streams and final hashes/manifests. A byte-preserving TCP proxy supports explicit IP/port targets, bidirectional backpressure, half-close, connection/idle timeouts and fail-closed recording. Tests cover binary streams, concurrent sessions, active one-way transfer, recording limits/I/O failure and CLI restart history. Temporary test data stays inside ignored `.tmp/`.
+
+This delivers the main M1 transport/recording foundation, but does **not** complete every acceptance criterion: there is no standalone capture validator yet, and no physical-printer/FlashPrint proxy trial has been performed. M3 remains a synthetic partial implementation, not verified compatibility. The package is flat (`finderlab/`) and uses standard-library tests without installation. Capture-derived profiles, discovery and remaining milestone criteria still apply. See [PROXY.md](PROXY.md) and [CAPTURES.md](CAPTURES.md).
 
 ## M0 — Agree on the test setup
 

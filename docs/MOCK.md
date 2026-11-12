@@ -15,7 +15,7 @@ python3 -m finderlab mock --verbose
 python3 -m finderlab mock --help
 ```
 
-Default endpoint: `127.0.0.1:8899/TCP`. No UDP sockets or discovery announcements are created. Port `0` requests an available port, printed on startup. Ctrl+C closes sessions; all virtual files are lost on process exit.
+Default endpoint: `127.0.0.1:8899/TCP`. No UDP sockets or discovery announcements are created. Port `0` requests an available port, printed on startup. Ctrl+C closes sessions and finalizes the capture manifest. All virtual files are lost on process exit, but their bytes remain in persistent captures.
 
 For manual testing from a separate FlashPrint machine, explicitly bind to the mock host's LAN address:
 
@@ -91,9 +91,11 @@ The storage limit measures file content, not process RSS. Python object overhead
 
 ## Logs and inspection
 
-`--verbose` enables connection and command logging. Commands are escaped before display; binary upload data is not printed. Unknown commands and abnormal upload termination produce warnings even without verbose mode. Filenames and peer addresses in logs may be private.
+Both requests and replies are now recorded automatically to a per-run directory under `captures/`, printed at startup. `traffic.log` provides timestamped, session-tagged escaped previews; `events.jsonl` provides structured events; per-session `.bin` files preserve exact bytes, including binary uploads and partial commands. New runs retain all previous connection history. See [CAPTURES.md](CAPTURES.md) for format, privacy, metadata flags and limits.
 
-This is **not** the recording format proposed in [CAPTURES.md](CAPTURES.md). There are no raw byte capture files, timestamps/offset manifests, disk exports or replay yet. For raw traffic, use a separately approved host-local packet capture. In Python tests/embedding, `MockPrinter.files` provides a read-only mapping of committed filenames to bytes.
+`--verbose` additionally shows commands/replies on the console. No full binary upload dump is printed there, but persistent captures contain the payload. Unknown commands and abnormal termination produce console warnings even without verbose mode. Logs can contain private names, model content and addresses.
+
+Python embedding is opt-in: pass `capture=Capture(...)` to `MockPrinter` and close the recorder after closing the server. Without that argument, embedding stays memory-only, as used by the original unit tests. `MockPrinter.files` remains a read-only mapping of committed names to bytes. Replay and standalone capture inspection/validation tools are not implemented yet.
 
 ## Testing
 

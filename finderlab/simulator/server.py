@@ -8,6 +8,7 @@ import re
 from types import MappingProxyType
 from typing import Mapping
 
+from ..capture import Capture, CaptureError
 from .profile import PROFILE_ID, STATUS_RESPONSES, response
 
 LOG = logging.getLogger(__name__)
@@ -46,8 +47,9 @@ class MockPrinter:
     No remote path is ever opened on the host filesystem.
     """
 
-    def __init__(self, config: MockConfig | None = None):
+    def __init__(self, config: MockConfig | None = None, *, capture: Capture | None = None):
         self.config = config or MockConfig()
+        self.capture = capture
         self._files: dict[str, bytes] = {}
         self._owner: object | None = None
         self._server: asyncio.Server | None = None
@@ -76,7 +78,7 @@ class MockPrinter:
         return self
 
     def _accept(self, reader, writer):
-        if len(self._tasks) >= self.config.max_clients:
+        if (self.capture and self.capture.failed) or len(self._tasks) >= self.config.max_clients:
             LOG.warning("Connection limit reached; rejecting %r", writer.get_extra_info("peername"))
             writer.close()
             return
@@ -107,15 +109,34 @@ class MockPrinter:
         session = _Session(self, reader, writer)
         peer = writer.get_extra_info("peername")
         LOG.info("Connected %r (profile=%s)", peer, PROFILE_ID)
+        reason = "eof"
         try:
-            await session.run()
+            if self.capture:
+                session.capture = self.capture.session(peer=peer, local=writer.get_extra_info("sockname"))
+            reason = await session.run()
+        except asyncio.CancelledError:
+            reason = "server_shutdown"
+            raise
+        except CaptureError as exc:
+            reason = "capture_failure"
+            LOG.error("Recording failed; closing %r: %s", peer, exc)
         except TimeoutError:
+            reason = "timeout"
             LOG.warning("Idle/write timeout for %r; pending upload discarded", peer)
         except (ConnectionError, OSError) as exc:
+            reason = "connection_error"
             LOG.info("Connection lost %r: %s", peer, exc)
         except Exception:
+            reason = "internal_error"
             LOG.exception("Unexpected mock session failure for %r", peer)
         finally:
+            if session.capture:
+                try:
+                    if reason != "eof" and not self.capture.failed:
+                        session.capture.event("error", phase="session", error_type=reason)
+                    session.capture.close(reason)
+                except CaptureError as exc:
+                    LOG.error("Cannot finish session recording: %s", exc)
             if self._owner is session:
                 self._owner = None
             writer.close()
@@ -136,49 +157,59 @@ class _Session:
         self.pending_name: str | None = None
         self.pending_data = bytearray()
         self.remaining = 0
+        self.capture = None
 
     async def send(self, data: bytes):
+        seq = self.capture.data("server_to_client", data) if self.capture else None
+        LOG.info("Reply %r", data)
         self.writer.write(data)
         await asyncio.wait_for(self.writer.drain(), self.config.idle_timeout)
+        if self.capture:
+            self.capture.event("forward_complete", data_seq=seq, direction="server_to_client")
 
     async def error(self, message: str):
         await self.send(f"Error: {message}\r\n".encode("ascii"))
 
     async def run(self):
+        # Read before parsing so captures include partial/invalid commands and
+        # pipelined bytes, rather than just the lines the parser accepts.
+        buffer = bytearray()
         while True:
-            if self.remaining:
-                chunk = await asyncio.wait_for(
-                    self.reader.read(min(self.remaining, 65536)),
-                    self.config.idle_timeout,
-                )
-                if not chunk:
-                    LOG.warning("EOF during upload; discarding %r", self.pending_name)
-                    return
-                self.pending_data.extend(chunk)
-                self.remaining -= len(chunk)
+            if self.remaining and buffer:
+                count = min(self.remaining, len(buffer))
+                self.pending_data.extend(buffer[:count])
+                del buffer[:count]
+                self.remaining -= count
                 continue
-            try:
-                line = await asyncio.wait_for(
-                    self.reader.readuntil(b"\r\n"), self.config.idle_timeout,
-                )
-            except asyncio.IncompleteReadError as exc:
-                if exc.partial or self.pending_name is not None:
+            if not self.remaining:
+                end = buffer.find(b"\r\n")
+                if (end >= 0 and end + 2 > self.config.max_command_size) or (
+                    end < 0 and len(buffer) >= self.config.max_command_size
+                ):
+                    await self.error("Command too long; connection closing")
+                    return "command_too_long"
+                if end >= 0:
+                    line = bytes(buffer[:end])
+                    del buffer[:end + 2]
+                    try:
+                        text = line.decode("ascii")
+                    except UnicodeDecodeError:
+                        await self.error("Commands must be ASCII")
+                        continue
+                    LOG.info("Command %r", text)
+                    await self.command(text)
+                    continue
+            chunk = await asyncio.wait_for(self.reader.read(65536), self.config.idle_timeout)
+            if not chunk:
+                if self.capture:
+                    self.capture.event("eof", direction="client_to_server")
+                if buffer or self.pending_name is not None:
                     LOG.warning("EOF before command/upload completion; discarding pending state")
-                return
-            except asyncio.LimitOverrunError:
-                await self.error("Command too long; connection closing")
-                return
-            if len(line) > self.config.max_command_size:
-                await self.error("Command too long; connection closing")
-                return
-            try:
-                text = line[:-2].decode("ascii")
-            except UnicodeDecodeError:
-                await self.error("Commands must be ASCII")
-                continue
-            # repr escapes control bytes; no binary upload content is logged.
-            LOG.info("Command %r", text)
-            await self.command(text)
+                    return "incomplete_upload" if self.pending_name is not None else "incomplete_command"
+                return "eof"
+            if self.capture:
+                self.capture.data("client_to_server", chunk)
+            buffer.extend(chunk)
 
     async def command(self, text: str):
         if not text.startswith("~"):

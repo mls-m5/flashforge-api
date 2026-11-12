@@ -1,65 +1,75 @@
-# Inspelningar och referensdata
+# Persistent traffic logs and connection history
 
-Detta är föreslaget format för den kommande proxyn/simulatorn, inte befintlig funktionalitet. Formatet ska versionssättas före första implementationen.
+## Implemented behavior
 
-## Syfte
-
-En inspelning ska kunna besvara **vilka byte som observerades, i vilken riktning och när**, utan att avkodning förstör data. Den ska räcka för strömjämförelse, parserregression och kontrollerad återspelning mot en simulator. PCAP kompletterar med nätverkspaket och TCP-metadata, men ersätter inte applikationens sessionsmetadata.
-
-## Föreslagen layout (formatversion 1)
+Both CLI modes (`mock` and `proxy`) now record by default. Every invocation creates a new private subdirectory under `captures/`, printed at startup. Every accepted session gets its own ID and two raw streams. Restarting the program never overwrites older runs.
 
 ```text
-captures/<capture-id>/
+captures/<UTC-start>-<random-id>/
   manifest.json
+  traffic.log
   events.jsonl
-  sessions/<session-id>/
+  sessions/s0001/
     client-to-server.bin
     server-to-client.bin
-  network.pcapng             # valfri separat nätverksfångst
-  notes.md                   # manuella handlingar och observationer
+  sessions/s0002/
+    ...
 ```
 
-`client` betyder den inkommande klienten (oftast FlashPrint); `server` är proxyns mål eller simulatorn. Behåll samma betydelse i samtliga filer.
+`--capture-dir PATH` changes the parent directory. Default `captures/` is ignored by Git. If you choose a different location, keep it out of version control yourself. Test-generated recordings and other temporary files use the ignored project-local `.tmp/`, not system temporary storage.
 
-### Manifest
+## Reading logs
 
-Ange minst formatversion, capture-ID, verktygsversion/commit om tillgänglig, läge (proxy/simulator), UTC-start, modell/firmware, FlashPrint-version, OS, bindningsadress, mål-IP/-port, experiment-ID och om fångsten avslutades korrekt. Okända miljöfakta ska uttryckligen vara `null`/okända, inte gissade.
+Start with **`traffic.log`**: UTC timestamps, session IDs, connection lifecycle, data directions, escaped byte previews and errors. Data previews include at most 256 bytes per observation. Large or coalesced messages can exceed the preview; the `.bin` files preserve the full bytes, without text conversion. Previews are not a substitute for the raw stream.
 
-Efter stängning anges per råfil storlek och SHA-256. Hashen visar om fångstfilen ändrats; den bevisar inte att skrivaren sparat samma fil. Lämna en synlig ofullständig markering om processen kraschar eller lagringen tar slut.
+`events.jsonl` contains the same observations in a machine-readable form. `manifest.json` records mode, tool version, host OS, configuration, optional FlashPrint/experiment metadata, recording limits and final session summaries. Each summary includes close reason, raw stream sizes and SHA-256 hashes.
 
-### Händelser
+The initial manifest has `complete: false`. It is finalized on orderly shutdown (including Ctrl+C). You can inspect the logs while the process is running, but final hashes/session summaries appear at shutdown. `complete` describes **the recording**, not whether a connection, upload or print succeeded. A recorded refusal or timeout can still be a complete recording.
 
-`events.jsonl` innehåller en JSON-händelse per rad. Föreslagna typer: `connection_open`, `data`, `forward_complete`, `eof`, `error`, `connection_close`, `capture_end`.
+Tell the assistant the printed capture path when it exists in the same accessible workspace. No remote log collection or automatic external upload is implemented. Recordings on another computer must be copied into the workspace or otherwise shared deliberately.
 
-Exempel på en `data`-händelse (fältnamn är ett formatförslag):
+## Format version 1
 
-```json
-{"v":1,"seq":12,"session_id":"s001","type":"data","direction":"client_to_server","monotonic_ns":48211000,"stream_offset":0,"length":12}
-```
+`client` is the incoming client (usually FlashPrint); `server` is the proxy target or the mock. Raw files contain the concatenated observed bytes for that session/direction, not PCAP packets.
 
-`monotonic_ns` är förfluten monotont uppmätt tid sedan capture-start, inte OS-klockans absoluta värde. `seq` ger en total loggordning; den är inte bevis för exakt kausal ordning mellan samtidiga riktningar. UTC används för att koppla till andra verktyg.
+Event types currently emitted:
 
-Rådata lagras separat i binärfilen. `stream_offset` och `length` pekar på exakt intervallet för den riktningens session. En socket-läsning motsvarar en observation, **inte ett protokollpaket**.
+- `listener_bound`: actual local endpoint, including an ephemeral port if requested;
+- `connection_open`: session ID, incoming peer/local endpoints, proxy target when applicable;
+- `target_connected`: proxy upstream connection established;
+- `data`: direction, stream offset, length, escaped preview and truncation flag;
+- `forward_complete`: reference to the `data` event after outgoing `drain()` succeeds;
+- `eof`: direction of observed EOF;
+- `error`: phase and error type, with a message where available;
+- `connection_close`: session close reason;
+- `capture_end`: orderly recorder finalization.
 
-En datahändelse avser byte som proxy har läst och registrerat, inte bevisat mottagande på motparten. `forward_complete` refererar datahändelsens sekvensnummer när skrivningen till utgående transport slutförts utan känt fel; inte heller det bevisar applikationsmottagande. Vid skrivfel kan redan vidarebefordrad mängd vara okänd och får inte fabriceras.
+Each event includes `v`, monotonically increasing `seq`, `session_id` (or null for run-level events), UTC timestamp and `monotonic_ns` elapsed since capture start. Sequence order is logging order, not proof of causality between simultaneous directions.
 
-Fel ska ange fas, riktning, feltyp och om fångsten blivit ofullständig. Half-close loggas per riktning, slutlig stängning separat. På så sätt skiljs timeout från EOF och fullbordad session från krasch.
+A data event records bytes the application read (or, for mock replies, generated). It does not prove the peer received or accepted them. `forward_complete` means a transport write/drain completed without a known error; it does not prove the remote application processed the data. On write failure, already forwarded byte count may be unknown.
 
-## Validering och visning
+A socket read is not a protocol message or a TCP packet. Proxy recordings include only bytes the relay actually read: data still buffered by the OS when a connect failure/shutdown occurs may not appear. Mock parsing happens after recording, so partial/invalid commands and binary payloads that were read are retained.
 
-En framtida validerare ska kontrollera:
+No per-command success inference, protocol decoding, PCAP export, replay or standalone capture validator is implemented yet. Hashes and offsets are checked in automated tests. A separate host packet capture is useful for transport-level verification.
 
-- formatversion, nödvändiga fält och unika sessions-/händelse-ID:n;
-- intervall inom rätt råfil, sammanhängande byteoffset och rimlig tidsordning;
-- storlekar, hash och slutmarkering;
-- att ofullständig sista JSON-rad eller saknade råbyte ger tydlig varning, inte tyst framgång.
+## Limits and failure behavior
 
-Analysverktyget ska kunna visa hex, ASCII med escapade kontrolltecken, kommandohändelser och tidslinje. Text med ersättningstecken är en vy, aldrig underlag för exakt återspelning. Stora payloads ska visas som intervall/längd/hash, inte fylla terminalen med modellinnehåll.
+Defaults:
 
-## Integritet och delning
+- `--max-capture-bytes 268435456`: 256 MiB **per run**, shared by raw streams, JSON events and the human log;
+- `--max-sessions 1000`: maximum recorded sessions per run, bounding manifest/history metadata;
+- active clients and connection timeouts are limited separately by the mock/proxy configuration.
 
-Captures kan innehålla serienummer, MAC/IP-adresser, datornamn, privata filnamn och hela 3D-modeller. Lagra lokalt med begränsad åtkomst. Ingen automatisk uppladdning till externa tjänster.
+The manifest and small filesystem metadata are outside the byte counter. Repeated runs accumulate: there is **no automatic deletion, rotation or total-directory quota**. Review disk space and manually archive/delete old runs as appropriate.
 
-Råinspelningar ska vara oförändrade. För delning: skapa ett separat derivat, dokumentera ersatta fält och regenerera längder/offset/hash där det behövs. Att byta en IP-sträng i rådata kan förstöra ett binärt paket. Använd helst en egen liten, delbar modell redan under försöket.
+On quota exhaustion or recording I/O failure, the affected connection stops rather than silently forwarding unrecorded data. The CLI then shuts down and reports the incomplete capture. Already forwarded bytes cannot be recalled; a partial file or uncertain operation may remain on a real printer. Recording failures prevent a `complete: true` result. If final manifest writing itself fails, the previous incomplete manifest remains.
 
-Håll fulla captures utanför versionshantering. Lägg bara små granskade fixtures i `tests/fixtures/`, med proveniens och licens/tillstånd för ingående innehåll. Bestäm lokal lagringskvot, ledigt-utrymme-kontroll och manuell gallringsrutin innan långa fångster startas.
+Writes are flushed to local files without waiting for shutdown, but not `fsync`ed per event: this is not a power-loss-safe audit log. Disk writes are synchronous and can add latency; the proxy promises byte preservation, not identical packet segmentation or timing. A crash can leave incomplete final JSON/raw data; never treat such a run as complete.
+
+## Privacy and sharing
+
+Recordings can contain full uploaded models, filenames, serial numbers, IP/MAC addresses and every command sent. A mock's virtual storage is RAM-only, but **its capture files persist payload bytes on disk**. The run directory is created with private permissions where supported; also secure its parent directory and backups.
+
+Do not commit raw captures or share them automatically. Prefer a small model you own when collecting a reference. Keep originals unchanged; make separate reviewed derivatives for sharing and document changes. Binary-field edits can invalidate lengths, offsets and hashes.
+
+Only small, reviewed fixtures with provenance and appropriate permission belong in `tests/fixtures/`. Runtime test data belongs in `.tmp/` and is cleaned up by the tests.
