@@ -1,6 +1,10 @@
 # Protokoll: evidens och öppna frågor
 
-Detta är en arbetsjournal, **inte en verifierad Finder 2-specifikation**. Inga lokala inspelningar från fysisk skrivare har ännu analyserats i projektet.
+This is a working journal, **not a verified Finder 2 specification**. No local physical-printer captures have been analyzed yet.
+
+## Implemented synthetic profile
+
+The mock now implements `synthetic-v1`; see [MOCK.md](MOCK.md) for its exact command set, identity/status conventions, limits and raw-length upload state machine. Its replies and errors are authored test conventions, not locally observed Finder 2 responses. `M20` listing is a mock-only convenience, not an evidenced Finder command. It neither implements CRC/block framing nor establishes that such framing is unnecessary. The unchanged uploader passing against this mock validates only internal interoperability, not the hardware protocol.
 
 ## Evidensnivåer
 

@@ -10,7 +10,7 @@ Vi ska inte bygga slicer, molntjänst eller fjärrstyrning av rörelse/värme i 
 
 ## 2. Utgångsläge och principer
 
-Befintlig implementation: enbart `upload.py`. Den lämnas orörd i denna dokumentationsetapp. Dess uppladdningssekvens är en hypotes, inte protokollspecifikation.
+Current implementation: the unchanged experimental `upload.py`, plus a synthetic TCP mock in `finderlab/simulator/`. See [docs/MOCK.md](docs/MOCK.md) for implemented behavior. Neither the uploader's transfer framing nor the mock's responses are verified Finder 2 protocol specifications. Proxy, discovery, capture/replay and web support are still planned.
 
 - Råa byte är primär evidens; textavkodning är en härledd vy.
 - Skilj lokal observation, extern uppgift och oprövad hypotes åt.
@@ -38,9 +38,9 @@ TCP-kommunikation och UDP-discovery är olika delsystem. Att TCP-porten fungerar
 
 ### Föreslagen teknik och struktur
 
-Python 3.11+ med `asyncio` för nätverk och `pytest` för tester föreslås. Proxy och simulator ska kunna köras utan webbberoenden. Ett litet FastAPI/Uvicorn-baserat backend med statisk HTML/JavaScript kan läggas till i webbsteget. Detta är ett teknikförslag som behöver stämmas av mot användarens operativsystem, inte befintliga dependencies.
+The implemented baseline uses Python 3.11+, `asyncio` for networking and standard-library `unittest` for tests. The mock runs without installation or third-party dependencies; `pytest` was an initial suggestion, not a requirement. Proxy and simulator must remain usable without web dependencies. FastAPI/Uvicorn with static HTML/JavaScript remains a possible later web stack, not a current dependency.
 
-Planerad struktur (finns inte ännu):
+The initial mock uses a flat `finderlab/` package (including `__main__.py` and `simulator/`) and `tests/` so it can run without installation. The following remains a proposed longer-term structure; its other components do not exist yet:
 
 ```text
 src/finderlab/

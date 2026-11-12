@@ -6,9 +6,11 @@ Reverse-engineera FlashForge Finder 2:s nätverksprotokoll med en inspelningspro
 
 Läs `README.md`, `DESIGN.md`, `docs/PROTOCOL.md` och aktuell etapp i `docs/ROADMAP.md` före implementation. Läs även `docs/CAPTURES.md` när loggning eller fixtures ändras.
 
-## Nuvarande status
+## Current status
 
-Vid dokumentens tillkomst finns endast `upload.py` som körbar projektkod. Övriga komponenter är planerade. Kontrollera alltid arbetskatalogens faktiska innehåll innan du beskriver funktionalitet som implementerad. Det finns ännu ingen fastställd installation, testsvit eller formatteringskonfiguration.
+Implemented: the original experimental `upload.py` and a synthetic TCP mock in `finderlab/simulator/`, launched with `python3 -m finderlab mock`. The mock uses a flat package layout so it runs from the repository root without installation. It is not verified against Finder 2 or FlashPrint. Read `docs/MOCK.md` before changing its behavior.
+
+Run the dependency-free test suite with `python3 -m unittest discover -s tests -v`. Tests use only ephemeral loopback endpoints. Proxy, capture/replay, discovery, evidence-based profiles and the web UI remain planned. Inspect the actual tree before describing functionality as implemented.
 
 ## Säkerhet: fysisk skrivare
 
@@ -30,7 +32,7 @@ Vid dokumentens tillkomst finns endast `upload.py` som körbar projektkod. Övri
 
 ## Kod och tester
 
-- Föreslagen bas är Python 3.11+, `asyncio` och `pytest`; etablera projektkonfiguration före sådana kommandon dokumenteras som tillgängliga.
+- The current baseline is Python 3.11+, `asyncio`, and standard-library `unittest` (including `IsolatedAsyncioTestCase`). No third-party dependencies or installation are needed to run the mock/tests. Reassess packaging or additional test tools when needed rather than adding dependencies solely to match an earlier proposal.
 - Transport hanterar byte; parser hanterar protokoll; webb hanterar användarflöde. Håll dem separerade.
 - En socket-läsning är inte ett meddelande. Testa delade radslut, flera svar per läsning och blandad text/binärdata.
 - Logga rådata utan förlust. Avkoda endast för presentation. Proxy får inte normalisera radslut eller injicera kommandon.

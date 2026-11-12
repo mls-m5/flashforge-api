@@ -1,6 +1,12 @@
 # Roadmap and acceptance criteria
 
-Everything below is planned unless explicitly marked complete. The initial repository contains only `upload.py`; this documentation pass does not implement the proposed tools.
+Everything below is planned unless explicitly marked complete.
+
+## Implementation update: initial dummy printer
+
+At the user's request, a synthetic TCP mock has been implemented ahead of the recording proxy and real-printer captures. It provides the first offline-testable server, control ownership, fixed identity/status replies, bounded RAM uploads, commit/discard semantics and a mock listing. See [MOCK.md](MOCK.md). Run it with `python3 -m finderlab mock`; run tests with `python3 -m unittest discover -s tests -v`.
+
+This is a partial foundation for M1/M3, **not completion of either milestone**: no proxy/capture output exists, and no FlashPrint or physical Finder compatibility has been verified. The package is flat (`finderlab/`) and uses standard-library tests so it runs without installation. Capture-derived profiles, discovery and remaining milestone criteria still apply.
 
 ## M0 — Agree on the test setup
 

@@ -1,44 +1,76 @@
-# FlashForge Finder 2 – protokollabb och webbuppladdning
+# FlashForge Finder 2 protocol lab
 
-Målet är att förstå Finder 2:s nätverksprotokoll och bygga ett enkelt lokalt webbgränssnitt där man släpper en färdigslicad fil för överföring till skrivaren. Uppladdning ska **inte automatiskt starta en utskrift**.
+Reverse-engineer the Finder 2 network protocol, build a realistic offline simulator, and eventually offer a small local drag-and-drop upload interface. **Uploading must not automatically start a print.**
 
-Projektet ska också kunna användas utan fysisk skrivare genom en alltmer verklighetstrogen simulator.
+## Current status
 
-## Status
+Implemented:
 
-Det finns i dag bara ett experimentellt skript, [`upload.py`](upload.py). Proxy, simulator, analysverktyg och webbgränssnitt är **planerade, inte implementerade**. Dokumentens framtida beteenden och acceptanskriterier är inte löften om befintlig funktionalitet.
+- A **synthetic TCP printer mock**, using Python 3.11+ and the standard library only.
+- Identity/status replies, control ownership, bounded RAM-only upload storage and a mock file listing.
+- Automated localhost tests, including the existing uploader against the mock.
+- The original experimental [`upload.py`](upload.py), unchanged.
 
-Skriptet använder TCP-port `8899`, skickar `~M601 S1`, `~M28`, råa filbyte, `~M29` och `~M602`. Det är inte verifierat mot projektets Finder 2 och bevisar inte att överföringsformatet är rätt. Det accepterar bara en viss form av `ok`-svar och har en fast paus före M29. Läs [protokollanteckningarna](docs/PROTOCOL.md) innan hårdvarutest.
+Not implemented: UDP discovery, recording proxy, capture/replay tooling, capture-derived Finder profiles, virtual printing, or the web interface. **Finder 2 and FlashPrint compatibility remain unverified.** The mock's response syntax and raw-upload framing are hypotheses, not captured printer behavior.
 
-Om man efter riskbedömning vill prova det befintliga skriptet:
+## Run the dummy printer
+
+From the project directory, no installation required:
 
 ```sh
-python3 upload.py SKRIVARENS_IP modell.gx
+python3 -m finderlab mock --verbose
 ```
 
-Skriptet har ingen konfigurerbar port och kräver inga tredjepartsbibliotek. Ingen ny körbar funktionalitet tillkommer genom denna dokumentationsetapp.
+It listens on **127.0.0.1:8899** by default. In another terminal, test the existing uploader against this local mock:
 
-## Planerade delar
+```sh
+python3 upload.py 127.0.0.1 path/to/model.gx
+```
 
-| Del | Uppgift |
+This tests the synthetic protocol only; it does not validate a model or prove hardware compatibility. Files disappear when the mock exits. Verbose logging shows commands and committed file sizes, not binary payload contents. Stop with Ctrl+C.
+
+For a different local port:
+
+```sh
+python3 -m finderlab mock --port 9000
+```
+
+The old uploader still has a hardcoded port of 8899. Use a TCP test client for other ports. See [docs/MOCK.md](docs/MOCK.md) for commands, limits, troubleshooting and manual FlashPrint testing.
+
+## Run tests
+
+```sh
+python3 -m unittest discover -s tests -v
+```
+
+Tests use ephemeral loopback ports and never connect to a physical printer. No third-party dependencies are required. One integration test retains the uploader's existing three-second pause.
+
+## Planned components
+
+| Component | Purpose |
 | --- | --- |
-| Inspelningsproxy | FlashPrint → proxy → riktig skrivare; loggar båda riktningar utan att ändra byteströmmarna. |
-| Finder-simulator | FlashPrint → simulerad skrivare; efterliknar identitet, sessioner, status, filöverföring och senare discovery. |
-| Analys och återspelning | Inspekterar inspelningar, jämför försök och skapar reproducerbara regressionstest. |
-| Klient och webbgränssnitt | Återanvänder det verifierade protokollet för lokal drag-and-drop-uppladdning. |
+| Recording proxy | FlashPrint → proxy → real printer, preserving both byte streams. |
+| Evidence-based simulator | Reproduce observed Finder 2 identity, sessions, status, transfer and discovery. |
+| Analysis and replay | Inspect captures, compare experiments and generate regression fixtures. |
+| Upload client and web UI | Use the verified protocol for local drag-and-drop transfer, without print-start. |
 
-**Rekommenderad ordning:** passiv fångst → proxy → referensinspelning → simulator → verifierad klient → webbgränssnitt.
+The synthetic mock is being implemented before reference captures at the user's request. A reference capture is still required to make it a trustworthy substitute for the physical printer.
 
-## Dokument
+## Documentation
 
-- [DESIGN.md](DESIGN.md): arkitektur, simulatorns realism och säkerhetsgränser.
-- [AGENTS.md](AGENTS.md): arbetsregler för kodassistenter och bidragsgivare.
-- [docs/PROTOCOL.md](docs/PROTOCOL.md): evidens, hypoteser, portar och öppna protokollfrågor.
-- [docs/CAPTURES.md](docs/CAPTURES.md): planerat inspelningsformat och integritet.
-- [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md): praktiskt upplägg för protokollundersökningen.
-- [docs/ROADMAP.md](docs/ROADMAP.md): etapper och testbara acceptanskriterier.
-- [docs/QUESTIONS.md](docs/QUESTIONS.md): sådant som behöver förtydligas inför implementation och hårdvarutest.
+New documentation is English; older Swedish sections will be translated incrementally.
 
-## Säkerhet
+- [DESIGN.md](DESIGN.md): architecture, realism goals and safety boundaries.
+- [AGENTS.md](AGENTS.md): contributor/agent rules, including milestone commits.
+- [docs/MOCK.md](docs/MOCK.md): implemented mock behavior and usage.
+- [docs/PROTOCOL.md](docs/PROTOCOL.md): evidence, hypotheses and open protocol questions.
+- [docs/CAPTURES.md](docs/CAPTURES.md): proposed capture format and privacy.
+- [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md): reverse-engineering procedures.
+- [docs/ROADMAP.md](docs/ROADMAP.md): milestones and acceptance criteria.
+- [docs/QUESTIONS.md](docs/QUESTIONS.md): environment and product decisions still needed.
 
-Arbeta på ett betrott, isolerat LAN. Exponera inte skrivare, proxy, simulator eller webbserver direkt mot internet. En transparent proxy är **inte ett säkerhetsfilter**: FlashPrint kan skicka rörelse-, värme- och startkommandon genom den. Ha fysisk uppsikt över skrivaren under experiment. Läs säkerhetsavsnitten i designen och experimentplanen.
+## Safety
+
+The mock has no outgoing printer connection and never executes G-code. Bind to loopback by default; use an explicit host address only when deliberately exposing the mock on a trusted LAN. Do not expose any project service or the real printer to the internet.
+
+Hardware experiments require explicit approval and physical supervision. The existing uploader is experimental and is not a verified Finder 2 client. A future transparent proxy will forward dangerous commands too; it will not be a safety filter.
