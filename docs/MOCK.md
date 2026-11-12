@@ -34,6 +34,7 @@ All commands must be ASCII, prefixed with `~`, and terminated by **CRLF** (`\r\n
 | Command | Synthetic behavior |
 | --- | --- |
 | `~M115` | Finder 2 label, explicitly synthetic firmware, mock name/serial/MAC. |
+| `~M650` | Fixed synthetic XY offsets: `X: 0 Y: 0`. Read-only; no arguments. Exact Finder reply remains unverified. |
 | `~M105` | Fixed idle temperature values; no heating. |
 | `~M114` | Fixed zero coordinates; no movement. |
 | `~M119` | Fixed ready/idle state with no current print. |
@@ -44,9 +45,15 @@ All commands must be ASCII, prefixed with `~`, and terminated by **CRLF** (`\r\n
 | `~M29` | Owner only: atomically commit a fully received pending upload. No upload pending is an error. |
 | `~M20` | Mock listing: `Begin file list`, sorted `name size` lines, `End file list`. Not verified Finder syntax. |
 
-Status queries and listing do not require control. Arguments to status/listing/release/finish commands are rejected. Unsupported commands, including movement, heating and print-start, are logged as warnings and rejected. Nothing is physically or virtually printed in this version.
+Identity/offset/status queries and listing do not require control. Arguments to status/listing/release/finish commands are rejected. Unsupported commands, including movement, heating and print-start, are logged as warnings and rejected. Nothing is physically or virtually printed in this version.
 
 `M119` describes a non-printing device; it does not simulate busy/temperature/movement dynamics. Files are reflected in `M20`, not in the current-print field.
+
+## Connection troubleshooting: M650
+
+A user-reported FlashPrint attempt sent `M601 S1`, `M115`, `M650`, then released control and disconnected after the old mock rejected `M650`. The mock now answers that query with fixed synthetic XY values instead of an unsupported-command error. See observation **FP-M650-001** in [PROTOCOL.md](PROTOCOL.md) for evidence and limitations.
+
+Restart the mock after updating and retry with `--verbose`. This removes one known unsupported command; it does not guarantee that FlashPrint will accept the response or complete connection. Report the next command sequence, any UI error and your FlashPrint version if it still disconnects.
 
 ## Upload state machine
 

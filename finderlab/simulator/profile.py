@@ -27,6 +27,10 @@ STATUS_RESPONSES = {
         "CurrentFile:"
     ),
     "M27": "SD printing byte 0/0",
+    # Observed as an incoming FlashPrint query in user report FP-M650-001.
+    # XY reply shape is externally reported for other FlashForge models;
+    # zero offsets are a synthetic choice, not a captured Finder 2 response.
+    "M650": "X: 0 Y: 0",
 }
 
 

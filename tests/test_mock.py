@@ -65,6 +65,37 @@ class MockTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue((await self.command(pair, "~" + cmd)).endswith(b"ok\r\n"))
         self.assertIn(b"READY", await self.command(pair, "~M119"))
 
+    async def test_reported_connection_sequence_with_m650(self):
+        # User-reported incoming commands, not a capture of real-printer replies.
+        pair = await self.connect()
+        await self.claim(pair)
+        self.assertIn(b"Machine Type:", await self.command(pair, "~M115"))
+        self.assertEqual(
+            await self.command(pair, "~M650"),
+            b"CMD M650 Received.\r\nX: 0 Y: 0\r\nok\r\n",
+        )
+        self.assertIn(b"Control Release", await self.command(pair, "~M602"))
+        # The mock stays usable; whether FlashPrint accepts the reply is unverified.
+        self.assertIn(b"READY", await self.command(pair, "~M119"))
+        await self.claim(await self.connect())
+
+    async def test_m650_is_read_only_and_rejects_arguments(self):
+        owner, observer = await self.connect(), await self.connect()
+        await self.claim(owner)
+        for _ in range(2):
+            self.assertEqual(
+                await self.command(observer, "~M650"),
+                b"CMD M650 Received.\r\nX: 0 Y: 0\r\nok\r\n",
+            )
+        self.assertEqual(
+            await self.command(observer, "~M650 X1"),
+            b"Error: M650 takes no arguments\r\n",
+        )
+        # Querying offsets must neither acquire control nor modify storage.
+        self.assertIn(b"Control Failed", await self.command(observer, "~M601 S1"))
+        self.assertFalse(self.printer.files)
+        await self.send_file(owner, "after-query.gx", b"abc")
+
     async def test_fragmented_and_coalesced_commands(self):
         reader, writer = await self.connect()
         for part in (b"~M", b"115\r", b"\n~M105\r\n~M27\r\n"):

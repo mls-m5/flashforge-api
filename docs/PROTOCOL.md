@@ -6,6 +6,16 @@ This is a working journal, **not a verified Finder 2 specification**. No local p
 
 The mock now implements `synthetic-v1`; see [MOCK.md](MOCK.md) for its exact command set, identity/status conventions, limits and raw-length upload state machine. Its replies and errors are authored test conventions, not locally observed Finder 2 responses. `M20` listing is a mock-only convenience, not an evidenced Finder command. It neither implements CRC/block framing nor establishes that such framing is unnecessary. The unchanged uploader passing against this mock validates only internal interoperability, not the hardware protocol.
 
+## FP-M650-001 — User-reported FlashPrint connection attempt
+
+- **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.
+- **Observed incoming sequence:** `~M601 S1` → `~M115` → `~M650` → about one second later `~M602`, followed by disconnect. The old mock logged `M650` as unsupported and its implementation sends an error for that command.
+- **Interpretation:** the rejection is a plausible reason FlashPrint abandoned the connection, but the log alone does not prove it is the only issue or that the identity response was fully accepted.
+- **External evidence:** [S6] describes `M650` as reading machine extruder distance and shows `X: 25 Y: 15` followed by `ok`. [S3] describes XY offsets on 5M-series machines. Neither establishes Finder 2's exact response.
+- **Synthetic hypothesis:** return `CMD M650 Received.\r\nX: 0 Y: 0\r\nok\r\n`, using the mock's existing reply envelope. Zero values, the envelope and allowing reads without control are mock conventions, not observed Finder behavior. No offset setter or movement is implemented.
+- **Regression:** `test_reported_connection_sequence_with_m650` checks the reported command order against the mock; `test_m650_is_read_only_and_rejects_arguments` checks repeatable replies and unchanged control ownership/storage.
+- **Next validation:** restart the updated mock and retry FlashPrint. Record the next commands/UI outcome and FlashPrint version. A real-printer reply capture is still needed to validate formatting and values.
+
 ## Evidensnivåer
 
 - **Kodobservation:** vad projektets befintliga program gör; bevisar inte skrivarens beteende.
@@ -91,3 +101,4 @@ Källorna granskades när grunddokumenten skrevs. De är sekundärmaterial tills
 - **[S3]** [Parallel-7 TCP Protocol](https://github.com/Parallel-7/flashforge-api-docs/wiki/TCP-Protocol), läst via [spegel](https://github-wiki-see.page/m/Parallel-7/flashforge-api-docs/wiki/TCP-Protocol). Blandar skrivarfamiljer; upload-avsnittet gäller A3/A4 Pro.
 - **[S4]** [Parallel-7 Discovery Protocol](https://github.com/Parallel-7/flashforge-api-docs/wiki/Discovery-Protocol), läst via [spegel](https://github-wiki-see.page/m/Parallel-7/flashforge-api-docs/wiki/Discovery-Protocol). Använd som hypoteskälla, inte Finder 2-specifikation.
 - **[S5]** [Ultimaker/Cura #7829: FlashForge Finder support](https://github.com/Ultimaker/Cura/issues/7829). Lång diskussion med flera modeller; discovery-exemplet ovan uppger Adventurer 3.
+- **[S6]** [Mrnt/OctoPrint-FlashForge G-Code Reference](https://github.com/Mrnt/OctoPrint-FlashForge/wiki/G-Code-Reference), read via [mirror](https://github-wiki-see.page/m/Mrnt/OctoPrint-FlashForge/wiki/G-Code-Reference). Its `M650` section reports machine extruder distance and an XY-shaped reply; it does not verify this project's Finder 2 response. Treat as a response-shape hypothesis, not a firmware specification.
