@@ -1,0 +1,24 @@
+# Python environments and generated files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Private recordings, models, and runtime storage
+/captures/
+/uploads/
+/storage/
+/local-profiles/
+*.pcap
+*.pcapng
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
