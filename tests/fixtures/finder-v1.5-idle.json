@@ -1,0 +1,32 @@
+{
+  "profile_id": "finder-v1.5-idle",
+  "source_capture": "20261112T190818Z-31ded6e5f0a5",
+  "source_session": "s0001",
+  "source_state": "Complete request/reply prefix; source recording subsequently finalized",
+  "source_client_range": [0, 98],
+  "source_server_range": [0, 1076],
+  "flashprint_version": null,
+  "reported_model": "Finder 2",
+  "observed_machine_type": "Flashforge Finder",
+  "observed_firmware": "V1.5 20170419",
+  "redactions": [
+    "Machine Name replaced with Mock Find (same 9-byte length)",
+    "SN replaced with synthetic F1AB0001 (same 8-byte length)"
+  ],
+  "exchanges": [
+    {"request": "~M601 S1\r\n", "reply": "CMD M601 Received.\r\nControl Success.\r\nok\r\n"},
+    {"request": "~M115\r\n", "reply": "CMD M115 Received.\r\nMachine Type: Flashforge Finder\r\nMachine Name: Mock Find\r\nFirmware: V1.5 20170419\r\nSN: F1AB0001\r\nX: 140  Y: 140  Z: 140\r\nTool Count: 1\r\nok\r\n"},
+    {"request": "~M650\r\n", "reply": "CMD M650 Received.\r\nX: 34 Y: 0\r\nok\r\n"},
+    {"request": "~M115\r\n", "reply": "CMD M115 Received.\r\nMachine Type: Flashforge Finder\r\nMachine Name: Mock Find\r\nFirmware: V1.5 20170419\r\nSN: F1AB0001\r\nX: 140  Y: 140  Z: 140\r\nTool Count: 1\r\nok\r\n"},
+    {"request": "~M114\r\n", "reply": "CMD M114 Received.\r\nX:0 Y:0 Z:0 A:0 B:0\r\nok\r\n"},
+    {"request": "~M27\r\n", "reply": "CMD M27 Received.\r\nSD printing byte 0/0\r\nok\r\n"},
+    {"request": "~M119\r\n", "reply": "CMD M119 Received.\r\nEndstop: X-max: 1 Y-max: 0 Z-max: 1\r\nStatus: S:1 L:0 J:0 F:1\r\nMachineStatus: READY\r\nMoveMode: READY\r\nok\r\n"},
+    {"request": "~M105\r\n", "reply": "CMD M105 Received.\r\nT0:21 /0 B:0 /0\r\nok\r\n"},
+    {"request": "~M119\r\n", "reply": "CMD M119 Received.\r\nEndstop: X-max: 1 Y-max: 0 Z-max: 1\r\nStatus: S:1 L:0 J:0 F:1\r\nMachineStatus: READY\r\nMoveMode: READY\r\nok\r\n"},
+    {"request": "~M105\r\n", "reply": "CMD M105 Received.\r\nT0:21 /0 B:0 /0\r\nok\r\n"},
+    {"request": "~M27\r\n", "reply": "CMD M27 Received.\r\nSD printing byte 0/0\r\nok\r\n"},
+    {"request": "~M119\r\n", "reply": "CMD M119 Received.\r\nEndstop: X-max: 1 Y-max: 0 Z-max: 1\r\nStatus: S:1 L:0 J:0 F:1\r\nMachineStatus: READY\r\nMoveMode: READY\r\nok\r\n"},
+    {"request": "~M105\r\n", "reply": "CMD M105 Received.\r\nT0:21 /0 B:0 /0\r\nok\r\n"},
+    {"request": "~M27\r\n", "reply": "CMD M27 Received.\r\nSD printing byte 0/0\r\nok\r\n"}
+  ]
+}

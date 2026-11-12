@@ -10,7 +10,7 @@ Vi ska inte bygga slicer, molntjänst eller fjärrstyrning av rörelse/värme i 
 
 ## 2. Utgångsläge och principer
 
-Current implementation: the unchanged experimental `upload.py`, a synthetic TCP mock in `finderlab/simulator/`, per-run recording in `finderlab/capture.py` and a byte-preserving TCP proxy in `finderlab/proxy.py`. See [docs/MOCK.md](docs/MOCK.md), [docs/PROXY.md](docs/PROXY.md) and [docs/CAPTURES.md](docs/CAPTURES.md). Neither the uploader's transfer framing nor the mock's responses are verified Finder 2 protocol specifications. Proxy/recording tests use only localhost fake servers. Discovery, replay/standalone analysis and web support remain planned.
+Current implementation: the unchanged experimental `upload.py`, a synthetic TCP mock in `finderlab/simulator/`, per-run recording in `finderlab/capture.py` and a byte-preserving TCP proxy in `finderlab/proxy.py`. See [docs/MOCK.md](docs/MOCK.md), [docs/PROXY.md](docs/PROXY.md) and [docs/CAPTURES.md](docs/CAPTURES.md). The default `finder-v1.5-idle` profile now uses capture-derived, anonymized control/identity/idle replies, with independent golden-byte tests and a user-recorded successful FlashPrint idle connection. The original `synthetic-v1` remains selectable. The uploader's transfer framing and the mock's other behaviors remain hypotheses, not a verified full specification. Automated proxy/recording tests use only localhost fake servers. Discovery, replay/standalone analysis and web support remain planned.
 
 - Råa byte är primär evidens; textavkodning är en härledd vy.
 - Skilj lokal observation, extern uppgift och oprövad hypotes åt.

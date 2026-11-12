@@ -96,7 +96,7 @@ class RecordedMockTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.temp = workspace_tempdir()
         self.capture = Capture(self.temp.name, "mock")
-        self.mock = await MockPrinter(MockConfig(port=0), capture=self.capture).start()
+        self.mock = await MockPrinter(MockConfig(port=0, profile="synthetic-v1"), capture=self.capture).start()
         self.clients = []
 
     async def asyncTearDown(self):

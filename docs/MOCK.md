@@ -1,10 +1,10 @@
-# Synthetic printer mock
+# Offline printer mock
 
 ## Status and provenance
 
-Profile **`synthetic-v1`** is a local testing convention, not a captured Finder 2 firmware profile. Command names are drawn from the hypotheses and external reports already listed in [PROTOCOL.md](PROTOCOL.md). Identity fields, status values, errors, listing syntax, control policy and transfer semantics have **not** been verified against Finder 2 or FlashPrint.
+Default profile **`finder-v1.5-idle`** uses real-printer control-acquisition, identity and idle-status replies from firmware `V1.5 20170419`. Formatting and values match the selected capture except for an anonymized machine name and serial. The original **`synthetic-v1`** remains available with `--profile synthetic-v1`.
 
-The mock is useful for testing the existing uploader, stream handling, session ownership and upload failure paths. A successful test against it is not independent evidence that the uploader implements the physical printer's protocol correctly.
+The user has successfully connected FlashPrint and polled idle status with the new profile; see observations FINDER-IDLE-003 and FINDER-MOCK-004 in [PROTOCOL.md](PROTOCOL.md). Reviewed reference bytes live in `tests/fixtures/finder-v1.5-idle.json`. Upload, errors, listing, release and control-policy behavior remain experimental mock conventions, not validated printer behavior. No response delays or physical dynamics are replayed.
 
 ## Start
 
@@ -25,21 +25,21 @@ python3 -m finderlab mock --host 192.0.2.20 --port 8899 --verbose
 
 `192.0.2.20` is a documentation placeholder: replace it with your machine's actual address. This exposes an unauthenticated mock on that interface; use a trusted network and suitable firewall rules. Bind options do not connect to a printer.
 
-If your FlashPrint version supports manual IP connection, point it at the mock. Whether it accepts this synthetic identity and proceeds is unknown. Watch verbose output for unsupported commands and keep the FlashPrint version/UI error in your notes. Unknown commands produce an error rather than a misleading generic `ok`. Automatic discovery is not supported yet.
+If your FlashPrint version supports manual IP connection, point it at the mock. Connection and idle polling have been observed in the user's setup; compatibility with other client versions/profiles is unknown. Watch verbose output for unsupported commands and keep the FlashPrint version/UI error in your notes. Unknown commands produce an error rather than a misleading generic `ok`. Automatic discovery is not supported yet.
 
 ## Commands implemented
 
 All commands must be ASCII, prefixed with `~`, and terminated by **CRLF** (`\r\n`). Commands are case-sensitive. Success replies have a `CMD <code> Received.` line, optional body, and an `ok` line. Errors are one `Error: ...` line with **no** `ok`.
 
-| Command | Synthetic behavior |
+| Command | Default captured-idle profile (other behavior remains synthetic) |
 | --- | --- |
-| `~M115` | Finder 2 label, explicitly synthetic firmware, mock name/serial/MAC. |
-| `~M650` | Fixed synthetic XY offsets: `X: 0 Y: 0`. Read-only; no arguments. Exact Finder reply remains unverified. |
-| `~M105` | Fixed idle temperature values; no heating. |
-| `~M114` | Fixed zero coordinates; no movement. |
+| `~M115` | `Flashforge Finder`, firmware `V1.5 20170419`, anonymized name/serial, captured field spacing and no MAC line. |
+| `~M650` | Captured `X: 34 Y: 0`; read-only. |
+| `~M105` | Fixed captured idle temperature `T0:21 /0 B:0 /0`; no heating. |
+| `~M114` | Captured `X:0 Y:0 Z:0 A:0 B:0`; no movement. |
 | `~M119` | Fixed ready/idle state with no current print. |
 | `~M27` | Idle print progress (`0/0`). |
-| `~M601 S1` | Acquire device-wide control; repeat claim by the owner succeeds. Another owner's claim fails. |
+| `~M601 S1` | Captured success body `Control Success.`; device-wide ownership/conflict policy is synthetic. |
 | `~M602` | Release owned control and discard pending upload; releasing with no owner is harmless. Cannot release another session's control. |
 | `~M28 <size> 0:/user/<name>` | Owner only: validate limits and begin receiving exactly `<size>` raw bytes. |
 | `~M29` | Owner only: atomically commit a fully received pending upload. No upload pending is an error. |
@@ -105,4 +105,4 @@ python3 -m unittest discover -s tests -v
 
 The suite uses `unittest.IsolatedAsyncioTestCase`, standard-library clients and ephemeral loopback endpoints. It covers parsing/fragmentation, pipelined commands, binary uploads, commit/discard, replacement, control conflicts, limits, timeout, shutdown and the unchanged uploader. No physical printer or FlashPrint instance is used.
 
-Next evidence needed: real Finder 2 connection/status and successful upload captures, plus discovery queries/replies. Use these to add a distinct capture-derived profile rather than silently presenting this one as hardware-accurate.
+Independent fixture tests compare the captured connection/polling prefix byte-for-byte, including coalesced commands and reordered polling. Existing synthetic-profile tests remain explicit. Next evidence needed: upload framing and job control, error handling and discovery; the idle baseline alone does not establish those behaviors.

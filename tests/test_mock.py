@@ -15,7 +15,8 @@ import upload
 
 class MockTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        self.printer = await MockPrinter(MockConfig(port=0)).start()
+        # Keep original synthetic semantics covered independently of the new default.
+        self.printer = await MockPrinter(MockConfig(port=0, profile="synthetic-v1")).start()
         self.connections = []
 
     async def asyncTearDown(self):
@@ -199,7 +200,7 @@ class MockTests(unittest.IsolatedAsyncioTestCase):
 
     async def restart(self, **overrides):
         await self.printer.close()
-        self.printer = await MockPrinter(MockConfig(port=0, **overrides)).start()
+        self.printer = await MockPrinter(MockConfig(port=0, profile="synthetic-v1", **overrides)).start()
 
     async def test_storage_and_file_limits(self):
         await self.restart(max_file_size=4, storage_limit=6, max_files=2)
@@ -262,7 +263,7 @@ class ConfigTests(unittest.TestCase):
             {"port": -1}, {"port": 65536}, {"idle_timeout": 0},
             {"idle_timeout": float("nan")}, {"idle_timeout": float("inf")},
             {"max_file_size": 0}, {"storage_limit": -1}, {"max_clients": 0},
-            {"max_files": 0}, {"max_command_size": 0},
+            {"max_files": 0}, {"max_command_size": 0}, {"profile": "unknown"},
         ):
             with self.assertRaises(ValueError, msg=str(kwargs)):
                 MockConfig(**kwargs)
@@ -271,9 +272,11 @@ class ConfigTests(unittest.TestCase):
         defaults = parser().parse_args(["mock"])
         self.assertEqual(defaults.host, "127.0.0.1")
         self.assertEqual(defaults.port, 8899)
-        custom = parser().parse_args(["mock", "--port", "0", "--max-files", "2"])
+        self.assertEqual(defaults.profile, "finder-v1.5-idle")
+        custom = parser().parse_args(["mock", "--port", "0", "--max-files", "2", "--profile", "synthetic-v1"])
         self.assertEqual(custom.port, 0)
         self.assertEqual(custom.max_files, 2)
+        self.assertEqual(custom.profile, "synthetic-v1")
 
 
 if __name__ == "__main__":

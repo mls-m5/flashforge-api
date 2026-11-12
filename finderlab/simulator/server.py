@@ -9,7 +9,7 @@ from types import MappingProxyType
 from typing import Mapping
 
 from ..capture import Capture, CaptureError
-from .profile import PROFILE_ID, STATUS_RESPONSES, response
+from .profile import DEFAULT_PROFILE, PROFILES, response
 
 LOG = logging.getLogger(__name__)
 NAME = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}\Z")
@@ -25,8 +25,11 @@ class MockConfig:
     max_files: int = 32
     max_clients: int = 8
     max_command_size: int = 4096
+    profile: str = DEFAULT_PROFILE
 
     def __post_init__(self):
+        if self.profile not in PROFILES:
+            raise ValueError(f"unknown mock profile: {self.profile}")
         if not 0 <= self.port <= 65535:
             raise ValueError("port must be between 0 and 65535")
         if not math.isfinite(self.idle_timeout) or self.idle_timeout <= 0:
@@ -49,6 +52,7 @@ class MockPrinter:
 
     def __init__(self, config: MockConfig | None = None, *, capture: Capture | None = None):
         self.config = config or MockConfig()
+        self.profile = PROFILES[self.config.profile]
         self.capture = capture
         self._files: dict[str, bytes] = {}
         self._owner: object | None = None
@@ -108,7 +112,7 @@ class MockPrinter:
     async def _serve(self, reader, writer):
         session = _Session(self, reader, writer)
         peer = writer.get_extra_info("peername")
-        LOG.info("Connected %r (profile=%s)", peer, PROFILE_ID)
+        LOG.info("Connected %r (profile=%s)", peer, self.profile.id)
         reason = "eof"
         try:
             if self.capture:
@@ -230,7 +234,7 @@ class _Session:
                 await self.error("Control Failed")
             else:
                 self.printer._owner = self
-                await self.send(response(cmd, "Control Success V2.1."))
+                await self.send(response(cmd, self.printer.profile.control_success))
         elif cmd == "M602":
             if args:
                 await self.error("M602 takes no arguments")
@@ -241,11 +245,11 @@ class _Session:
                 self.pending_name = None
                 self.pending_data.clear()
                 await self.send(response(cmd, "Control Release."))
-        elif cmd in STATUS_RESPONSES:
+        elif cmd in self.printer.profile.status_responses:
             if args:
                 await self.error(f"{cmd} takes no arguments")
             else:
-                await self.send(response(cmd, STATUS_RESPONSES[cmd]))
+                await self.send(response(cmd, self.printer.profile.status_responses[cmd]))
         elif cmd == "M20":
             if args:
                 await self.error("M20 takes no arguments")
@@ -273,7 +277,7 @@ class _Session:
                 await self.send(response(cmd))
         else:
             LOG.warning("Unsupported command %r", text)
-            await self.error("Unsupported command (synthetic profile)")
+            await self.error("Unsupported command (mock policy)")
 
     async def begin_upload(self, args):
         if len(args) != 2 or not re.fullmatch(r"[0-9]{1,12}", args[0]):

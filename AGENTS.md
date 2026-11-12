@@ -10,7 +10,7 @@ Läs `README.md`, `DESIGN.md`, `docs/PROTOCOL.md` och aktuell etapp i `docs/ROAD
 
 Implemented: the original experimental `upload.py`, a synthetic TCP mock (`python3 -m finderlab mock`), persistent per-run recording (`finderlab/capture.py`), and a byte-preserving recording proxy (`python3 -m finderlab proxy --target-host IP`). Both CLI modes record to ignored `captures/` by default. The flat package runs from the repository root without installation. Read `docs/MOCK.md`, `docs/PROXY.md` and `docs/CAPTURES.md` before changing their behavior.
 
-Run the dependency-free test suite with `python3 -m unittest discover -s tests -v`. Tests use only ephemeral loopback endpoints and project-local `.tmp/` files. FlashPrint/Finder compatibility remains unverified; replay/standalone analysis, discovery, evidence-based profiles and the web UI remain planned. Inspect the actual tree before describing functionality as implemented.
+Run the dependency-free test suite with `python3 -m unittest discover -s tests -v`. Tests use only ephemeral loopback endpoints and project-local `.tmp/` files. The default `finder-v1.5-idle` profile now matches reviewed, anonymized connection/status reference bytes and has a user-recorded FlashPrint idle-polling success. `--profile synthetic-v1` preserves the original convention. Do not extend that limited validation to upload, printing, errors or other firmware/client versions. Replay/standalone analysis, discovery and the web UI remain planned. Inspect the actual tree before describing functionality as implemented.
 
 ## Säkerhet: fysisk skrivare
 

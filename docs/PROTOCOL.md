@@ -1,10 +1,37 @@
-# Protokoll: evidens och öppna frågor
+# Protocol evidence and open questions
 
-This is a working journal, **not a verified Finder 2 specification**. No local physical-printer captures have been analyzed yet.
+This is a working journal, **not a complete Finder 2 specification**. A user-collected real-printer proxy capture now establishes a connection/idle baseline; see FINDER-IDLE-003 below. Behaviors outside the observed exchanges remain unverified.
 
-## Implemented synthetic profile
+## Implemented profiles
 
-The mock now implements `synthetic-v1`; see [MOCK.md](MOCK.md) for its exact command set, identity/status conventions, limits and raw-length upload state machine. Its replies and errors are authored test conventions, not locally observed Finder 2 responses. `M20` listing is a mock-only convenience, not an evidenced Finder command. It neither implements CRC/block framing nor establishes that such framing is unnecessary. The unchanged uploader passing against this mock validates only internal interoperability, not the hardware protocol.
+The default `finder-v1.5-idle` reproduces captured control-acquisition and idle replies with only the name/serial anonymized. The original `synthetic-v1` remains selectable. See [MOCK.md](MOCK.md) for scope. Listing, errors, release/control policy and raw-length upload remain mock conventions, not established printer behavior. The unchanged uploader passing against a mock validates only internal interoperability, not hardware upload framing.
+
+## FINDER-IDLE-003 — Real-printer connection and status baseline
+
+Source: `captures/20261112T190818Z-31ded6e5f0a5`, session `s0001`, starting 2026-11-12 19:08 UTC. User-reported model: Finder 2. Observed identity: `Flashforge Finder`, firmware `V1.5 20170419`. FlashPrint version and selected machine profile are unknown. The manifest has subsequently been finalized successfully.
+
+Observed sequence: `M601 S1 → M115 → M650 → M115 → M114 → M27 → M119 → M105`, then sustained status polling. The client's repeated `M115` is therefore also present in a successful real-printer session and is not itself a failure indicator.
+
+Important differences from `synthetic-v1`:
+
+- `M601`: `Control Success.` (no `V2.1` suffix).
+- `M115`: machine type has no `2`; real firmware text; two spaces between axis dimensions; no MAC field.
+- `M650`: `X: 34 Y: 0`.
+- `M114`: integer coordinate formatting.
+- `M119`: `Z-max`, different endstop/status values and field order; no LED/current-file lines.
+- `M105`: `T0:21 /0 B:0 /0` in the selected idle baseline.
+
+The reviewed fixture `tests/fixtures/finder-v1.5-idle.json` contains the first 14 complete exchanges: client bytes `[0,98)`, server bytes `[0,1076)`. Only name and serial were replaced, preserving lengths. It was compared offline to the actual raw ranges with those two substitutions. Raw captures/private identifiers are not committed. See `tests/fixtures/README.md` for provenance and sanitized hash.
+
+This is evidence for the observed responses, not for arbitrary error handling, control conflicts, release, upload, discovery or timing requirements. Snapshot temperatures/endstops are not a dynamic physical model.
+
+## FINDER-MOCK-004 — FlashPrint accepts the updated idle profile
+
+User-reported successful connection, supported by `captures/20261112T191332Z-4bda35d1b451`, session `s0001`, 2026-11-12 19:13 UTC. The finalized capture uses `finder-v1.5-idle` with the anonymized name/serial.
+
+The client sent 57 commands: one control claim, two identity queries, one offset query, one position query, and 52 status queries (`M27`: 17, `M119`: 18, `M105`: 17). Every command has a corresponding successful reply; no error events or error replies were recorded. Polling lasted about 17 seconds until recording shutdown (`capture_shutdown`), rather than the previous immediate release/disconnect. Raw stream sizes and hashes match the manifest.
+
+This validates manual connection and idle polling in the user's setup (FlashPrint version still unknown), not uploads or printing. No single field has been isolated as the cause of the earlier failure.
 
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
@@ -30,9 +57,11 @@ The mock now implements `synthetic-v1`; see [MOCK.md](MOCK.md) for its exact com
 - **Kodobservation:** vad projektets befintliga program gör; bevisar inte skrivarens beteende.
 - **Extern uppgift:** vad en länkad källa uppger för angiven modell/familj.
 - **Hypotes:** något vi avser att testa.
-- **Lokalt verifierat:** reproducerbart försök med miljö och capture-referens. Inga sådana poster ännu.
+- **Locally observed/reference-backed:** a recorded attempt with environment and capture references. FINDER-IDLE-003 and FINDER-MOCK-004 now provide bounded evidence; missing environment details remain explicit.
 
-## Inventering
+## Initial hypothesis inventory (predates the captured baseline)
+
+The following inventory records the starting assumptions. See the observations above for newer evidence; do not treat these initial unknowns as a summary of current implementation.
 
 | Ämne | Vad vi har | Status och nästa kontroll |
 | --- | --- | --- |

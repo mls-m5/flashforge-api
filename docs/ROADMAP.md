@@ -10,7 +10,13 @@ At the user's request, a synthetic TCP mock has been implemented ahead of the re
 
 Both CLI modes now write persistent per-run logs, structured events, per-session binary streams and final hashes/manifests. A byte-preserving TCP proxy supports explicit IP/port targets, bidirectional backpressure, half-close, connection/idle timeouts and fail-closed recording. Tests cover binary streams, concurrent sessions, active one-way transfer, recording limits/I/O failure and CLI restart history. Temporary test data stays inside ignored `.tmp/`.
 
-This delivers the main M1 transport/recording foundation, but does **not** complete every acceptance criterion: there is no standalone capture validator yet, and no physical-printer/FlashPrint proxy trial has been performed. M3 remains a synthetic partial implementation, not verified compatibility. The package is flat (`finderlab/`) and uses standard-library tests without installation. Capture-derived profiles, discovery and remaining milestone criteria still apply. See [PROXY.md](PROXY.md) and [CAPTURES.md](CAPTURES.md).
+This delivers the main M1 transport/recording foundation, but a standalone capture validator remains missing. The package is flat (`finderlab/`) and uses standard-library tests without installation. See [PROXY.md](PROXY.md) and [CAPTURES.md](CAPTURES.md).
+
+## Implementation update: captured idle profile
+
+A user-collected real-printer proxy capture establishes the `V1.5 20170419` connection/status baseline. Default `finder-v1.5-idle` replies match a reviewed fixture with name/serial anonymized. Independent byte-for-byte tests cover the initial connection/polling sequence and repeated/reordered queries. The user's subsequent finalized mock capture confirms FlashPrint connection and idle polling. `synthetic-v1` remains selectable.
+
+This advances M2/M3, not completion: client version remains unknown; upload, printing, errors, discovery and the remaining acceptance criteria still need evidence and implementation.
 
 ## M0 — Agree on the test setup
 

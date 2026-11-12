@@ -8,7 +8,7 @@ import logging
 from .capture import Capture, CaptureError
 from .proxy import ProxyConfig, RecordingProxy
 from .simulator import MockConfig, MockPrinter
-from .simulator.profile import PROFILE_ID
+from .simulator.profile import PROFILES
 
 
 def parser() -> argparse.ArgumentParser:
@@ -16,8 +16,10 @@ def parser() -> argparse.ArgumentParser:
         prog="python3 -m finderlab", description="Finder 2 offline protocol lab",
     )
     commands = cli.add_subparsers(dest="command", required=True)
-    mock = commands.add_parser("mock", help="run the synthetic TCP printer")
+    mock = commands.add_parser("mock", help="run the offline TCP dummy printer")
     defaults = MockConfig()
+    mock.add_argument("--profile", choices=tuple(PROFILES), default=defaults.profile,
+                      help="response profile (default: %(default)s)")
     for name in ("max_file_size", "storage_limit", "max_files", "max_command_size"):
         mock.add_argument("--" + name.replace("_", "-"), type=int, default=getattr(defaults, name))
     proxy = commands.add_parser("proxy", help="record and relay TCP to an explicit printer IP")
@@ -39,24 +41,32 @@ def parser() -> argparse.ArgumentParser:
 
 
 async def run(config, mode, capture_options):
+    profile = PROFILES[config.profile] if mode == "mock" else None
+    metadata = {"config": asdict(config)}
+    if profile:
+        metadata.update(profile=profile.id, profile_source_capture=profile.source_capture)
     capture = Capture(
-        capture_options["capture_dir"], mode, metadata={"config": asdict(config)},
+        capture_options["capture_dir"], mode, metadata=metadata,
         max_bytes=capture_options["max_capture_bytes"], max_sessions=capture_options["max_sessions"],
         flashprint_version=capture_options["flashprint_version"],
         experiment_id=capture_options["experiment_id"],
-        model="synthetic Finder 2" if mode == "mock" else None,
-        firmware=PROFILE_ID if mode == "mock" else None,
+        model="Flashforge Finder (emulated)" if profile else None,
+        firmware=profile.firmware if profile else None,
     )
     service = MockPrinter(config, capture=capture) if mode == "mock" else RecordingProxy(config, capture)
     try:
         async with service:
             host, port = service.address
             capture.event("listener_bound", address=[host, port])
-            label = f"Synthetic printer ({PROFILE_ID})" if mode == "mock" else "Recording proxy"
+            label = f"Dummy printer ({profile.id})" if profile else "Recording proxy"
             print(f"{label} listening on {host}:{port}", flush=True)
             print(f"Capture directory: {capture.path.resolve()}", flush=True)
             if mode == "mock":
-                print("Not verified against Finder 2 or FlashPrint. No discovery; virtual files are RAM-only.", flush=True)
+                if profile.source_capture:
+                    print("Capture-derived idle replies; name/serial anonymized. FlashPrint acceptance needs a new test.", flush=True)
+                else:
+                    print("Synthetic replies, not verified against Finder 2 or FlashPrint.", flush=True)
+                print("No discovery. Upload protocol remains experimental; virtual files are RAM-only.", flush=True)
             else:
                 print(f"Target: {config.target_host}:{config.target_port}. Transparent relay: ALL commands are forwarded.", flush=True)
             print("Private raw traffic is saved, including any uploaded files. Stop with Ctrl+C.", flush=True)

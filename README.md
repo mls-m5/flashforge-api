@@ -6,14 +6,14 @@ Reverse-engineer the Finder 2 network protocol, build a realistic offline simula
 
 Implemented:
 
-- A **synthetic TCP printer mock**, using Python 3.11+ and the standard library only.
+- An **offline TCP printer mock**, using Python 3.11+ and the standard library only. Its default `finder-v1.5-idle` profile matches captured idle replies; `--profile synthetic-v1` retains the original test profile.
 - Identity/status replies, control ownership, bounded RAM-only virtual upload storage and a mock file listing.
 - **Persistent traffic logs and connection history** for both CLI modes, with exact request/reply streams.
 - A **recording TCP proxy** for comparing FlashPrint traffic with the real printer's responses.
 - Automated localhost tests, including the existing uploader, recording failures and proxy transport behavior.
 - The original experimental [`upload.py`](upload.py), unchanged.
 
-Not implemented: UDP discovery, replay/standalone analysis tooling, capture-derived Finder profiles, virtual printing, or the web interface. **Finder 2 and FlashPrint compatibility remain unverified.** The mock's response syntax and raw-upload framing are hypotheses, not captured printer behavior.
+Not implemented: UDP discovery, replay/standalone analysis tooling, virtual printing, or the web interface. **FlashPrint connection and idle polling have been observed with the captured profile.** Upload framing and other behavior remain unverified; the idle baseline is not a complete printer emulator.
 
 ## Run the dummy printer
 
@@ -68,7 +68,7 @@ Tests use ephemeral loopback ports and never connect to a physical printer. Gene
 | Analysis and replay | Inspect captures, compare experiments and generate regression fixtures. |
 | Upload client and web UI | Use the verified protocol for local drag-and-drop transfer, without print-start. |
 
-The synthetic mock is being implemented before reference captures at the user's request. A reference capture is still required to make it a trustworthy substitute for the physical printer.
+A real-printer connection/status capture now supplies independent regression fixtures, with private identity fields anonymized. The user's subsequent mock recording confirms sustained FlashPrint idle polling. Further captures are needed for file transfer, job control, errors and discovery.
 
 ## Documentation
 
