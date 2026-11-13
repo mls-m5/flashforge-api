@@ -57,9 +57,26 @@ Do not mix these Debian/Ubuntu package instructions indiscriminately: match the 
 
 Once help succeeds, pass the selected extracted AppRun path via `--orca` to `finderlab slice`. Keep configuration isolation and start with offline export only; see [SLICING.md](SLICING.md). For normal GUI setup on the host, run the selected AppRun without `--help` yourself; that launches the application rather than our offline protocol tool. Do not choose an unrelated FlashForge model or initiate discovery/printing as part of the CLI validation.
 
+## Download script (host or agent environment)
+
+From the repository root, run the standard-library Python script:
+
+```sh
+python3 tools/download_orca.py
+# Or select a pinned build explicitly:
+python3 tools/download_orca.py --version 2.5.0
+python3 tools/download_orca.py --version 2.3.0
+```
+
+When using a relative script path, run from the repository root; an absolute script path works from elsewhere. The script saves to the repository's ignored `.local-tools/`, not the caller's current directory. Linux x86_64 only: auto mode selects pinned 2.3.0 with glibc older than 2.38, otherwise pinned 2.5.0. This is an ABI-based convenience, not a complete runtime/security compatibility check. These are fixed versions, not a moving latest-release lookup.
+
+It downloads only from official GitHub release URLs over HTTPS, enforces the known size and pinned SHA-256, and sets executable permission. Existing matching downloads are verified/reused without network access; mismatches or concurrent outputs are never overwritten. Partial downloads stay under project-local `.tmp/` and are cleaned on ordinary failures/interruption. The default download deadline is 300 seconds (`--timeout` changes it), with socket reads bounded by up to 30 seconds; an in-flight read can extend past the deadline by that socket timeout. Publication requires `.tmp/` and `.local-tools/` to be on the same filesystem.
+
+**It does not execute/extract Orca, install runtime packages, replace existing extracted installations, change the active launcher or connect to a printer.** Follow this guide's extraction/runtime instructions after downloading. For 2.3.0, the checksum is pinned from our earlier official download, not an upstream published/signed checksum; see provenance below. No downloaded executable is included in Git.
+
 ## On a host without the shared downloads
 
-Use the official release pages, not similarly named third-party download sites:
+Prefer the script above, or use the official release pages, not similarly named third-party download sites:
 
 - [OrcaSlicer 2.5.0](https://github.com/OrcaSlicer/OrcaSlicer/releases/tag/v2.5.0): `OrcaSlicer_Linux_AppImage_Ubuntu2404_V2.5.0.AppImage` for modern x86_64 Linux.
 - [OrcaSlicer 2.3.0](https://github.com/OrcaSlicer/OrcaSlicer/releases/tag/v2.3.0): `OrcaSlicer_Linux_AppImage_V2.3.0.AppImage` for this older-runtime attempt; **not** its Ubuntu2404 asset.

@@ -45,7 +45,7 @@ Read [docs/CLIENT.md](docs/CLIENT.md) for proxy/direct hardware trials, safety c
 
 ## Slice STL with Orca (offline first)
 
-Install a trusted Orca CLI separately, then supply self-contained machine/process/filament JSON profiles:
+Download a pinned official Linux x86_64 AppImage with `python3 tools/download_orca.py` (older glibc selects 2.3.0; otherwise 2.5.0). It verifies size/SHA-256 but does not execute/extract the application or install runtime packages. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for setup. Then supply self-contained machine/process/filament JSON profiles:
 
 ```sh
 python3 -m finderlab slice upload/model.stl \
