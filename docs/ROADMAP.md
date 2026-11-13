@@ -48,7 +48,7 @@ File/name preflight errors are now recorded without opening a network connection
 
 Implemented at the user's request: offline `slice STL` and opt-in `upload STL --slice`, backed by a separate async Orca CLI adapter. It uses explicit self-contained machine/process/filament JSON, isolated local work/data directories, shell-free arguments, input hashes, persisted diagnostics, process/resource limits and a one-job lock. All slicing/validation must succeed before the upload client connects. Upload-only remains the default. Failed/multiple/binary/oversized outputs, timeout, cancellation and recorder failures are tested with a fake executable; combined transfers/start opt-in use fresh loopback dummies.
 
-This is orchestration, not a validated slicer/profile milestone: native Orca is not installed here, no model was actually sliced by Orca, and no new hardware action was taken. Native build/profile validation, safe Finder 2 toolpaths, GX/thumbnail packaging and the web API remain open. See [SLICING.md](SLICING.md) for current commands, prerequisites and the next offline host trial.
+This is orchestration, not a validated slicer/profile milestone: no model was actually sliced by Orca, and no new hardware action was taken. Subsequent official AppImage download/extraction is documented in [ORCA_INSTALL.md](ORCA_INSTALL.md); native help is still blocked by missing runtimes, with the 2.5.0 build also requiring newer glibc. Native build/profile validation, safe Finder 2 toolpaths, GX/thumbnail packaging and the web API remain open. See [SLICING.md](SLICING.md) for current commands, prerequisites and the next offline host trial.
 
 ## M0 — Agree on the test setup
 

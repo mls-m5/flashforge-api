@@ -4,7 +4,7 @@
 
 Implemented: `slice MODEL.stl` for offline export, and `upload MODEL.stl --slice` for sequential STL → Orca → plain G-code → the existing uploader. The async adapter is `finderlab/slicer.py::slice_model`; it does not import or invoke the printer client. The combined CLI does not open a printer connection until slicing has succeeded. Upload-only remains the default; the existing explicit `--start` still means save confirmation → READY check → start. There is no automatic stop or retry.
 
-**Not verified here:** actual Orca slicing, an Orca Finder 2 profile, physical plain-G-code support, or safe generated toolpaths. Neither `orca-slicer` nor `OrcaSlicer` is installed in this coding environment. Automated tests use an independent fake executable plus fresh ephemeral dummy printers; they test orchestration/limits, not geometry or Orca compatibility. No native slicer or physical printer was run during this implementation.
+**Not verified here:** actual Orca slicing, an Orca Finder 2 profile, physical plain-G-code support, or safe generated toolpaths. Official 2.3.0/2.5.0 AppImages are now downloaded/extracted locally, but native execution is blocked by runtime dependencies (and the newer build's glibc requirement). See [ORCA_INSTALL.md](ORCA_INSTALL.md) for exact paths, provenance, host instructions and pending approval. Automated tests use an independent fake executable plus fresh ephemeral dummy printers; they test orchestration/limits, not geometry or Orca compatibility. No native slicing or physical printer trial was performed; subsequent native help attempts failed in the runtime/loader before CLI validation.
 
 This is a CLI/library foundation for a future local web API, **not an implemented HTTP endpoint**. The user request's “sdl” is interpreted as **STL**. 3MF/OBJ/SDL inputs are not accepted in this first adapter. STL coordinates are interpreted as millimetres: no automatic unit conversion, scaling, repair or auto-orientation. Orca is asked to arrange the object and ensure it is on the bed, using the supplied machine profile.
 
@@ -109,6 +109,6 @@ External interface references, not Finder 2 protocol evidence:
 - [Orca CLI transforms](https://github.com/OrcaSlicer/OrcaSlicer/wiki/cli_transform): arrange/orient/ensure-on-bed;
 - [upstream PrintConfig.cpp](https://github.com/OrcaSlicer/OrcaSlicer/blob/main/src/libslic3r/PrintConfig.cpp): reported setting names and Sailfish enum availability, not proof that a particular packaged version or profile works here.
 
-These upstream pages/main branch can change. No upstream implementation/profile code was copied. Actual installed build/version remains **unknown** until a native host trial is shared.
+These upstream pages/main branch can change. No upstream implementation/profile code was copied. Downloaded versions are now recorded in [ORCA_INSTALL.md](ORCA_INSTALL.md); successful native CLI/build validation is still pending.
 
 Next: provide the host Orca executable/version and exported machine/process/filament profiles (including any inherited parents), resolve/review them, run **offline slicing only**, inspect output plus logs, then transfer to a fresh dummy. Physical start remains a separate approved decision. GX/thumbnail generation, a verified Finder Orca profile and the web API remain unimplemented.

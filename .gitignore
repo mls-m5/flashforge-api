@@ -19,6 +19,7 @@ dist/
 /uploads/
 /storage/
 /local-profiles/
+/.local-tools/
 *.pcap
 *.pcapng
 
