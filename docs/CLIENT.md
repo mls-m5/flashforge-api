@@ -28,7 +28,13 @@ python3 -m finderlab upload upload/test1.gx --remote-name "client sample.gx"
 
 The file must be a nonempty regular `.gx`, `.gcode` or `.g`, at most 8 MiB by default (`--max-file-size` changes this policy). Internal ASCII spaces are allowed in remote names. Paths, control characters, non-ASCII names and ambiguous leading/trailing spaces are rejected. Use an ASCII override if the local basename is incompatible.
 
-Files are sent **unchanged**, including binary GX headers/thumbnails or plain G-code comments/line endings. The local extension is preserved by default; a remote-name override does not convert content. Plain G-code is not automatically wrapped as GX or given a thumbnail. The client does not slice, generate GX, inspect model safety, convert formats or fix G-code. A `.gx` extension is not proof that its contents are safe or Finder-compatible. Use known-working FlashPrint files for the first physical trial.
+Files are sent **unchanged**, including binary GX headers/thumbnails or plain G-code comments/line endings. The local extension is preserved by default; a remote-name override does not convert content. Plain G-code is not automatically wrapped as GX or given a thumbnail. The transport client does not slice, generate GX, inspect model safety, convert formats or fix G-code. Optional CLI slicing is a separate pre-connection Orca stage described below. A `.gx` extension is not proof that its contents are safe or Finder-compatible. Use known-working FlashPrint files for the first physical trial.
+
+## Optional STL slicing before upload
+
+`upload MODEL.stl --slice` uses the separate Orca adapter with explicit `--machine`, `--process`, and `--filament` JSON profiles (`--orca` selects the executable). It slices **before** connecting, retains generated G-code in the run directory and uploads only after successful output validation. Remote names default to the original model stem plus `.gcode`; `.gx` overrides are refused because this does not create a GX container. Plain print-file upload without `--slice` is unchanged; STL cannot accidentally be sent as printer payload.
+
+For offline review use `slice MODEL.stl` instead; it never opens a printer connection. Read [SLICING.md](SLICING.md) for actual commands, profile flattening requirements, limits and unverified native/Finder compatibility. No reviewed Orca profile ships yet, and `--start` is not approval to print unreviewed output.
 
 ## What upload does
 

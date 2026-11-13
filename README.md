@@ -11,7 +11,8 @@ Implemented:
 - **Persistent traffic logs and connection history** for mock, proxy and client commands, with exact request/reply streams.
 - A **recording TCP proxy** for comparing FlashPrint traffic with the real printer's responses.
 - A **print-file upload CLI and reusable async client** for `.gx`, `.gcode` and `.g`, with exact block ACKs/CRC32, upload-only defaults, explicit upload `--start`, and separate confirmed start/stop actions.
-- Automated localhost tests, including the existing uploader, recording failures and proxy transport behavior.
+- An **optional Orca CLI adapter**: offline `slice MODEL.stl`, or `upload MODEL.stl --slice` before any printer connection, using explicit trusted JSON profiles and bounded child processes. Native Orca/profile compatibility still needs a host trial.
+- Automated localhost tests, including the existing uploader, recording failures, proxy transport and fake-slicer orchestration.
 - The original experimental [`upload.py`](upload.py), unchanged.
 
 Not implemented: UDP discovery, replay/standalone analysis tooling, physical job dynamics, or the web interface. **FlashPrint connection, upload and explicit virtual start/stop have now been observed against the dummy.** The new client has also uploaded the user's 3.67 MB GX to a fresh dummy with an exact byte match and no job started. A subsequent user-run host/proxy trial confirmed the new client's real-printer upload-only flow: all blocks, final save and release acknowledged, no start/stop sent. Other firmware, errors/retries and physical job-control actions remain separately bounded; mock success alone is not hardware evidence.
@@ -40,7 +41,22 @@ python3 -m finderlab upload "upload/example.gcode" --start
 
 Test against the dummy first. This flag may heat/move a real printer or a printer behind a proxy. It starts only after successful save and READY validation, never after a failed/uncertain upload, and never appends an automatic stop. Format support is **not** conversion, G-code safety validation or proof of physical firmware support for every extension.
 
-Read [docs/CLIENT.md](docs/CLIENT.md) for proxy/direct hardware trials, safety confirmations, status/start/stop commands, errors and persistent client logs. A hardware trial requires physical supervision and explicit approval; non-loopback targets also require `--allow-hardware`. Slicing/GX/thumbnail generation is deferred—use a known-working FlashPrint file first. The old `upload.py` remains unchanged and is not the new client.
+Read [docs/CLIENT.md](docs/CLIENT.md) for proxy/direct hardware trials, safety confirmations, status/start/stop commands, errors and persistent client logs. A hardware trial requires physical supervision and explicit approval; non-loopback targets also require `--allow-hardware`. Orca slicing integration is optional and requires separately installed Orca plus explicit profiles; verified Finder-profile and GX/thumbnail generation remain deferred—use a known-working FlashPrint file for initial hardware trials. The old `upload.py` remains unchanged and is not the new client.
+
+## Slice STL with Orca (offline first)
+
+Install a trusted Orca CLI separately, then supply self-contained machine/process/filament JSON profiles:
+
+```sh
+python3 -m finderlab slice upload/model.stl \
+  --orca /path/to/orca-slicer \
+  --machine local-profiles/finder-machine.json \
+  --process local-profiles/finder-process.json \
+  --filament local-profiles/pla.json \
+  --output upload/model-review.gcode
+```
+
+For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native Orca is unavailable in this environment: tests use a fake CLI, not real slicing. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The web API and GX/thumbnail creation are not implemented.
 
 ## Run the dummy printer
 
@@ -114,6 +130,7 @@ New documentation is English; older Swedish sections will be translated incremen
 - [docs/CAPTURES.md](docs/CAPTURES.md): implemented logs, history, recording format and privacy.
 - [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md): reverse-engineering procedures.
 - [docs/ROADMAP.md](docs/ROADMAP.md): milestones and acceptance criteria.
+- [docs/SLICING.md](docs/SLICING.md): implemented Orca CLI adapter, offline/combined workflows, trusted profile requirements and native-validation limitations.
 - [docs/SLICING_ANALYSIS.md](docs/SLICING_ANALYSIS.md): offline analysis of supplied FlashPrint/Prusa samples, extrusion-state errors and remaining profile risks (not a print-ready replacement).
 - [docs/PRUSA_ITERATION_01.md](docs/PRUSA_ITERATION_01.md): user-requested start/end candidates and settings for offline re-slicing/review only; not hardware-validated.
 - [docs/QUESTIONS.md](docs/QUESTIONS.md): environment and product decisions still needed.

@@ -2,7 +2,7 @@
 
 ## Implemented behavior
 
-The `mock`, `proxy`, and client commands (`upload`, `status`, `start`, `stop`) record by default. Every invocation creates a new private subdirectory under `captures/`, printed at startup. Every accepted or outgoing session gets its own ID and two raw streams. Client manifests use mode `client` and include the operation in metadata. Restarting the program never overwrites older runs.
+The `mock`, `proxy`, offline `slice`, and client commands (`upload`, `status`, `start`, `stop`) record by default. Every invocation creates a new private subdirectory under `captures/`, printed at startup. Every accepted or outgoing session gets its own ID and two raw streams. Client manifests use mode `client` and include the operation in metadata. Restarting the program never overwrites older runs.
 
 ```text
 captures/<UTC-start>-<random-id>/
@@ -30,6 +30,12 @@ The initial manifest has `complete: false`. It is finalized on orderly shutdown 
 
 Tell the assistant the printed capture path when it exists in the same accessible workspace. No remote log collection or automatic external upload is implemented. Recordings on another computer must be copied into the workspace or otherwise shared deliberately.
 
+## Slicer diagnostics and generated files
+
+Standalone slicing uses mode `slice` with no printer sessions; combined `upload --slice` keeps mode `client`. `slicer_command`, `slicer_output`, `slicer_exit` and `slicer_result` events describe capability probing, slicing argv, stdout/stderr bytes (authoritative `data_hex`, plus readable derived text), completed exit codes and candidate output hashes. The manifest retains input hashes/basenames, limits, executable path and `slicing_confirmed` when completed. Errors in phase `slicing` stop before any printer connection. `slicer_result` is not a toolpath safety assertion or proof that output publication/upload later succeeded.
+
+Generated `sliced.gcode` is retained under the run directory by default, or at standalone slice's explicit `--output`. It has a **separate** size bound (`--max-file-size`) and is outside `--max-capture-bytes`; original profiles/model snapshots and native temporary data are cleaned from project-local `.tmp/`. Raw slicer log chunks are bounded independently and count toward the existing event/log quota. Full details and trust limits: [SLICING.md](SLICING.md).
+
 ## Format version 1
 
 `client` is the incoming client (usually FlashPrint) for proxy/mock captures, or the new upload application for mode `client`; `server` is the selected target/mock in all cases. Raw files contain the concatenated observed bytes for that session/direction, not PCAP packets.
@@ -44,7 +50,8 @@ Event types currently emitted:
 - `eof`: direction of observed EOF;
 - `error`: phase and error type, with a message where available;
 - `connection_close`: session close reason;
-- `capture_end`: orderly recorder finalization.
+- `capture_end`: orderly recorder finalization;
+- `slicer_command`, `slicer_output`, `slicer_exit`, `slicer_result`: optional Orca stages described above.
 
 Each event includes `v`, monotonically increasing `seq`, `session_id` (or null for run-level events), UTC timestamp and `monotonic_ns` elapsed since capture start. Sequence order is logging order, not proof of causality between simultaneous directions.
 

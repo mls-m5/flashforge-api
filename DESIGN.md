@@ -1,12 +1,12 @@
 # Design
 
-## 1. Mål och avgränsning
+## 1. Goals and scope
 
-Bygg ett lokalt protokollabb för **FlashForge Finder 2**, och därefter en liten webbapplikation för uppladdning av färdigslicade filer. Det primära slutflödet är att släppa en fil, se framsteg och få ett tydligt kvitto utan att starta utskrift.
+Build a local protocol lab for **FlashForge Finder 2**, then a small web application for uploading print files. The default workflow should show progress and an honest save confirmation without starting a print.
 
-Simulatorn ska kunna ersätta hårdvaran för så stor del av FlashPrints normala arbetsflöde som möjligt. Målet är observerbar kompatibilitet för en angiven kombination av Finder-modell, firmware och FlashPrint-version, inte en allmän emulator för alla FlashForge-skrivare. Full fysisk simulering och firmwareemulering ingår inte i första versionen.
+The simulator should replace hardware for as much of FlashPrint's normal workflow as supported by evidence. Compatibility is scoped to a Finder model/firmware/FlashPrint combination, not every FlashForge device. Full physical/firmware simulation is out of scope.
 
-Vi ska inte bygga slicer, molntjänst eller fjärrstyrning av rörelse/värme i första webbversionen. `.gcode`, `.g` och `.gx` är kandidater att undersöka, inte bekräftade likvärdiga format. Godtycklig G-code blir inte Finder-kompatibel genom att filändelsen byts.
+We do not build a slicing engine, cloud service or generic motion/heating control. An optional local Orca subprocess adapter now supports STL slicing before upload, with explicit trusted profiles; native/profile validation is still outstanding. The web interface remains planned. `.gcode`, `.g` and `.gx` are transfer candidates, not proven equivalent firmware formats. Renaming G-code cannot make it Finder-compatible or create a GX container.
 
 ## 2. Utgångsläge och principer
 
@@ -108,6 +108,10 @@ Ren återspelning används som strikt regressionstest för en känd följd. Den 
 ## 6. Upload client and future web interface
 
 Implemented client contract: `.gx`/`.gcode`/`.g` byte-preserving transfer (no container conversion or safety inference); upload-only by default; explicit endpoint/firmware guard; bounded incremental CRLF reply parsing with preserved surplus bytes; exact indexed ACK validation; no automatic retries; distinct final-save confirmation and UNKNOWN outcomes. Save/start/stop remain separate library actions. Upload CLI `--start` explicitly composes confirmed save and a fresh READY check with start of the exact returned destination; an unsuccessful/uncertain save never triggers it. No stop is automatically appended. File/name preflight failures are logged before any connection; capture metadata distinguishes start intent, saved-file confirmation and acknowledged start. On a failed binary transfer, close without injecting release/stop into payload. Release is attempted only at a healthy command boundary. Source files are streamed unchanged (including existing previews), checked for mutation, and hashed; a source hash is not remote read-back validation. Non-loopback CLI targets require opt-in, but loopback may itself proxy hardware. See [docs/CLIENT.md](docs/CLIENT.md).
+
+### Optional slicing stage
+
+`finderlab/slicer.py` exposes a separate async STL → plain G-code adapter. `slice` invokes it offline; upload's `--slice` invokes it before opening a printer session. Trusted self-contained JSON profiles, isolated datadir/workspace, capability probing, bounded output/logs/time/address space, process-group cleanup and a per-workspace single-job lock prevent accidental fallback to arbitrary shell options or unbounded concurrent jobs. These are resource/orchestration boundaries, not a native-code security sandbox or motion-safety check. Logs/hash provenance share the capture lifecycle; generated output is separately size-bounded. No fallback guessed Finder profile, G-code rewriting, GX wrapping, thumbnail generation or automatic start is introduced. See [docs/SLICING.md](docs/SLICING.md). Native Orca and a reviewed Finder profile are not available here; tests use a fake CLI and dummy printers.
 
 The following web-interface requirements remain planned:
 

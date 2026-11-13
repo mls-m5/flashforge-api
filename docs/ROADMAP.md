@@ -44,6 +44,12 @@ Upload `--start` is an explicit opt-in: save must first be confirmed, then the c
 
 File/name preflight errors are now recorded without opening a network connection. New tests cover supported suffixes, opt-in/default behavior, remote-name selection/order, failure gates and diagnostics. The provided 36176-byte `.gcode` was also sent byte-for-byte to a freshly created ephemeral dummy and a virtual job started; no hardware was contacted. Further physical trials require approval and G-code/profile review independently of these transport changes.
 
+## Orca slicing adapter foundation
+
+Implemented at the user's request: offline `slice STL` and opt-in `upload STL --slice`, backed by a separate async Orca CLI adapter. It uses explicit self-contained machine/process/filament JSON, isolated local work/data directories, shell-free arguments, input hashes, persisted diagnostics, process/resource limits and a one-job lock. All slicing/validation must succeed before the upload client connects. Upload-only remains the default. Failed/multiple/binary/oversized outputs, timeout, cancellation and recorder failures are tested with a fake executable; combined transfers/start opt-in use fresh loopback dummies.
+
+This is orchestration, not a validated slicer/profile milestone: native Orca is not installed here, no model was actually sliced by Orca, and no new hardware action was taken. Native build/profile validation, safe Finder 2 toolpaths, GX/thumbnail packaging and the web API remain open. See [SLICING.md](SLICING.md) for current commands, prerequisites and the next offline host trial.
+
 ## M0 — Agree on the test setup
 
 - Confirm the model, firmware, FlashPrint version, host OS and GitHub reference.
@@ -150,9 +156,9 @@ Plan:
 
 **Acceptance:** reviewed connection and independently optional upload/start/cancel scenarios can be checked reproducibly in CI without private captures or hardware, with clear mismatch offsets and no accidental auto-abort. Actual replay commands will be documented only once implemented.
 
-## Future: slicing and GX/thumbnail production
+## Slicing and GX/thumbnail production: remaining validation
 
-Deferred until upload is reliable. Keep independent stages: model → CLI slicer → Finder-compatible G-code → GX container/thumbnail → explicit upload → optional separately confirmed start.
+The optional Orca CLI adapter foundation is now implemented (see above); native/profile validation and GX generation remain outstanding. Keep independent stages: model → CLI slicer → reviewed Finder-compatible G-code → optional GX container/thumbnail → explicit upload → optional separately confirmed start.
 
 - Candidate slicers include Slic3r-derived CLI tools such as PrusaSlicer; choose after checking the actual binary/version and Finder profile compatibility, not merely CLI availability. [PrusaSlicer CLI documentation](https://github.com/prusa3d/PrusaSlicer/wiki/Command-Line-Interface) is a starting reference, not an installed/verified integration.
 - The user reports Prusa-generated files colliding with build-surface borders and completed prints. Treat coordinate system, build envelope, homing, extrusion mode, start/end commands and safe end-of-job behavior as **hardware-test blockers** until compared with known-working FlashPrint output/settings for this printer. No generic start/end script or guessed safe parking move should be shipped.
@@ -170,7 +176,7 @@ Other differences include 150×150×160 profile dimensions versus nominal 140×1
 
 The user will paste a documented candidate into a copy of the Prusa profile and return fresh output for analysis. [PRUSA_ITERATION_01.md](PRUSA_ITERATION_01.md) records the exact start/end text and prerequisites: absolute E, explicit resets before/after the working reference's fixed purge path, nominal centered 140 mm envelope, explicit Z speed and requested layer/temperature settings. The end candidate retains the reference homing/shutdown suffix but removes copied job-specific E/Z/XY values; it relies on the generated body's reviewed retract rather than injecting another one.
 
-This is **offline only**, not an approved printer profile. M118 omission/semantics, the changed end transition, physical clearances, slicer-added commands/hooks and actual nozzle/material still need review. The current uploader now also permits plain G-code transfer, but that does not validate this candidate or create a GX container. GX generation is not implemented; renaming Prusa G-code is not conversion. CLI integration remains proposed until the actual host executable is checked with --help. No new slicer install or hardware command was performed here.
+This is **offline only**, not an approved printer profile. M118 omission/semantics, the changed end transition, physical clearances, slicer-added commands/hooks and actual nozzle/material still need review. The current uploader now also permits plain G-code transfer, but that does not validate this candidate or create a GX container. GX generation is not implemented; renaming Prusa G-code is not conversion. Prusa CLI integration remains proposed; the separate Orca adapter now probes its selected executable with --help, but no native Orca binary is available here. No new slicer install or hardware command was performed here.
 
 ## Deferred work
 

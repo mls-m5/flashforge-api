@@ -132,6 +132,12 @@ The upload flag is explicit confirmation, not a new default. M23 uses the actual
 
 These local checks do not validate physical plain-G-code support, the user's new Prusa toolpaths, or the optional combined workflow on hardware. Earlier successful physical client evidence (CLIENT-UPLOAD-009) remains an upload-only GX trial.
 
+## SLICER-ADAPTER-011 — Optional Orca orchestration, no new hardware evidence
+
+User requested on-demand STL slicing before upload. `slice` and upload `--slice` now orchestrate a trusted external Orca CLI, with required explicit JSON profiles, isolated input snapshots, bounded process/log/output resources and diagnostics. The uploader connects only after successful slicing and default operation still sends no M23/M26. Profile/toolpath safety, GX generation and firmware acceptance are not inferred.
+
+External interface references and exact flags are recorded in [SLICING.md](SLICING.md). Native Orca version is **unknown/not installed** here. Local tests use an independent fake executable, then fresh ephemeral `finder-v1.5` dummies for byte preservation, stage ordering and opt-in virtual start. They are orchestration regression checks, not actual slicing or new independent Finder protocol evidence. No physical printer was contacted. The next acceptance step is an offline host Orca/profile trial with logs/output shared for review.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.
