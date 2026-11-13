@@ -9,13 +9,15 @@ Downloaded and extracted under ignored `.local-tools/`, without sudo:
 | Build | Local executable | Observed status |
 | --- | --- | --- |
 | Official 2.5.0 Ubuntu2404 x86_64 AppImage | `.local-tools/orca-2.5.0/AppRun` | Cannot run here: requires GLIBC 2.38 and GLIBCXX 3.4.32, plus missing desktop runtime libraries. Do not replace the system glibc to make it work. |
-| Official 2.3.0 non-Ubuntu2404 x86_64 AppImage | `.local-tools/orca-2.3.0/AppRun` | No missing GLIBC/GLIBCXX versions in the loader check; runtime libraries still missing. Native `--help`/slicing has not succeeded yet. |
+| Official 2.3.0 non-Ubuntu2404 x86_64 AppImage | `.local-tools/orca-2.3.0/AppRun` | Native `--help` succeeds after approved runtime installation, including under the adapter's process/resource limits. Actual slicing/profile validation is still outstanding. |
 
 `.local-tools/orca-slicer` points to the extracted 2.3.0 AppRun. Both original AppImages and download provenance JSON remain local; this uses about 1.3 GiB. No binaries or extracted third-party files are committed. The original AppRun files are unmodified. Their resource directories must stay alongside them; do not copy only the internal executable.
 
-Direct AppImage execution failed because this environment has no FUSE device/fusermount. Extraction succeeded and avoids that requirement. The 2.3.0 loader identified missing GTK/WebKit/OpenGL dependencies. A request for `libwebkit2gtk-4.0-37`, `libgl1`, and `libegl1` is the next step; their dependencies provide the other missing desktop libraries. This requests packages for the agent environment, not an automatic host OS installation.
+Direct AppImage execution failed because this environment has no FUSE device/fusermount. Extraction succeeded and avoids that requirement. The 2.3.0 loader identified missing GTK/WebKit/OpenGL dependencies. The user approved `libwebkit2gtk-4.0-37`, `libgl1`, and `libegl1`; Pi rebuilt the sandbox image successfully with these packages and their dependencies. This installed runtimes in the agent environment, not automatically on the host OS.
 
-Only isolated `--help`/loader probes were attempted. No model was sliced, no GUI opened intentionally, and no printer connected. After package approval: retry help using isolated project-local data/cache/temp paths, record the actual advertised CLI flags, then decide the next offline profile trial. An installed application is not a validated Finder profile.
+Native validation now succeeds: direct isolated `--help --datadir DATA` exits 0 without FUSE or a display, and a second probe through the actual adapter worker succeeds with its 4096 MiB address-space limit, 256 MiB file/workspace limit and 15-second help timeout. Capture `20261113T212359Z-e2569f3cc60a` (mode `slice`, experiment `orca-native-help-only`) preserves argv, stdout/stderr and exit status. All required flags are advertised: `--slice`, `--load-settings`, `--load-filaments`, `--outputdir`, `--datadir`, `--arrange`, `--orient`, `--ensure-on-bed`. The asset is release 2.3.0, while its help banner literally says `OrcaSlicer-01.10.01.50:`; retain both rather than inventing a consistent banner.
+
+Only isolated `--help`/loader probes were attempted. No model was sliced, no GUI opened intentionally, and no printer connected. Next: supply/review profiles for an offline slicing trial. Successful help/capability probing is not actual geometry generation or a validated Finder profile.
 
 ## On the host: reuse the shared files
 
@@ -28,13 +30,14 @@ mkdir -p .tmp/orca-host/{tmp,data,config,cache}
 On Ubuntu 24.04 or another compatible modern x86_64 system, probe the newer build:
 
 ```sh
-TMPDIR="$PWD/.tmp/orca-host/tmp" \
-XDG_CONFIG_HOME="$PWD/.tmp/orca-host/config" \
-XDG_CACHE_HOME="$PWD/.tmp/orca-host/cache" \
-XDG_DATA_HOME="$PWD/.tmp/orca-host/data" \
-  .local-tools/orca-2.5.0/AppRun --help \
-  --datadir "$PWD/.tmp/orca-host/data"
+ORCA="$PWD/.local-tools/orca-2.5.0/AppRun"
+(cd .tmp/orca-host && \
+  TMPDIR="$PWD/tmp" XDG_CONFIG_HOME="$PWD/config" \
+  XDG_CACHE_HOME="$PWD/cache" XDG_DATA_HOME="$PWD/data" \
+  "$ORCA" --help --datadir "$PWD/data")
 ```
+
+Run from this scratch directory: the observed 2.3.0 build writes a `result.json` in its working directory even for successful help. Its `Success.` does not mean a model was sliced. The Finderlab adapter already runs help in an isolated temporary working directory.
 
 If it reports missing runtime libraries, on Ubuntu 24.04 the relevant packages are normally:
 
@@ -83,4 +86,4 @@ The launcher is then `.local-tools/orca-selected/AppRun`. Keep all extraction/te
 
 2.3.0 asset: 112784576 bytes. Observed local SHA-256 `73079d88ec36f0615db7919d00aa26fe301e348ba6e051862a7cfc4040150c03`. GitHub's API did **not** publish a digest for this asset, so this is local provenance, not independent upstream checksum verification. Downloads used the official GitHub HTTPS release URLs; hashes do not constitute an independent security audit or signing certificate.
 
-Runtime validation and any profile adjustments remain outstanding. Do not infer hardware, toolpath or firmware compatibility from downloading/extracting an application.
+Actual slicing and profile validation remain outstanding; only native help/capability probing has succeeded. Do not infer hardware, toolpath or firmware compatibility from downloading/extracting an application.

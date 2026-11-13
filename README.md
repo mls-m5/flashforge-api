@@ -56,7 +56,7 @@ python3 -m finderlab slice upload/model.stl \
   --output upload/model-review.gcode
 ```
 
-For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native AppImages are downloaded/extracted but not runnable here yet; tests use a fake CLI, not real slicing. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation and current runtime blockers. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The web API and GX/thumbnail creation are not implemented.
+For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native Orca 2.3.0 help/capability probing now succeeds after approved runtime installation; actual slicing/profile validation remains outstanding, and automated tests still use a fake CLI. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation, the probe reference and the newer 2.5.0 build's ABI blocker. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The web API and GX/thumbnail creation are not implemented.
 
 ## Run the dummy printer
 
