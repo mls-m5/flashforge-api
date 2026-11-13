@@ -120,6 +120,18 @@ The user started a host-side proxy and ran the new client manually after the age
 
 This supports successful save/release on the observed hardware/firmware and file. It is not remote file read-back/hash verification, a printer-screen/preview check, a hardware emergency-stop guarantee, or validation of unrelated slicer output. No new-client start/stop command was tested physically in this trial. Original file, name/hash details and raw recordings remain outside Git.
 
+## CLIENT-OPTIONS-010 — File allowlist, explicit start and diagnostics
+
+User requested plain G-code transfer and an explicit upload-and-start flag. The client now allows `.gx`, `.gcode` and `.g`, preserving bytes/default extension without interpreting, converting or validating toolpaths. This allowlist is not new evidence that every extension is physically printable on the firmware.
+
+The existing newest pre-change recordings were proxy `20261112T221825Z-06ea748aad87` and client `20261112T221858Z-7faf5e3f4d55`. They show a **GX** transfer with blocks 0/1 acknowledged and block 2 sent, then client `CancelledError`; no M29 or M23. They do not show a `.gcode` rejection by the printer. Old extension rejection happened during local preflight before capture initialization. Preflight file/name errors are now logged before any endpoint connection, without changing CLI syntax/configuration guards.
+
+Local development trial for the new options: supplied 36176-byte `.gcode` sent via the actual CLI to a fresh ephemeral dummy, saved byte-for-byte and explicitly started as a virtual job with `--start`. Client capture `20261112T235709Z-ae02c8614f60`, dummy capture `20261112T235709Z-ce09a7299b86`, experiment `gcode-start-dummy-only`. Wire sequence: `M601 S1 → M115 → M119 → M28 → 9 frames → M29 → M119 → M23 → M602`. No M26 was sent and no physical printer was contacted.
+
+The upload flag is explicit confirmation, not a new default. M23 uses the actual saved remote basename (including overrides) only after verified M29 and a fresh READY check. Wrong ACK, failed/unknown save or a non-READY post-save state cannot trigger start. An uncertain start is not retried; the preceding confirmed save remains recorded separately. Tests cover these failure gates plus default upload-only behavior and invalid-format logging with no connection.
+
+These local checks do not validate physical plain-G-code support, the user's new Prusa toolpaths, or the optional combined workflow on hardware. Earlier successful physical client evidence (CLIENT-UPLOAD-009) remains an upload-only GX trial.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.

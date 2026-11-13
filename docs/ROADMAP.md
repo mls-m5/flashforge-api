@@ -36,6 +36,14 @@ An actual CLI trial uploaded the user's `upload/test1.gx` to a fresh ephemeral d
 
 The user subsequently completed a host-side new-client trial through the proxy to the real Finder: all 896 block ACKs, `Done saving file.` and `Control Release.` were recorded. Reconstructed payload matches the provided GX; client and proxy streams match; no start/stop was sent. See CLIENT-UPLOAD-009. This satisfies the observed M5 upload-only hardware trial, not general firmware compatibility or physical tests of the client's optional job controls. Error/retry variants and additional hardware actions still require bounded evidence/approval. Slicing and GX/thumbnail production are not part of this implementation.
 
+## Client update: additional suffixes, explicit upload-and-start, preflight logs
+
+The CLI permits `.gx`, `.gcode` and `.g` (case-insensitive), preserving source bytes and extension unless the user explicitly supplies a remote name. This is transport support, not a slicer/converter or a hardware-printability guarantee. STL/3MF/BGCODE remain rejected.
+
+Upload `--start` is an explicit opt-in: save must first be confirmed, then the client rechecks READY and starts the actual saved remote name. Failed transfer/unknown save does not start; a failed start preserves the already confirmed save outcome. There is never an automatic stop. Default upload-only and the standalone confirmed start/stop commands remain available.
+
+File/name preflight errors are now recorded without opening a network connection. New tests cover supported suffixes, opt-in/default behavior, remote-name selection/order, failure gates and diagnostics. The provided 36176-byte `.gcode` was also sent byte-for-byte to a freshly created ephemeral dummy and a virtual job started; no hardware was contacted. Further physical trials require approval and G-code/profile review independently of these transport changes.
+
 ## M0 — Agree on the test setup
 
 - Confirm the model, firmware, FlashPrint version, host OS and GitHub reference.
@@ -162,7 +170,7 @@ Other differences include 150×150×160 profile dimensions versus nominal 140×1
 
 The user will paste a documented candidate into a copy of the Prusa profile and return fresh output for analysis. [PRUSA_ITERATION_01.md](PRUSA_ITERATION_01.md) records the exact start/end text and prerequisites: absolute E, explicit resets before/after the working reference's fixed purge path, nominal centered 140 mm envelope, explicit Z speed and requested layer/temperature settings. The end candidate retains the reference homing/shutdown suffix but removes copied job-specific E/Z/XY values; it relies on the generated body's reviewed retract rather than injecting another one.
 
-This is **offline only**, not an approved printer profile. M118 omission/semantics, the changed end transition, physical clearances, slicer-added commands/hooks and actual nozzle/material still need review. The current uploader accepts GX, and GX generation is not implemented; renaming Prusa G-code is not conversion. CLI integration remains proposed until the actual host executable is checked with --help. No new slicer install or hardware command was performed here.
+This is **offline only**, not an approved printer profile. M118 omission/semantics, the changed end transition, physical clearances, slicer-added commands/hooks and actual nozzle/material still need review. The current uploader now also permits plain G-code transfer, but that does not validate this candidate or create a GX container. GX generation is not implemented; renaming Prusa G-code is not conversion. CLI integration remains proposed until the actual host executable is checked with --help. No new slicer install or hardware command was performed here.
 
 ## Deferred work
 

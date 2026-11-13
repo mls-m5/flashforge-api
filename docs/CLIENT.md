@@ -1,8 +1,8 @@
-# GX upload client
+# Print-file upload client
 
 ## Status
 
-Implemented as `python3 -m finderlab upload`, with reusable async `FinderClient` in `finderlab/client.py`. Python 3.11+, standard library only. It implements the observed V1.5 block/CRC/ACK protocol, **not** the raw transfer in the old `upload.py`.
+Implemented as `python3 -m finderlab upload`, with reusable async `FinderClient` in `finderlab/client.py`. Python 3.11+, standard library only. It implements the observed V1.5 block/CRC/ACK protocol, **not** the raw transfer in the old `upload.py`. The client accepts `.gx`, `.gcode` and `.g` (case-insensitive). This is a transfer allowlist, not a guarantee that every format/file is understood or safe to print on physical firmware.
 
 The actual CLI has uploaded the user's `upload/test1.gx` to a fresh ephemeral loopback dummy: 3668165 bytes, 896 blocks, exact received/source content and SHA-256 match, no virtual job started. Independent scripted-server tests check wire bytes against reference replies and a known CRC vector. The user subsequently ran the same client on the host through the proxy to the real Finder: all 896 blocks were acknowledged, final save and control release were confirmed, and client/proxy byte streams matched exactly. No start/stop was sent. See CLIENT-UPLOAD-009 in [PROTOCOL.md](PROTOCOL.md). This validates that upload-only workflow on the observed firmware, not every device/error case or the new client's physical start/stop actions.
 
@@ -26,9 +26,9 @@ Default target is `127.0.0.1:8899`. A different port works with `--port`. An ASC
 python3 -m finderlab upload upload/test1.gx --remote-name "client sample.gx"
 ```
 
-The file must be a nonempty regular `.gx`, at most 8 MiB by default (`--max-file-size` changes this policy). Internal ASCII spaces are allowed in remote names. Paths, control characters, non-ASCII names and ambiguous leading/trailing spaces are rejected. Use an ASCII override if the local basename is incompatible.
+The file must be a nonempty regular `.gx`, `.gcode` or `.g`, at most 8 MiB by default (`--max-file-size` changes this policy). Internal ASCII spaces are allowed in remote names. Paths, control characters, non-ASCII names and ambiguous leading/trailing spaces are rejected. Use an ASCII override if the local basename is incompatible.
 
-Files are sent **unchanged**, including binary headers/thumbnails. The client does not slice, generate GX, inspect model safety, convert formats or fix G-code. A `.gx` extension is not proof that its contents are safe or Finder-compatible. Use known-working FlashPrint files for the first physical trial.
+Files are sent **unchanged**, including binary GX headers/thumbnails or plain G-code comments/line endings. The local extension is preserved by default; a remote-name override does not convert content. Plain G-code is not automatically wrapped as GX or given a thumbnail. The client does not slice, generate GX, inspect model safety, convert formats or fix G-code. A `.gx` extension is not proof that its contents are safe or Finder-compatible. Use known-working FlashPrint files for the first physical trial.
 
 ## What upload does
 
@@ -40,9 +40,22 @@ Files are sent **unchanged**, including binary headers/thumbnails. The client do
 6. Verify that the source has not changed, send `M29`, require `Done saving file.` plus the command echo and final CRLF-terminated `ok`.
 7. Try `M602` to release control at a healthy command boundary, then close.
 
-**No M23/start or M26/stop is part of uploading.** Use an unused remote name to avoid overwriting a file already stored on the printer. No remote existence/listing protocol has been verified, so the client cannot automatically prove the name is unused.
+**By default no M23/start or M26/stop is part of uploading.** `--start` is an explicit confirmation to compose upload followed by start, only after verified save and a fresh READY check. No M26 is ever appended. Use an unused remote name to avoid overwriting a file already stored on the printer. No remote existence/listing protocol has been verified, so the client cannot automatically prove the name is unused.
 
 Console progress is **block-acknowledged logical bytes**, separate from final save confirmation. Printed SHA-256 is the source stream hash, not a remote file read-back. Save confirmation is based on the endpoint's reply.
+
+## Optional start after upload
+
+```sh
+# Upload only (default):
+python3 -m finderlab upload "upload/example.gcode"
+# Explicitly request start after confirmed save:
+python3 -m finderlab upload "upload/example.gcode" --start
+```
+
+Use these first against the **dummy**. `--start` may heat/move a real target, including through a loopback proxy; it is not a motion-safety check. The flag itself supplies confirmation; the separate `start` command still requires `--confirm-start`.
+
+The combined command starts the exact saved destination name, including `--remote-name`, in the same session. Failed block transfer, rejected save or UNKNOWN final-save result never triggers start. If start later fails, the already confirmed file remains saved: the console/save metadata distinguish the stages. Do not blindly re-upload/retry. No automatic stop or cleanup deletion is performed. `.gcode`/`.g` and the combined start mode have been tested locally; the earlier successful physical trial was upload-only with GX, not a guarantee for these additional cases.
 
 ## Real-printer trial: preferably through the proxy
 
@@ -75,7 +88,7 @@ python3 -m finderlab start "client sample.gx" --confirm-start
 python3 -m finderlab stop --confirm-stop
 ```
 
-These default to the same loopback endpoint. Use the target/port/hardware flags explicitly as needed. `start` may physically heat/move the printer; it is **not required to upload**. `stop` cancels current work and is never sent automatically, including on timeout, Ctrl+C, release or disconnect. Upload-only creates no new print job to stop.
+These default to the same loopback endpoint. Use the target/port/hardware flags explicitly as needed. `start` (or upload's explicit `--start`) may physically heat/move the printer; it is **not required to upload**. `stop` cancels current work and is never sent automatically, including on timeout, Ctrl+C, release or disconnect. Default upload-only creates no new print job to stop.
 
 A stop ACK is not proof of READY, stopped motion or cooled heaters; physical firmware has transient states. This is not an emergency-stop facility. Remain at the printer and use its physical controls if necessary.
 
@@ -87,7 +100,7 @@ There are **no automatic retries/resume**. If a block fails, the connection clos
 
 At a healthy command boundary, release is attempted. If release fails after a confirmed save, the save remains confirmed; a separate warning is emitted, not a retry. One client serializes its operations, but there is no cross-process lock: close competing clients before experiments.
 
-Every CLI run prints its private `captures/<run>/` directory. `traffic.log`, structured events and exact request/reply streams are retained, including uploaded model bytes. `mode` is `client`; metadata names the operation. See [CAPTURES.md](CAPTURES.md). Original GX examples under `upload/` or `uploads/` remain ignored by Git. No original model content is committed as a regression fixture.
+Every CLI run prints its private `captures/<run>/` directory. `traffic.log`, structured events and exact request/reply streams are retained, including uploaded model bytes. `mode` is `client`; metadata names the operation and records `start_requested`, plus `upload_confirmed` / `start_acknowledged` when those stages succeed. File/name validation errors now create an error with phase `preflight` before any endpoint connection. Invalid CLI syntax/configuration can still fail before a capture can be initialized. See [CAPTURES.md](CAPTURES.md). Original print-file examples under `upload/` or `uploads/` remain ignored by Git. No original model content is committed as a regression fixture.
 
 ## Later, not this step
 

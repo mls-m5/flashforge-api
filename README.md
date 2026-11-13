@@ -10,13 +10,13 @@ Implemented:
 - Identity/status replies, control ownership, bounded RAM-only virtual upload storage and a mock file listing.
 - **Persistent traffic logs and connection history** for mock, proxy and client commands, with exact request/reply streams.
 - A **recording TCP proxy** for comparing FlashPrint traffic with the real printer's responses.
-- A **GX upload CLI and reusable async client**, with exact block ACKs/CRC32, upload-only defaults, and separately confirmed start/stop actions.
+- A **print-file upload CLI and reusable async client** for `.gx`, `.gcode` and `.g`, with exact block ACKs/CRC32, upload-only defaults, explicit upload `--start`, and separate confirmed start/stop actions.
 - Automated localhost tests, including the existing uploader, recording failures and proxy transport behavior.
 - The original experimental [`upload.py`](upload.py), unchanged.
 
 Not implemented: UDP discovery, replay/standalone analysis tooling, physical job dynamics, or the web interface. **FlashPrint connection, upload and explicit virtual start/stop have now been observed against the dummy.** The new client has also uploaded the user's 3.67 MB GX to a fresh dummy with an exact byte match and no job started. A subsequent user-run host/proxy trial confirmed the new client's real-printer upload-only flow: all blocks, final save and release acknowledged, no start/stop sent. Other firmware, errors/retries and physical job-control actions remain separately bounded; mock success alone is not hardware evidence.
 
-## Upload a GX file (dummy first)
+## Upload a print file (dummy first)
 
 Terminal 1:
 
@@ -30,7 +30,15 @@ Terminal 2:
 python3 -m finderlab upload upload/test1.gx
 ```
 
-The client defaults to `127.0.0.1:8899`. Confirm this is the **dummy**, not a proxy to hardware. It preserves all GX bytes/embedded thumbnails, validates block ACKs and final save, and sends **no start or stop**. Use `--port` for a different endpoint and `--remote-name "client sample.gx"` for an ASCII destination basename. Only observed Finder firmware `V1.5 20170419` is enabled.
+The client defaults to `127.0.0.1:8899`. Confirm this is the **dummy**, not a proxy to hardware. It preserves the source bytes/extension (including GX thumbnails or plain G-code), validates block ACKs and final save, and sends **no start or stop by default**. Use `--port` for a different endpoint and `--remote-name "client sample.gx"` for an ASCII destination basename. Only observed Finder firmware `V1.5 20170419` is enabled.
+
+To explicitly start after confirmed save, add `--start`:
+
+```sh
+python3 -m finderlab upload "upload/example.gcode" --start
+```
+
+Test against the dummy first. This flag may heat/move a real printer or a printer behind a proxy. It starts only after successful save and READY validation, never after a failed/uncertain upload, and never appends an automatic stop. Format support is **not** conversion, G-code safety validation or proof of physical firmware support for every extension.
 
 Read [docs/CLIENT.md](docs/CLIENT.md) for proxy/direct hardware trials, safety confirmations, status/start/stop commands, errors and persistent client logs. A hardware trial requires physical supervision and explicit approval; non-loopback targets also require `--allow-hardware`. Slicing/GX/thumbnail generation is deferred—use a known-working FlashPrint file first. The old `upload.py` remains unchanged and is not the new client.
 

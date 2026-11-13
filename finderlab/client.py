@@ -15,6 +15,8 @@ from .capture import Capture
 from .protocol.upload import BLOCK_SIZE, encode_frame
 
 LOG = logging.getLogger(__name__)
+SUPPORTED_SUFFIXES = frozenset({".gx", ".gcode", ".g"})
+FORMAT_DESCRIPTION = ".gx, .gcode or .g"
 
 
 class ClientError(RuntimeError):
@@ -53,15 +55,15 @@ class ClientConfig:
 
 def remote_path(name: str) -> str:
     if (not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_. -]{0,127}", name)
-            or ".." in name or name.endswith(" ") or not name.lower().endswith(".gx")):
-        raise ValueError("Remote name must be an ASCII .gx basename (no paths/control characters; internal spaces allowed)")
+            or ".." in name or name.endswith(" ") or Path(name).suffix.lower() not in SUPPORTED_SUFFIXES):
+        raise ValueError(f"Remote name must be an ASCII {FORMAT_DESCRIPTION} basename (no paths/control characters; internal spaces allowed)")
     return "0:/user/" + name
 
 
 def validate_file(path, max_size):
     path = Path(path)
-    if path.suffix.lower() != ".gx" or not path.is_file():
-        raise ValueError("Choose an existing regular .gx file")
+    if path.suffix.lower() not in SUPPORTED_SUFFIXES or not path.is_file():
+        raise ValueError(f"Choose an existing regular {FORMAT_DESCRIPTION} file")
     if not 0 < path.stat().st_size <= max_size:
         raise ValueError(f"File must contain 1–{max_size} bytes")
     return path

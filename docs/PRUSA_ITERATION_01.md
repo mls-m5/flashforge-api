@@ -89,7 +89,7 @@ Save under ignored `upload/`, for example:
 
 We will inspect the complete custom-start → body and body → custom-end transitions, all active E/motion modes/resets, retraction deltas, first/model layer heights, Z feed requests, body placement/envelope, unexpected added commands and duplicate hooks. The mock validates transport, **not collision safety**.
 
-The current uploader accepts GX, not a bare Prusa `.gcode`. GX packaging/thumbnail generation is not implemented yet. Renaming `.gcode` to `.gx` is not conversion. A small **known-working FlashPrint-generated GX** is the available reference-print route today, with physical supervision; this new Prusa candidate is still export-only until reviewed.
+The uploader now permits plain `.gcode`/`.g` as byte-preserving transfers as well as GX. That does **not** mean this iteration is safe to print or that the firmware's handling of plain files has been verified. Do not use upload's new `--start` against hardware to bypass this export/review step. GX packaging/thumbnail generation is not implemented yet. Renaming `.gcode` to `.gx` is not conversion. A small **known-working FlashPrint-generated GX** is the available reference-print route today, with physical supervision; this new Prusa candidate is still export-only until reviewed.
 
 ## CLI integration later
 

@@ -22,7 +22,9 @@ captures/<UTC-start>-<random-id>/
 
 Start with **`traffic.log`**: UTC timestamps, session IDs, connection lifecycle, data directions, escaped byte previews and errors. Data previews include at most 256 bytes per observation. Large or coalesced messages can exceed the preview; the `.bin` files preserve the full bytes, without text conversion. Previews are not a substitute for the raw stream.
 
-`events.jsonl` contains the same observations in a machine-readable form. `manifest.json` records mode, tool version, host OS, configuration, optional FlashPrint/experiment metadata, recording limits and final session summaries. Each summary includes close reason, raw stream sizes and SHA-256 hashes.
+`events.jsonl` contains the same observations in a machine-readable form. `manifest.json` records mode, tool version, host OS, configuration, optional FlashPrint/experiment metadata, recording limits and final session summaries. Each summary includes close reason, raw stream sizes and SHA-256 hashes. Client metadata also records `start_requested`, `upload_confirmed` and `start_acknowledged` as applicable, so a saved file and a later start failure are not conflated.
+
+Client file/name validation now happens after recorder initialization but **before connecting**. Its failures appear as `error` events with phase `preflight`, normally with no sessions/raw streams. Other client phases include `connect`, `upload` and `start_after_upload`. CLI syntax/configuration errors can still fail before a recorder is initialized; an unwritable capture location cannot create a log.
 
 The initial manifest has `complete: false`. It is finalized on orderly shutdown (including Ctrl+C). You can inspect the logs while the process is running, but final hashes/session summaries appear at shutdown. `complete` describes **the recording**, not whether a connection, upload or print succeeded. A recorded refusal or timeout can still be a complete recording.
 

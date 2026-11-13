@@ -1,13 +1,19 @@
 """Exercise real CLI lifecycle; captures and tool temp storage stay in .tmp/."""
 
 import asyncio
+from contextlib import redirect_stdout
+import io
 import json
 import os
 from pathlib import Path
 import signal
 import sys
 import unittest
+from unittest.mock import AsyncMock, patch
 
+from finderlab.__main__ import parser
+from finderlab.cli_client import PreflightError, run_client
+from finderlab.client import ClientConfig
 from finderlab.simulator import MockConfig, MockPrinter
 from helpers import workspace_tempdir
 
@@ -38,12 +44,102 @@ class CLITests(unittest.IsolatedAsyncioTestCase):
                     manifest = json.loads(manifest_path.read_text())
                     self.assertEqual(manifest["mode"], "client")
                     self.assertEqual(manifest["metadata"]["operation"], "upload")
+                    self.assertFalse(manifest["metadata"]["start_requested"])
                     self.assertTrue(manifest["complete"])
                     self.assertEqual(len(manifest["sessions"]), 1)
                 finally:
                     if process.returncode is None:
                         process.kill()
                         await process.communicate()
+
+    async def test_gcode_upload_defaults_to_no_start(self):
+        root = Path(__file__).resolve().parents[1]
+        with workspace_tempdir() as directory:
+            path = Path(directory) / "raw sample.gcode"
+            payload = b"; synthetic test, not a print profile\r\nG90\n~M23\r\n~M26\r\n"
+            path.write_bytes(payload)
+            async with MockPrinter(MockConfig(port=0)) as mock:
+                process = await asyncio.create_subprocess_exec(
+                    sys.executable, "-m", "finderlab", "upload", str(path),
+                    "--port", str(mock.address[1]), "--capture-dir", directory,
+                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                    cwd=root, env={**os.environ, "TMPDIR": str(root / ".tmp")},
+                )
+                try:
+                    stdout, stderr = await asyncio.wait_for(process.communicate(), 8)
+                    self.assertEqual(process.returncode, 0, stderr.decode())
+                    self.assertEqual(mock.files[path.name], payload)
+                    self.assertIsNone(mock.active_file)
+                    self.assertNotIn(b"Start acknowledged", stdout)
+                finally:
+                    if process.returncode is None:
+                        process.kill()
+                        await process.communicate()
+
+    async def test_upload_start_flag_uses_confirmed_remote_name_after_save(self):
+        root = Path(__file__).resolve().parents[1]
+        with workspace_tempdir() as directory:
+            path = Path(directory) / "source.gcode"
+            payload = b"; synthetic test only\n" + bytes(range(256)) * 20
+            path.write_bytes(payload)
+            remote = "chosen  remote.gcode"
+            async with MockPrinter(MockConfig(port=0)) as mock:
+                process = await asyncio.create_subprocess_exec(
+                    sys.executable, "-m", "finderlab", "upload", str(path), "--start",
+                    "--remote-name", remote, "--port", str(mock.address[1]), "--capture-dir", directory,
+                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                    cwd=root, env={**os.environ, "TMPDIR": str(root / ".tmp")},
+                )
+                try:
+                    stdout, stderr = await asyncio.wait_for(process.communicate(), 8)
+                    self.assertEqual(process.returncode, 0, stderr.decode())
+                    self.assertEqual(mock.files[remote], payload)
+                    self.assertNotIn(path.name, mock.files)
+                    self.assertEqual(mock.active_file, remote)
+                    self.assertIn(b"Start acknowledged", stdout)
+                    manifest_path = next(Path(directory).glob("*/manifest.json"))
+                    manifest = json.loads(manifest_path.read_text())
+                    self.assertTrue(manifest["metadata"]["start_requested"])
+                    self.assertTrue(manifest["metadata"]["upload_confirmed"])
+                    self.assertTrue(manifest["metadata"]["start_acknowledged"])
+                    raw = (manifest_path.parent / "sessions" / "s0001" / "client-to-server.bin").read_bytes()
+                    pos = 0
+                    commands = []
+                    while pos < len(raw):
+                        if raw[pos:pos + 4] == bytes.fromhex("5a5aa5a5"):
+                            pos += 4112
+                        else:
+                            end = raw.index(b"\r\n", pos)
+                            commands.append(raw[pos:end])
+                            pos = end + 2
+                    self.assertLess(commands.index(b"~M29"), commands.index(("~M23 0:/user/" + remote).encode()))
+                    self.assertNotIn(b"~M26", commands)
+                finally:
+                    if process.returncode is None:
+                        process.kill()
+                        await process.communicate()
+
+    async def test_preflight_failures_are_logged_without_connecting(self):
+        with workspace_tempdir() as directory:
+            path = Path(directory) / "unsupported.stl"
+            path.write_text("synthetic test")
+            options = vars(parser().parse_args(["upload", str(path), "--start", "--capture-dir", directory]))
+            with patch("finderlab.client.asyncio.open_connection", new_callable=AsyncMock) as connect:
+                with redirect_stdout(io.StringIO()), self.assertRaises(PreflightError):
+                    await run_client(ClientConfig(), "upload", options)
+                connect.assert_not_awaited()
+            manifest_path = next(Path(directory).glob("*/manifest.json"))
+            manifest = json.loads(manifest_path.read_text())
+            self.assertTrue(manifest["complete"])
+            self.assertEqual(manifest["sessions"], [])
+            self.assertTrue(manifest["metadata"]["start_requested"])
+            self.assertEqual(manifest["metadata"]["source_name"], "unsupported.stl")
+            records = [json.loads(line) for line in (manifest_path.parent / "events.jsonl").read_text().splitlines()]
+            errors = [e for e in records if e["type"] == "error"]
+            self.assertEqual(len(errors), 1)
+            self.assertEqual(errors[0]["phase"], "preflight")
+            self.assertEqual(errors[0]["error_type"], "PreflightError")
+            self.assertNotIn("connection_open", [e["type"] for e in records])
 
     async def test_job_confirmations_and_hardware_guard_fail_before_connect(self):
         root = Path(__file__).resolve().parents[1]
