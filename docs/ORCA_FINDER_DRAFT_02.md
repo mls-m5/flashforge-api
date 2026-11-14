@@ -187,7 +187,26 @@ The wrapper calls `slice` only, refuses existing output through the adapter,
 and defaults to the local 2.3.0 launcher. It does not expose upload/start flags.
 The private profile directory is not supplied by a fresh public clone.
 
-For a **read-only slicing page test** on this workspace:
+For a **read-only slicing page test** on this workspace, the short launcher
+checks the local paths, uses a separate `web-data/offline-test` workspace and
+always leaves all printer actions disabled:
+
+```sh
+python3 tools/start_offline_web.py
+# If port 8000 is occupied:
+python3 tools/start_offline_web.py --port 8001
+# File preflight only, without starting anything:
+python3 tools/start_offline_web.py --check
+```
+
+Open the printed loopback URL, choose the listed test cube (or your STL), then
+Slice and download for review. Ctrl+C stops the server. This runs natively,
+not in the Podman image; Orca runtime libraries still need to work on the host.
+Private profiles/executable must already exist locally; `--check` only checks
+files, not native loading or profile/motion safety. No arbitrary flags are
+forwarded by the launcher.
+
+Equivalent expanded invocation:
 
 ```sh
 python3 -m finderlab web --orca .local-tools/orca-slicer \

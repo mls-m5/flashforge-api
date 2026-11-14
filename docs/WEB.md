@@ -103,7 +103,9 @@ HTTP Slice/download path was checked, with uploads/job controls disabled.
 Extrusion resets, final retraction and a slow Z layer-change hook address the
 identified numeric issues, but G21/M82/M118 behavior and physical homing/clip
 clearance remain unresolved. See [ORCA_FINDER_DRAFT_02.md](ORCA_FINDER_DRAFT_02.md)
-for private artifact paths and a **read-only slicing-page invocation**. Original
+for private artifact paths and a **read-only slicing-page invocation**. On this
+workspace, `python3 tools/start_offline_web.py` is the short launcher for that
+native experiment; it never enables uploads or job controls. Original
 profiles are unchanged. Do not enable generated-output upload/start just because
 this candidate slices successfully.
 
