@@ -55,7 +55,18 @@ captures, local profiles, account configuration or Git metadata should enter it.
 - Research trace derivatives under `docs/traces/` are generated only from pinned,
   already reviewed fixtures, not raw captures. Exporter: `tools/export_reviewed_traces.py`.
 
-Pending: finish reproducibility tests/docs, inspect the Docker build on the host,
-run the full research suite, review all diffs and request host Git pushes. Do not
+Follow-up validation: the research suite (106 tests), plugin SDK suite and
+separate Node viewmodel checks pass. New plugin fault tests exercise ACK/save/
+overall deadlines, recording quotas/finalization failure, paused/busy guards and
+release warnings. The tab coalesces status polls, rejects duplicate submissions,
+ignores obsolete replies after logout, and requires a result refresh before a
+retry after a lost HTTP submission response. Captures and snapshot hashes are
+shown only in the admin tab. These remain context/viewmodel tests, not a live
+browser deployment.
+
+Pending: inspect the Docker build/runtime on the host and complete live browser
+acceptance against a fresh dummy. The research commit `3ab0401` was successfully
+pushed through host approval; later changes and the plugin remote need separate
+publication verification. Do not infer push success from a request alone. Do not
 claim GitHub publication until the push approval reports success. Raw captures,
 models, private profiles, volumes and the pre-existing result.json stay untracked.
