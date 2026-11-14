@@ -93,7 +93,7 @@ The uploader now permits plain `.gcode`/`.g` as byte-preserving transfers as wel
 
 ## CLI integration
 
-A separate [Orca adapter](SLICING.md) is now implemented for offline STL export and optional pre-upload slicing. It does not translate Prusa INI files, macros or these unvalidated snippets into an Orca profile. Native Orca/profile validation is still required. The following **Prusa** invocation remains proposed, not implemented/tested here.
+A separate [Orca adapter](SLICING.md) is now implemented for offline STL export and optional pre-upload slicing. It does not translate Prusa INI files, macros or these unvalidated snippets into an Orca profile. Native Orca/profile validation is still required. A subsequent [local Orca draft](ORCA_FINDER_DRAFT_01.md) preserves the comparison settings and fixed command candidate, but native Orca rejects Sailfish; do not interpret the enum's existence as a supported UI/CLI option. The following **Prusa** invocation remains proposed, not implemented/tested here.
 
 PrusaSlicer exposes a CLI, including loading settings and exporting G-code. A typical Linux-host command, **to verify with the installed binary's `--help`**, is:
 

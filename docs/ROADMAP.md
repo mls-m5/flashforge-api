@@ -50,6 +50,14 @@ Implemented at the user's request: offline `slice STL` and opt-in `upload STL --
 
 This is orchestration, not a validated slicer/profile milestone: no model was actually sliced by Orca, and no new hardware action was taken. Subsequent official AppImage download/extraction is documented in [ORCA_INSTALL.md](ORCA_INSTALL.md); native 2.3.0 help/capability probing now succeeds after user-approved runtime installation, including under adapter limits. Actual slicing/profile validation remains outstanding, and the 2.5.0 build requires newer glibc. Native build/profile validation, safe Finder 2 toolpaths, GX/thumbnail packaging and the web API remain open. See [SLICING.md](SLICING.md) for current commands, prerequisites and the next offline host trial.
 
+## Local Finder draft: native flavor blocker
+
+The user mounted an Orca home and requested a local edited copy. Its selected stock MyMarlin machine and complete inheritance sources were preserved privately, then resolved into `local-profiles/finder-offline-01/` with the discussed Finder comparison settings and an offline-only runner. No mounted files were changed, and no private profile data is committed.
+
+Structural adapter checks pass. Three native 2.3.0 offline attempts on a generated review cube first exposed standalone compatibility metadata handling, then the decisive rejection `gcode_flavor: invalid value sailfish`. No G-code was generated and no printer connection occurred. The 2.5.0 source also excludes Sailfish from accepted flavor values; earlier enum-map observations did not establish support. See [ORCA_FINDER_DRAFT_01.md](ORCA_FINDER_DRAFT_01.md).
+
+Do not substitute Marlin or disable checks silently. Next decision is an explicitly reviewed Orca/Marlin compatibility experiment versus a slicer supporting the existing Sailfish comparison configuration. This failure does not independently prove the Finder's required dialect. Native successful slicing, generated-body safety, nozzle/material confirmation and physical trials remain open.
+
 ## M0 — Agree on the test setup
 
 - Confirm the model, firmware, FlashPrint version, host OS and GitHub reference.

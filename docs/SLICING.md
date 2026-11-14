@@ -6,6 +6,8 @@ Implemented: `slice MODEL.stl` for offline export, and `upload MODEL.stl --slice
 
 **Not verified here:** actual Orca slicing, an Orca Finder 2 profile, physical plain-G-code support, or safe generated toolpaths. Official 2.3.0/2.5.0 AppImages are downloaded/extracted locally. After approved runtime installation, native 2.3.0 help/capability probing succeeds, including under the adapter limits; 2.5.0 remains incompatible with this Debian 12 runtime. See [ORCA_INSTALL.md](ORCA_INSTALL.md) for paths, provenance, probe capture and host instructions. Automated tests use an independent fake executable plus fresh ephemeral dummy printers; they test orchestration/limits, not geometry or Orca compatibility. No native slicing or physical printer trial was performed; successful native help does not validate JSON profile loading, geometry generation or firmware compatibility.
 
+A user-requested local Finder draft has since been copied/edited, but its native offline trial is blocked by Orca rejecting `gcode_flavor=sailfish`. See [ORCA_FINDER_DRAFT_01.md](ORCA_FINDER_DRAFT_01.md) for the private artifact paths, source attribution, exact changes, failed trial captures and the next dialect decision. The earlier internal Sailfish enum observation was not evidence of an accepted Orca profile option.
+
 This is a CLI/library foundation for a future local web API, **not an implemented HTTP endpoint**. The user request's “sdl” is interpreted as **STL**. 3MF/OBJ/SDL inputs are not accepted in this first adapter. STL coordinates are interpreted as millimetres: no automatic unit conversion, scaling, repair or auto-orientation. Orca is asked to arrange the object and ensure it is on the bed, using the supplied machine profile.
 
 ## Install and prepare profiles on the host
@@ -107,8 +109,8 @@ External interface references, not Finder 2 protocol evidence:
 - [Orca CLI actions](https://github.com/OrcaSlicer/OrcaSlicer/wiki/cli_actions): `--slice`, help and default validity checks;
 - [Orca CLI misc](https://github.com/OrcaSlicer/OrcaSlicer/wiki/cli_misc): semicolon-separated settings, filament JSON and output/datadir;
 - [Orca CLI transforms](https://github.com/OrcaSlicer/OrcaSlicer/wiki/cli_transform): arrange/orient/ensure-on-bed;
-- [upstream PrintConfig.cpp](https://github.com/OrcaSlicer/OrcaSlicer/blob/main/src/libslic3r/PrintConfig.cpp): reported setting names and Sailfish enum availability, not proof that a particular packaged version or profile works here.
+- [upstream PrintConfig.cpp](https://github.com/OrcaSlicer/OrcaSlicer/blob/main/src/libslic3r/PrintConfig.cpp): setting names only. Internal enum entries and the accepted flavor list differ; native 2.3.0 rejects Sailfish, and tagged 2.5.0 source excludes it from the accepted list.
 
 These upstream pages/main branch can change. No upstream implementation/profile code was copied. Downloaded versions and the successful native 2.3.0 help probe are recorded in [ORCA_INSTALL.md](ORCA_INSTALL.md); actual slicing/profile validation is still pending.
 
-Next: provide the host Orca executable/version and exported machine/process/filament profiles (including any inherited parents), resolve/review them, run **offline slicing only**, inspect output plus logs, then transfer to a fresh dummy. Physical start remains a separate approved decision. GX/thumbnail generation, a verified Finder Orca profile and the web API remain unimplemented.
+Next: resolve the draft's dialect/slicer choice explicitly, then run **offline slicing only**, inspect complete output plus logs, and only then transfer to a fresh dummy. Physical start remains a separate approved decision. GX/thumbnail generation, a verified Finder Orca profile and the web API remain unimplemented.

@@ -138,6 +138,12 @@ User requested on-demand STL slicing before upload. `slice` and upload `--slice`
 
 External interface references and exact flags are recorded in [SLICING.md](SLICING.md). At initial adapter implementation, native Orca was **unknown/not installed** here. Local tests use an independent fake executable, then fresh ephemeral `finder-v1.5` dummies for byte preservation, stage ordering and opt-in virtual start. They are orchestration regression checks, not actual slicing or new independent Finder protocol evidence. No physical printer was contacted. A subsequent approved runtime installation enabled a native help-only probe of the official 2.3.0 asset under adapter limits: capture `20261113T212359Z-e2569f3cc60a`, experiment `orca-native-help-only`, no printer sessions. Required flags are advertised; the literal banner is `OrcaSlicer-01.10.01.50:` despite the release asset's 2.3.0 name. This is CLI capability evidence only, not actual slicing or Finder compatibility. See [ORCA_INSTALL.md](ORCA_INSTALL.md). The next acceptance step remains an offline native/profile slicing trial with logs/output shared for review.
 
+## SLICER-DRAFT-012 — Local edited copy, native option rejection
+
+User-requested local profile copies are documented in [ORCA_FINDER_DRAFT_01.md](ORCA_FINDER_DRAFT_01.md). They are ignored private derivatives, not approved printer profiles. Three native offline mode-`slice` trials on a generated review cube are captured as `20261114T091222Z-53559609ef80`, `20261114T091308Z-2216cf6d8b75` and `20261114T091406Z-47664b67deca`. After correcting standalone CLI compatibility metadata, the last trial rejects `gcode_flavor: invalid value sailfish` before generating G-code. No printer sessions or hardware commands occurred.
+
+This is native Orca 2.3.0 configuration evidence, not Finder protocol evidence. The tagged 2.5.0 source also excludes Sailfish from accepted values; existence of its enum key was insufficient evidence of support. Retain this blocker rather than silently switching to Marlin. The earlier Sailfish comparison choice came from the supplied Prusa configuration and is not independent proof of the physical printer's required dialect. A separately scoped offline compatibility investigation is needed before changing that choice.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.

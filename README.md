@@ -56,7 +56,7 @@ python3 -m finderlab slice upload/model.stl \
   --output upload/model-review.gcode
 ```
 
-For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native Orca 2.3.0 help/capability probing now succeeds after approved runtime installation; actual slicing/profile validation remains outstanding, and automated tests still use a fake CLI. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation, the probe reference and the newer 2.5.0 build's ABI blocker. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The web API and GX/thumbnail creation are not implemented.
+For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native Orca 2.3.0 help/capability probing succeeds after approved runtime installation. A copied/edited local Finder draft now passes structural checks but native slicing is blocked by rejected Sailfish flavor; see [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md). Actual successful slicing/profile validation remains outstanding, and automated tests still use a fake CLI. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation, the probe reference and the newer 2.5.0 build's ABI blocker. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The web API and GX/thumbnail creation are not implemented.
 
 ## Run the dummy printer
 
@@ -132,6 +132,7 @@ New documentation is English; older Swedish sections will be translated incremen
 - [docs/ROADMAP.md](docs/ROADMAP.md): milestones and acceptance criteria.
 - [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md): local AppImage versions, runtime blockers, integrity provenance and host setup.
 - [docs/SLICING.md](docs/SLICING.md): implemented Orca CLI adapter, offline/combined workflows, trusted profile requirements and native-validation limitations.
+- [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md): local copied/edited Finder comparison presets and the observed Sailfish validation blocker; not a print-ready profile.
 - [docs/SLICING_ANALYSIS.md](docs/SLICING_ANALYSIS.md): offline analysis of supplied FlashPrint/Prusa samples, extrusion-state errors and remaining profile risks (not a print-ready replacement).
 - [docs/PRUSA_ITERATION_01.md](docs/PRUSA_ITERATION_01.md): user-requested start/end candidates and settings for offline re-slicing/review only; not hardware-validated.
 - [docs/QUESTIONS.md](docs/QUESTIONS.md): environment and product decisions still needed.

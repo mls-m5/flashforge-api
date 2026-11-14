@@ -17,7 +17,7 @@ Direct AppImage execution failed because this environment has no FUSE device/fus
 
 Native validation now succeeds: direct isolated `--help --datadir DATA` exits 0 without FUSE or a display, and a second probe through the actual adapter worker succeeds with its 4096 MiB address-space limit, 256 MiB file/workspace limit and 15-second help timeout. Capture `20261113T212359Z-e2569f3cc60a` (mode `slice`, experiment `orca-native-help-only`) preserves argv, stdout/stderr and exit status. All required flags are advertised: `--slice`, `--load-settings`, `--load-filaments`, `--outputdir`, `--datadir`, `--arrange`, `--orient`, `--ensure-on-bed`. The asset is release 2.3.0, while its help banner literally says `OrcaSlicer-01.10.01.50:`; retain both rather than inventing a consistent banner.
 
-Only isolated `--help`/loader probes were attempted. No model was sliced, no GUI opened intentionally, and no printer connected. Next: supply/review profiles for an offline slicing trial. Successful help/capability probing is not actual geometry generation or a validated Finder profile.
+During installation only isolated `--help`/loader probes were attempted. No model was sliced, no GUI opened intentionally, and no printer connected. Subsequent user-requested draft profile trials now reach native validation but reject Sailfish before geometry generation; see [ORCA_FINDER_DRAFT_01.md](ORCA_FINDER_DRAFT_01.md). Successful help/capability probing is not actual geometry generation or a validated Finder profile.
 
 ## On the host: reuse the shared files
 
