@@ -42,7 +42,9 @@ Stop the previous web server (Ctrl+C), then run:
 
 Open the printed URL (default http://127.0.0.1:8000), choose STL, Slice, then
 confirm **Save to dummy · no start**. Existing GX/G-code can also be selected
-without slicing. Wait for final save confirmation. Start/Cancel remain disabled.
+without slicing. Wait for final save confirmation. Then separately confirm
+**Start saved file** to start a virtual job; **Request cancel** cancels that
+virtual job. Nothing starts automatically and the dummy never executes G-code.
 
 This creates its **own new dummy on an ephemeral loopback port** in the same
 process; it does not reuse port9000, an existing proxy or browser-supplied target.
@@ -58,7 +60,10 @@ waiver of profile/motion safety review or permission for a hardware print.
 The normal offline launcher stays read-only; configured external endpoints keep
 the existing upload/generated-output/job-control guards. CLI equivalent:
 `python3 -m finderlab web --dummy` plus the trusted Orca/profile options.
-`--dummy` refuses target/hardware/job-control options and does not enable Start.
+`--dummy` refuses target/hardware/job-control overrides. Its own confirmed
+Start/Cancel operate only on its new simulator. External configured endpoints
+still require explicit `--enable-job-controls`; this dummy workflow does not
+authorize hardware actions or validate the candidate's physical startup paths.
 
 ## Start with a fresh dummy
 

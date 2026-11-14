@@ -40,7 +40,12 @@
             state.job_result === "cancel_acknowledged" ? "Cancel command acknowledged. This does NOT prove READY, motion stopped or cooled heaters. Check the printer physically." :
             /_unknown$/.test(state.job_result || "") ? "Job result UNKNOWN. Check physical state; no automatic retry was performed." :
             "No job-control result in this slot. Cached acknowledgements are not live printer status.");
-        text("job-gating", config && config.job_controls_enabled ? "Explicit job controls ENABLED. Start uses only this slot's confirmed saved filename." :
+        if (config && config.owned_dummy) {
+            text("job-result", state.job_result === "start_acknowledged" ? "Virtual job started in the owned dummy. No G-code, motion or heating is executed." :
+                state.job_result === "cancel_acknowledged" ? "Virtual cancel acknowledged by the owned dummy." :
+                /_unknown$/.test(state.job_result || "") ? "Virtual job result unknown; inspect local diagnostics." : "No virtual job requested yet.");
+        }
+        text("job-gating", config && config.owned_dummy ? "Confirmed virtual Start/Cancel available. This endpoint is the owned dummy, not hardware." : config && config.job_controls_enabled ? "Explicit job controls ENABLED. Start uses only this slot's confirmed saved filename." :
             "Job controls disabled. Restart with --enable-job-controls only for a deliberate supervised trial.");
         if (state.error) text("error", state.error);
         text("gating", !config || !config.upload_enabled ? "Printer uploads disabled: start the server with --enable-upload for an explicitly chosen endpoint." :
@@ -135,18 +140,22 @@
         }
     });
     el("start").addEventListener("click", () => {
-        if (confirm(`Start saved file ${state.saved_name} on ${config.target}? This may HEAT AND MOVE the printer. Remote file contents were not read back; close other printer clients and supervise physically.`)) {
+        const message = config.owned_dummy ? `Start a virtual job for ${state.saved_name} in the owned dummy? No G-code will be executed.` :
+            `Start saved file ${state.saved_name} on ${config.target}? This may HEAT AND MOVE the printer. Remote file contents were not read back; close other printer clients and supervise physically.`;
+        if (confirm(message)) {
             action("start", {confirm: true, save_id: state.save_id});
         }
     });
     el("stop").addEventListener("click", () => {
-        if (confirm(`Request cancellation of the current job on ${config.target}? This can cancel a job started elsewhere. It is NOT an emergency stop or a guarantee of stopped motion or cooled heaters. Check the physical printer.`)) {
+        const message = config.owned_dummy ? "Cancel the virtual job in the owned dummy? No hardware is contacted." :
+            `Request cancellation of the current job on ${config.target}? This can cancel a job started elsewhere. It is NOT an emergency stop or a guarantee of stopped motion or cooled heaters. Check the physical printer.`;
+        if (confirm(message)) {
             action("stop", {confirm: true});
         }
     });
     request("/api/config").then(data => {
         config = data;
-        text("target", data.owned_dummy ? `${data.target} · FRESH OWNED DUMMY · virtual upload only, no G-code execution` :
+        text("target", data.owned_dummy ? `${data.target} · FRESH OWNED DUMMY · virtual Save/Start/Cancel, no G-code execution` :
             `${data.target} · printer uploads ${data.upload_enabled ? "ENABLED" : "disabled"}`);
         text("orca", data.slicing_enabled ? "Trusted server-side Orca/profiles configured. Slice offline, then download and review before a separate Save." :
             "Orca not configured. Supply --orca and trusted self-contained --machine / --process / --filament JSON on the server. Existing FlashPrint GX files work independently.");

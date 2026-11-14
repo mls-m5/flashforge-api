@@ -468,7 +468,7 @@ async def serve_workbench(config, *, dummy=False):
             from .simulator import MockConfig, MockPrinter
             printer = await stack.enter_async_context(MockPrinter(MockConfig(host="127.0.0.1", port=0)))
             config = replace(config, client=ClientConfig(host="127.0.0.1", port=printer.address[1]),
-                             enable_upload=True, allow_sliced_upload=True, enable_job_controls=False)
+                             enable_upload=True, allow_sliced_upload=True, enable_job_controls=True)
         server = await stack.enter_async_context(WebServer(config))
         server.owned_dummy = printer
         server.work.owned_dummy = printer is not None
@@ -517,10 +517,10 @@ def web_main(cli, args):
                 print("Private files/captures: " + str(server.work.folder), flush=True)
                 if server.owned_dummy:
                     print(f"Owned fresh dummy: {server.owned_dummy.address}. RAM-only virtual files; no G-code execution.", flush=True)
-                    print("Save is enabled only to this new dummy. No existing listener/proxy is used; job controls disabled.", flush=True)
+                    print("Save and confirmed virtual Start/Cancel target only this new dummy. No existing listener/proxy is used.", flush=True)
                 else:
                     print("No automatic connect, start, stop or retries. Loopback may proxy hardware.", flush=True)
-                print("Explicit job controls: " + ("ENABLED (may heat/move)" if server.config.enable_job_controls else "disabled"), flush=True)
+                print("Explicit job controls: " + ("VIRTUAL ONLY" if server.owned_dummy else "ENABLED (may heat/move)" if server.config.enable_job_controls else "disabled"), flush=True)
                 print("Orca: " + ("configured; profiles/toolpaths NOT validated" if slicing else "not configured; no print-approved Finder profile is provided"), flush=True)
                 await stopped.wait()
         finally:

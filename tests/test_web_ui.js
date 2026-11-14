@@ -121,6 +121,15 @@ async function main() {
     state = {busy: false, phase: "failed", error: "Transport endpoint is not connected", slicer_log: ""};
     click("refresh"); await flush();
     assert.match(element("slicer-log").textContent, /Transport endpoint is not connected/);
+    config.owned_dummy = true;
+    config.job_controls_enabled = true;
+    state = {busy: false, phase: "start_acknowledged", job_result: "start_acknowledged", saved: true, start_attempted: true};
+    click("refresh"); await flush();
+    assert.match(element("job-result").textContent, /No G-code, motion or heating/);
+    assert.match(element("job-gating").textContent, /owned dummy, not hardware/);
+    assert.equal(element("stop").disabled, false);
+    click("stop"); await flush();
+    assert.match(element("job-result").textContent, /Virtual cancel acknowledged/);
     console.log("Standalone page selection, confirmations, slice/save separation and uncertainty tests passed.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -313,7 +313,7 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(manifest["complete"])
         self.assertEqual((await self.post("/api/save", {"confirm": True, "remote_name": "quota.gx"}))[0], 409)
 
-    async def test_owned_dummy_overrides_target_and_accepts_only_virtual_save(self):
+    async def test_owned_dummy_overrides_target_and_supports_confirmed_virtual_job(self):
         cfg = WebConfig(port=0, data_dir=self.root / "owned-dummy",
                         client=ClientConfig(host="192.0.2.1", allow_hardware=True),
                         enable_job_controls=True)
@@ -326,7 +326,7 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
                 capabilities = json.loads(content)
                 self.assertTrue(capabilities["owned_dummy"])
                 self.assertTrue(capabilities["sliced_upload_enabled"])
-                self.assertFalse(capabilities["job_controls_enabled"])
+                self.assertTrue(capabilities["job_controls_enabled"])
                 self.assertEqual(owned.config.client.host, "127.0.0.1")
                 self.assertFalse(owned.config.client.allow_hardware)
                 payload = b"; synthetic dummy save only\x00~M29"
@@ -339,7 +339,17 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
                 manifest = json.loads((Path(result["capture"]) / "manifest.json").read_text())
                 self.assertEqual(manifest["metadata"]["target_kind"], "owned_dummy")
                 self.assertIn("emulated", manifest["model"])
-                self.assertEqual((await self.post("/api/start", {"confirm": True, "save_id": result["save_id"]}))[0], 409)
+                self.assertEqual((await self.post("/api/start", {"save_id": result["save_id"]}))[0], 400)
+                self.assertIsNone(owned.owned_dummy.active_file)
+                self.assertEqual((await self.post("/api/start", {"confirm": True, "save_id": result["save_id"]}))[0], 200)
+                result = await self.finish()
+                self.assertEqual(result["job_result"], "start_acknowledged")
+                self.assertEqual(owned.owned_dummy.active_file, "virtual.gcode")
+                self.assertEqual((await self.post("/api/stop", {"confirm": False}))[0], 400)
+                self.assertEqual(owned.owned_dummy.active_file, "virtual.gcode")
+                self.assertEqual((await self.post("/api/stop", {"confirm": True}))[0], 200)
+                self.assertEqual((await self.finish())["job_result"], "cancel_acknowledged")
+                self.assertIsNone(owned.owned_dummy.active_file)
             finally:
                 self.server = previous
         with self.assertRaises(OSError):

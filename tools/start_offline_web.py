@@ -56,7 +56,7 @@ def main():
     except ValueError as exc:
         cli.error(str(exc))
     if args.dummy_upload_test:
-        print("DUMMY UPLOAD TEST: a new owned dummy is created; Start/Cancel remain disabled.", flush=True)
+        print("DUMMY UPLOAD TEST: a new owned dummy is created; confirmed Start/Cancel are virtual only.", flush=True)
     else:
         print("OFFLINE SLICING ONLY: printer uploads, Start and Cancel are disabled.", flush=True)
     print("Draft 02 is experimental and NOT approved for printing.", flush=True)
