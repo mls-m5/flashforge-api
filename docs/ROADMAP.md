@@ -92,6 +92,16 @@ is published as supported, and no hardware permission is inferred. See
 [ORCA_FINDER_DRAFT_02.md](ORCA_FINDER_DRAFT_02.md) for capture references,
 reproduction and the paired-reference review still needed.
 
+## Evidence update: user-run draft02 cube startup
+
+The user reports no startup collision on the physical Finder2 with the
+Orca2.5/draft02 cube. Recorded Save and explicit Start share the same save
+identity; fresh READY/M23/file-size confirmation and release are recorded.
+See FINDER-START-016 and ORCA_FINDER_DRAFT_02.md. This advances physical
+startup acceptance for that trial only. End-of-print extrusion/parking,
+completion, print quality and other model placements await evidence. Earlier
+impact cause is not identified; no further agent hardware activity is implied.
+
 ## M0 — Agree on the test setup
 
 - Confirm the model, firmware, FlashPrint version, host OS and GitHub reference.

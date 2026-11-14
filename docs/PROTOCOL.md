@@ -163,6 +163,25 @@ G21/M82 are added versus the working FlashPrint command set, M118 is omitted,
 and homing/offset/clearance/material semantics remain unresolved. Source draft01
 and mounted profiles are unchanged; no generated candidate was uploaded/started.
 
+## FINDER-START-016 — User physical cube startup, no collision reported
+
+The user reports starting the Orca-generated cube on the physical Finder2 and
+observing no startup collision. Host web captures
+`20261114T194200Z-3eaa5f777f9e` (slice),
+`20261114T194203Z-aaae4cb7f728` (confirmed save), and
+`20261114T194209Z-0fa308f10bca` (confirmed start), under
+`web-data/proxy-test/captures/`, all finalized. The last two share the same
+save identity and exact `cube-20x20x5.gcode` destination. Start commands:
+M601/M115/M119/M23/M602; fresh READY and file size76579 confirmed. No automatic
+M26 was appended. Firmware reports V1.5 20170419; generated output uses the
+host Orca2.5 build/current private draft02; nozzle0.4 mm and PLA user-confirmed.
+
+The physical no-collision result is user-reported, not inferred from M23 ACK.
+It clears the previously unobserved startup for this specific trial, not all
+model placements, firmware semantics or prior-impact root cause. End behavior,
+completion and print quality are not yet reported. No new agent hardware action
+or general safety authorization. See ORCA_FINDER_DRAFT_02.md for exact scope.
+
 ## CLIENT-M28-015 — User-run cube save refused on reply spacing
 
 User-host web slice capture

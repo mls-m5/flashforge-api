@@ -1,5 +1,32 @@
 # Finder offline draft 02 — native slicing succeeds, NOT approved for printing
 
+## Latest status: user-observed physical startup succeeded
+
+The user subsequently ran the cube on the physical printer and explicitly
+reported that it started **without a collision**. This resolves the startup
+collision blocker for that observed file/profile/printer trial; do not keep
+presenting it as wholly untested. It does not identify the cause of the earlier
+Prusa impact, establish all placements/models, or confirm end-of-print behavior.
+The user's suggestion that earlier custom code caused it remains a hypothesis.
+The historical offline warnings/results below describe earlier stages.
+
+User-host captures under `web-data/proxy-test/captures/`:
+
+- `20261114T194200Z-3eaa5f777f9e`: successful Orca2.5 slice; all three profile
+  input hashes match the current private draft02.
+- `20261114T194203Z-aaae4cb7f728`: confirmed Save to `cube-20x20x5.gcode`.
+- `20261114T194209Z-0fa308f10bca`: same per-save identity, fresh READY query,
+  M23 for that exact basename, `File opened ... Size: 76579`, `File selected`,
+  then release. All three recordings finalized. No automatic cancel was sent.
+
+Model: user-reported Finder2; observed firmware V1.5 20170419; user-confirmed
+0.4 mm nozzle and PLA. FlashPrint version is unknown/not the generating client
+for this trial. The trace establishes start acknowledgement; **no-collision
+motion is the user's physical observation**, not something proved by the ACK.
+The agent inspected private logs only and did not connect to hardware.
+Completion, final extrusion/parking, calibration and print quality await user
+feedback. General safety, emergency-stop or other-firmware claims do not follow.
+
 ## Authorization and scope
 
 The user explicitly approved a separate **offline** Orca/Marlin-emission
