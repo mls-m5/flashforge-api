@@ -170,6 +170,7 @@ New documentation is English; older Swedish sections will be translated incremen
 - [docs/ROADMAP.md](docs/ROADMAP.md): milestones and acceptance criteria.
 - [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md): local AppImage versions, runtime blockers, integrity provenance and host setup.
 - [docs/SLICING.md](docs/SLICING.md): implemented Orca CLI adapter, offline/combined workflows, trusted profile requirements and native-validation limitations.
+- [docs/FLASHFORGE_PROFILE_REVIEW.md](docs/FLASHFORGE_PROFILE_REVIEW.md): inspection of the user's official Orca ZIP and Finder material settings in FlashPrint; not a print-ready Orca profile.
 - [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md): local copied/edited Finder comparison presets and the observed Sailfish validation blocker; not a print-ready profile.
 - [docs/SLICING_ANALYSIS.md](docs/SLICING_ANALYSIS.md): offline analysis of supplied FlashPrint/Prusa samples, extrusion-state errors and remaining profile risks (not a print-ready replacement).
 - [docs/PRUSA_ITERATION_01.md](docs/PRUSA_ITERATION_01.md): user-requested start/end candidates and settings for offline re-slicing/review only; not hardware-validated.

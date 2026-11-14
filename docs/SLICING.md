@@ -10,6 +10,14 @@ A user-requested local Finder draft has since been copied/edited, but its native
 
 The CLI/library is also used by the new [standalone local page](WEB.md). The page accepts an STL into a bounded local slot, requires an explicit offline Slice, offers output download/review, and requires a separate confirmed Save. Generated-output saving is server-disabled by default, independently of ordinary GX upload. Orca executable/profiles remain trusted server configuration, not HTTP parameters. The user request's “sdl” is interpreted as **STL**. 3MF/OBJ/SDL inputs are not accepted in this first adapter. STL coordinates are interpreted as millimetres: no automatic unit conversion, scaling, repair or auto-orientation. Orca is asked to arrange the object and ensure it is on the bed, using the supplied machine profile.
 
+The user's official Finder download page is now under a separate read-only
+review: [FLASHFORGE_PROFILE_REVIEW.md](FLASHFORGE_PROFILE_REVIEW.md). The exact
+Linux Orca ZIP contains an AppImage labelled V1.8.1, not loose JSON presets;
+its embedded presets still need inspection. The linked FlashPrint 5.8.3 DEB
+contains concrete older Finder material/process values, kept as local reference,
+not a redistributed or converted Orca profile. This has not yet resolved the
+native flavor/profile blocker.
+
 ## Install and prepare profiles on the host
 
 1. Install a trusted OrcaSlicer build separately. On Linux use its CLI-capable executable (or a trusted launcher). Set `--orca /absolute/path/to/orca-slicer` if it is not on PATH. Discovery tries `orca-slicer`, then `OrcaSlicer`. The adapter currently requires POSIX process/resource limits; Linux is the development platform. Windows execution is not supported by this adapter yet.
