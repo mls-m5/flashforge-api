@@ -32,7 +32,7 @@ In terminal 2:
 python3 -m finderlab web --enable-upload --target-port 9000
 ```
 
-Open **http://127.0.0.1:8000**. Drop an existing FlashPrint `.gx` (or `.gcode`/`.g`), then explicitly confirm **Save to Finder · no start**. Selecting a file does not connect to a printer. STL requires separately configured Orca and trusted profiles; the known Sailfish draft is still rejected, so no print-ready Finder STL slicing is claimed. Generated-output saving is blocked by default pending separate profile review. Uploads are disabled without `--enable-upload`. To deliberately enable separate **Start saved file** and **Request cancel** buttons, also add `--enable-job-controls`. Each requires its own confirmation; Start may heat/move, and Cancel is not an emergency stop. Saving still never starts a print.
+Open **http://127.0.0.1:8000**. Drop an existing FlashPrint `.gx` (or `.gcode`/`.g`), then explicitly confirm **Save to Finder · no start**. Selecting a file does not connect to a printer. STL requires separately configured Orca and trusted profiles. The old Sailfish draft is still rejected; a separately authorized **offline Marlin-emission draft 02 now slices natively**, but is not a print-ready or physically validated Finder profile. Generated-output saving is blocked by default pending separate profile review. Uploads are disabled without `--enable-upload`. To deliberately enable separate **Start saved file** and **Request cancel** buttons, also add `--enable-job-controls`. Each requires its own confirmation; Start may heat/move, and Cancel is not an emergency stop. Saving still never starts a print.
 
 See **[docs/WEB.md](docs/WEB.md)** for the workflow, native Orca configuration, private storage, limits and Podman commands. The default Compose now starts this standalone page, not OctoPrint. No printer is discovered and a loopback proxy can still reach real hardware.
 
@@ -75,7 +75,17 @@ python3 -m finderlab slice upload/model.stl \
   --output upload/model-review.gcode
 ```
 
-For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native Orca 2.3.0 help/capability probing succeeds after approved runtime installation. A copied/edited local Finder draft now passes structural checks but native slicing is blocked by rejected Sailfish flavor; see [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md). Actual successful slicing/profile validation remains outstanding, and automated tests still use a fake CLI. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation, the probe reference and the newer 2.5.0 build's ABI blocker. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The standalone page exposes the same optional adapter with separate slice/review/save steps; GX/thumbnail creation and a validated Finder profile are not implemented.
+For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native Orca 2.3.0 help/capability probing succeeds after approved runtime installation. A copied/edited local Finder draft now passes structural checks but native slicing is blocked by rejected Sailfish flavor; see [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md). A separate user-approved [draft 02](docs/ORCA_FINDER_DRAFT_02.md) now slices a generated cube and the supplied holder natively with 2.3.0, including an explicit slow Z layer-change step after detecting mixed-XYZ overspeed. These are offline review artifacts, **not approved for printing**; original profiles remain unchanged. Physical/motion/profile validation is still outstanding; automated orchestration tests continue using a fake CLI. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation, the probe reference and the newer 2.5.0 build's ABI blocker. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The standalone page exposes the same optional adapter with separate slice/review/save steps; GX/thumbnail creation and a validated Finder profile are not implemented.
+
+## Offline G-code diagnostics (not safety approval)
+
+```sh
+python3 -m finderlab review path/to/file.gcode
+# For a reference file without explicit M82/M83, label the intended-E assumption:
+python3 -m finderlab review path/to/reference.gx --assume-absolute-e
+```
+
+Reads only: reports declared coordinates, E deltas, nominal resolved Z components, unmodeled homing and warnings. It diagnoses the old copied +363 mm E-only end step, but **does not certify collision safety or firmware compatibility**. See [docs/ORCA_FINDER_DRAFT_02.md](docs/ORCA_FINDER_DRAFT_02.md) for native output findings and the private, read-only web slicing setup. Use a new output file for review reports; never overwrite your source.
 
 ## Paused OctoPrint experiment
 
@@ -171,6 +181,7 @@ New documentation is English; older Swedish sections will be translated incremen
 - [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md): local AppImage versions, runtime blockers, integrity provenance and host setup.
 - [docs/SLICING.md](docs/SLICING.md): implemented Orca CLI adapter, offline/combined workflows, trusted profile requirements and native-validation limitations.
 - [docs/FLASHFORGE_PROFILE_REVIEW.md](docs/FLASHFORGE_PROFILE_REVIEW.md): inspection of the user's official Orca ZIP and Finder material settings in FlashPrint; not a print-ready Orca profile.
+- [docs/ORCA_FINDER_DRAFT_02.md](docs/ORCA_FINDER_DRAFT_02.md): native offline Marlin-emission experiment, extrusion/coordinate/Z diagnostics and unresolved physical blockers; not print approved.
 - [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md): local copied/edited Finder comparison presets and the observed Sailfish validation blocker; not a print-ready profile.
 - [docs/SLICING_ANALYSIS.md](docs/SLICING_ANALYSIS.md): offline analysis of supplied FlashPrint/Prusa samples, extrusion-state errors and remaining profile risks (not a print-ready replacement).
 - [docs/PRUSA_ITERATION_01.md](docs/PRUSA_ITERATION_01.md): user-requested start/end candidates and settings for offline re-slicing/review only; not hardware-validated.

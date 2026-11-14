@@ -488,7 +488,7 @@ def web_main(cli, args):
                 print("Private files/captures: " + str(server.work.folder), flush=True)
                 print("No automatic connect, start, stop or retries. Loopback may proxy hardware.", flush=True)
                 print("Explicit job controls: " + ("ENABLED (may heat/move)" if config.enable_job_controls else "disabled"), flush=True)
-                print("Orca: " + ("configured; profiles/toolpaths NOT validated" if slicing else "not configured; Finder Orca profile remains blocked"), flush=True)
+                print("Orca: " + ("configured; profiles/toolpaths NOT validated" if slicing else "not configured; no print-approved Finder profile is provided"), flush=True)
                 await stopped.wait()
         finally:
             loop.remove_signal_handler(signal.SIGTERM)

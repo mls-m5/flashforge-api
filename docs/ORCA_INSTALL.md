@@ -9,7 +9,7 @@ Downloaded and extracted under ignored `.local-tools/`, without sudo:
 | Build | Local executable | Observed status |
 | --- | --- | --- |
 | Official 2.5.0 Ubuntu2404 x86_64 AppImage | `.local-tools/orca-2.5.0/AppRun` | Cannot run here: requires GLIBC 2.38 and GLIBCXX 3.4.32, plus missing desktop runtime libraries. Do not replace the system glibc to make it work. |
-| Official 2.3.0 non-Ubuntu2404 x86_64 AppImage | `.local-tools/orca-2.3.0/AppRun` | Native `--help` succeeds after approved runtime installation, including under the adapter's process/resource limits. Actual slicing/profile validation is still outstanding. |
+| Official 2.3.0 non-Ubuntu2404 x86_64 AppImage | `.local-tools/orca-2.3.0/AppRun` | Native `--help` succeeds after approved runtime installation, including under the adapter's process/resource limits. Native experimental draft 02 now generates cube/holder geometry; physical Finder profile validation remains outstanding. |
 
 `.local-tools/orca-slicer` points to the extracted 2.3.0 AppRun. Both original AppImages and download provenance JSON remain local; this uses about 1.3 GiB. No binaries or extracted third-party files are committed. The original AppRun files are unmodified. Their resource directories must stay alongside them; do not copy only the internal executable.
 
@@ -17,7 +17,7 @@ Direct AppImage execution failed because this environment has no FUSE device/fus
 
 Native validation now succeeds: direct isolated `--help --datadir DATA` exits 0 without FUSE or a display, and a second probe through the actual adapter worker succeeds with its 4096 MiB address-space limit, 256 MiB file/workspace limit and 15-second help timeout. Capture `20261113T212359Z-e2569f3cc60a` (mode `slice`, experiment `orca-native-help-only`) preserves argv, stdout/stderr and exit status. All required flags are advertised: `--slice`, `--load-settings`, `--load-filaments`, `--outputdir`, `--datadir`, `--arrange`, `--orient`, `--ensure-on-bed`. The asset is release 2.3.0, while its help banner literally says `OrcaSlicer-01.10.01.50:`; retain both rather than inventing a consistent banner.
 
-During installation only isolated `--help`/loader probes were attempted. No model was sliced, no GUI opened intentionally, and no printer connected. Subsequent user-requested draft profile trials now reach native validation but reject Sailfish before geometry generation; see [ORCA_FINDER_DRAFT_01.md](ORCA_FINDER_DRAFT_01.md). Successful help/capability probing is not actual geometry generation or a validated Finder profile.
+During installation only isolated `--help`/loader probes were attempted. No model was sliced, no GUI opened intentionally, and no printer connected. Subsequent user-requested draft profile trials now reach native validation but reject Sailfish before geometry generation; see [ORCA_FINDER_DRAFT_01.md](ORCA_FINDER_DRAFT_01.md). A later explicitly authorized [draft 02](ORCA_FINDER_DRAFT_02.md) Marlin-emission experiment now adds actual cube/holder geometry generation with native 2.3.0 and a read-only web trial. The original Sailfish draft is unchanged. Neither help nor successful generation validates the physical Finder profile, homing, clearance or firmware semantics.
 
 ## On the host: reuse the shared files
 
@@ -103,4 +103,4 @@ The launcher is then `.local-tools/orca-selected/AppRun`. Keep all extraction/te
 
 2.3.0 asset: 112784576 bytes. Observed local SHA-256 `73079d88ec36f0615db7919d00aa26fe301e348ba6e051862a7cfc4040150c03`. GitHub's API did **not** publish a digest for this asset, so this is local provenance, not independent upstream checksum verification. Downloads used the official GitHub HTTPS release URLs; hashes do not constitute an independent security audit or signing certificate.
 
-Actual slicing and profile validation remain outstanding; only native help/capability probing has succeeded. Do not infer hardware, toolpath or firmware compatibility from downloading/extracting an application.
+Native draft 02 geometry generation is now recorded separately in [ORCA_FINDER_DRAFT_02.md](ORCA_FINDER_DRAFT_02.md); physical Finder profile validation remains outstanding. Do not infer hardware, toolpath or firmware compatibility from downloading/extracting an application.

@@ -85,7 +85,7 @@ agent hardware trial is authorized or performed by adding these controls.
   Subsequent release/logging failures are shown separately. Context/loopback
   tests validate wiring, not physical start/cancel dynamics or safety.
 
-## Orca is optional, and Finder profile validation is still blocked
+## Orca is optional; native experimental slicing is not print approval
 
 The page uses the existing resource-limited, shell-free Orca adapter. It does
 not bundle a printer profile, edit the existing local draft, substitute Marlin,
@@ -96,6 +96,16 @@ Installed Orca 2.3.0 rejects the current draft's `gcode_flavor=sailfish`;
 profile decision is still needed before a useful native Finder slice can be
 claimed. **The initial page is usable with existing FlashPrint GX files now;
 STL → safe Finder toolpaths is not yet solved.**
+
+The user subsequently authorized a separate **offline Marlin-emission draft 02**.
+Native 2.3.0 now slices a generated cube and the supplied holder and the native
+HTTP Slice/download path was checked, with uploads/job controls disabled.
+Extrusion resets, final retraction and a slow Z layer-change hook address the
+identified numeric issues, but G21/M82/M118 behavior and physical homing/clip
+clearance remain unresolved. See [ORCA_FINDER_DRAFT_02.md](ORCA_FINDER_DRAFT_02.md)
+for private artifact paths and a **read-only slicing-page invocation**. Original
+profiles are unchanged. Do not enable generated-output upload/start just because
+this candidate slices successfully.
 
 With your own trusted, self-contained and separately reviewed JSON profiles:
 
@@ -248,6 +258,6 @@ Orca executable. They exercise browser/server transfer separately from save,
 exact payload/hash/command order, save without start/stop, separate confirmed
 job controls with stale-ID/repeat/unknown guards, explicit gates, origin/token/
 Host checks, truncated/oversized files, busy/quota/locking and slicing outcomes.
-Node checks use a minimal DOM model, not a rendered browser. Native successful
-Finder slicing, actual browser drag/drop and container acceptance still need
+Node checks use a minimal DOM model, not a rendered browser. Native experimental generation has a separate recorded trial; a print-approved
+Finder profile, actual browser drag/drop and container acceptance still need
 manual validation. No physical printer is used or authorized by these checks.

@@ -72,6 +72,26 @@ changed and no printer was contacted. See
 methods and limitations. The next step needs an explicit offline dialect/slicer
 choice; copying an Adventurer profile or disabling flavor checks is not a fix.
 
+## User-authorized offline Orca draft 02: native generation succeeds
+
+A separate private copy uses explicit Marlin emission, not a hidden fallback or
+firmware change. Native 2.3.0 slices both a generated cube and the supplied
+holder. Original profile 01 remains unchanged and rejected as before. Stage A
+isolated flavor/identity; B applied selected Finder reference settings and
+exposed a 12.915967 mm/s nominal Z component on a combined layer move; C added
+an explicit slow Z step before XY layer travel. Both current outputs have
+resolved nominal Z components at most 7 mm/s and a final E delta of -1.3 mm,
+not the old copied +363.30675 mm feed. A read-only native web Slice/download
+trial succeeded with no printer sessions and Save disabled.
+
+The new `review` CLI reports bounded, read-only numerical diagnostics with
+synthetic regression tests; it is not a collision/safety validator or replay
+engine. Physical homing/offset/clip clearance, G21/M82/M118 behavior and material
+calibration remain blockers. No candidate was uploaded or printed, no profile
+is published as supported, and no hardware permission is inferred. See
+[ORCA_FINDER_DRAFT_02.md](ORCA_FINDER_DRAFT_02.md) for capture references,
+reproduction and the paired-reference review still needed.
+
 ## M0 — Agree on the test setup
 
 - Confirm the model, firmware, FlashPrint version, host OS and GitHub reference.
@@ -172,7 +192,8 @@ configuration, not browser parameters; generated-output saving is separately
 disabled until an operator deliberately enables it. The default Compose and
 new Podman recipe target the standalone page. Independent HTTP tests, fresh
 loopback dummies and a fake Orca exercise orchestration, guards and exact upload
-bytes; no successful native Finder slicing or physical trial is claimed.
+bytes. A subsequent separately authorized draft 02 now adds native experimental
+geometry generation, not a supported Finder profile or physical trial.
 
 The page now also offers separately confirmed Start/Cancel behind explicit
 `--enable-job-controls`. Start is tied to the exact confirmed saved basename
@@ -182,8 +203,9 @@ or proof of cooled/stationary hardware. Tests use only virtual jobs/fresh
 loopback endpoints. No live job monitoring or new physical control evidence is
 claimed, and save/shutdown/error never automatically start/cancel.
 
-**Remaining acceptance:** native Finder Orca profile/dialect decision (Sailfish
-rejection is unchanged), live browser file/drop/error flow, actual Podman image
+**Remaining acceptance:** physical Finder profile/dialect validation (original
+Sailfish rejection is unchanged; separate draft 02 geometry generation succeeds),
+live browser file/drop/error flow, actual Podman image
 build/runtime, and separately approved hardware upload if desired. No model/
 toolpath preview or GX generator is provided. See [WEB.md](WEB.md).
 

@@ -51,6 +51,18 @@ Standalone slicing uses mode `slice` with no printer sessions; combined `upload 
 
 Generated `sliced.gcode` is retained under the run directory by default, or at standalone slice's explicit `--output`. It has a **separate** size bound (`--max-file-size`) and is outside `--max-capture-bytes`; original profiles/model snapshots and native temporary data are cleaned from project-local `.tmp/`. Raw slicer log chunks are bounded independently and count toward the existing event/log quota. Full details and trust limits: [SLICING.md](SLICING.md).
 
+## Offline numerical review reports
+
+`python3 -m finderlab review FILE` reads a bounded regular G-code file (or the
+observed GX body offset) and writes a derived JSON report to stdout. It creates
+no printer session or capture, runs no slicer and does not rewrite its source.
+Reports include hashes/coordinates and may disclose private geometry; keep
+reports from private files in ignored `.tmp/` or local profile storage. Modal/
+E-origin assumptions and unmodeled homing remain explicit. Empty alerts do not
+certify motion safety or firmware compatibility. See
+[ORCA_FINDER_DRAFT_02.md](ORCA_FINDER_DRAFT_02.md) for actual native trials and
+how the new diagnostic differs from preserved raw evidence.
+
 ## Format version 1
 
 `client` is the incoming client (usually FlashPrint) for proxy/mock captures, or the new upload application for mode `client`; `server` is the selected target/mock in all cases. Raw files contain the concatenated observed bytes for that session/direction, not PCAP packets.

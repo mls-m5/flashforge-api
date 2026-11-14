@@ -4,7 +4,7 @@
 
 Implemented: `slice MODEL.stl` for offline export, and `upload MODEL.stl --slice` for sequential STL → Orca → plain G-code → the existing uploader. The async adapter is `finderlab/slicer.py::slice_model`; it does not import or invoke the printer client. The combined CLI does not open a printer connection until slicing has succeeded. Upload-only remains the default; the existing explicit `--start` still means save confirmation → READY check → start. There is no automatic stop or retry.
 
-**Not verified here:** actual Orca slicing, an Orca Finder 2 profile, physical plain-G-code support, or safe generated toolpaths. Official 2.3.0/2.5.0 AppImages are downloaded/extracted locally. After approved runtime installation, native 2.3.0 help/capability probing succeeds, including under the adapter limits; 2.5.0 remains incompatible with this Debian 12 runtime. See [ORCA_INSTALL.md](ORCA_INSTALL.md) for paths, provenance, probe capture and host instructions. Automated tests use an independent fake executable plus fresh ephemeral dummy printers; they test orchestration/limits, not geometry or Orca compatibility. No native slicing or physical printer trial was performed; successful native help does not validate JSON profile loading, geometry generation or firmware compatibility.
+**Native offline generation now observed:** the separately user-authorized Marlin-emission [draft 02](ORCA_FINDER_DRAFT_02.md) slices a generated cube and the supplied holder with Orca 2.3.0. It is an experimental candidate, **not a validated Finder 2 profile**, physical plain-G-code trial or safe-toolpath certificate. Official 2.3.0/2.5.0 AppImages are downloaded/extracted locally. After approved runtime installation, native 2.3.0 help/capability probing succeeds, including under the adapter limits; 2.5.0 remains incompatible with this Debian 12 runtime. See [ORCA_INSTALL.md](ORCA_INSTALL.md) for paths, provenance, probe capture and host instructions. Automated tests use an independent fake executable plus fresh ephemeral dummy printers; they test orchestration/limits, not geometry or Orca compatibility. Earlier native work established help only; draft 02 now adds actual JSON loading/geometry generation. No physical trial of this generated output was performed. Native success does not establish firmware compatibility, homing/clip clearance or material calibration.
 
 A user-requested local Finder draft has since been copied/edited, but its native offline trial is blocked by Orca rejecting `gcode_flavor=sailfish`. See [ORCA_FINDER_DRAFT_01.md](ORCA_FINDER_DRAFT_01.md) for the private artifact paths, source attribution, exact changes, failed trial captures and the next dialect decision. The earlier internal Sailfish enum observation was not evidence of an accepted Orca profile option.
 
@@ -17,8 +17,10 @@ Read-only inspection of its actual embedded filesystem found no Finder in all
 2062 bundled profile JSON files; its Flashforge machines are Adventurer 5M/5M
 Pro, not Finder. The linked FlashPrint 5.8.3 DEB contains concrete older Finder
 material/process values, kept as local reference, not a redistributed or
-converted Orca profile. This has not resolved the native flavor/profile blocker;
-a separate explicit offline dialect/slicer decision is still needed.
+converted Orca profile. This did not supply a Finder profile. The user subsequently authorized a separate
+Marlin-emission offline experiment: draft 02 now generates geometry, while the
+original Sailfish draft is unchanged and still rejected. See its separate
+[trial report](ORCA_FINDER_DRAFT_02.md) before interpreting that progress.
 
 ## Install and prepare profiles on the host
 
@@ -121,6 +123,6 @@ External interface references, not Finder 2 protocol evidence:
 - [Orca CLI transforms](https://github.com/OrcaSlicer/OrcaSlicer/wiki/cli_transform): arrange/orient/ensure-on-bed;
 - [upstream PrintConfig.cpp](https://github.com/OrcaSlicer/OrcaSlicer/blob/main/src/libslic3r/PrintConfig.cpp): setting names only. Internal enum entries and the accepted flavor list differ; native 2.3.0 rejects Sailfish, and tagged 2.5.0 source excludes it from the accepted list.
 
-These upstream pages/main branch can change. No upstream implementation/profile code was copied. Downloaded versions and the successful native 2.3.0 help probe are recorded in [ORCA_INSTALL.md](ORCA_INSTALL.md); actual slicing/profile validation is still pending.
+These upstream pages/main branch can change. The adapter runtime contains no copied upstream implementation/profile code; private draft profile derivatives retain source/license provenance separately. Downloaded versions and the native help probe are recorded in [ORCA_INSTALL.md](ORCA_INSTALL.md); draft 02 adds native geometry generation, not physical profile validation.
 
-Next: resolve the draft's dialect/slicer choice explicitly, then run **offline slicing only**, inspect complete output plus logs, and only then transfer to a fresh dummy. Physical start remains a separate approved decision. GX/thumbnail generation and a verified Finder Orca profile remain unimplemented. The standalone page's adapter wiring is now implemented and fake-executable tested; this does not resolve native profile compatibility or validate generated toolpaths.
+The user explicitly approved the draft 02 offline dialect experiment; native geometry generation now succeeds. Next review its documented G21/M82/M118 and physical homing/clearance blockers, confirm nozzle/material, and retain generated files as review-only until a separately bounded next trial is agreed. Physical start remains a separate approved decision. GX/thumbnail generation and a verified Finder Orca profile remain unimplemented. The standalone page's adapter wiring is now implemented and fake-executable tested; this does not resolve native profile compatibility or validate generated toolpaths.

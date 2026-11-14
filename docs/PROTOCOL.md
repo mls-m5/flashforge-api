@@ -144,6 +144,25 @@ User-requested local profile copies are documented in [ORCA_FINDER_DRAFT_01.md](
 
 This is native Orca 2.3.0 configuration evidence, not Finder protocol evidence. The tagged 2.5.0 source also excludes Sailfish from accepted values; existence of its enum key was insufficient evidence of support. Retain this blocker rather than silently switching to Marlin. The earlier Sailfish comparison choice came from the supplied Prusa configuration and is not independent proof of the physical printer's required dialect. A separately scoped offline compatibility investigation is needed before changing that choice.
 
+## SLICER-DRAFT-013 — Explicit offline Marlin-emission experiment
+
+User authorized a separate offline candidate, not a firmware change or printer
+trial. Native Orca 2.3.0 now generates cube/holder output with private draft 02;
+all five CLI captures under `captures/finder02/` finalized with zero printer
+sessions. See [ORCA_FINDER_DRAFT_02.md](ORCA_FINDER_DRAFT_02.md) for exact IDs and
+stages. Stage B exposed mixed-XYZ travel with nominal Z component12.915967 mm/s;
+stage C's separate layer Z step yields resolved nominal components at most7 mm/s
+in both current files. Final requested E delta is -1.3 mm, with no extra custom
+end E/XY/Z park; the old +363 mm E-only end discontinuity is not present.
+
+Native HTTP Slice/download capture
+`web-data/finder02-native/captures/20261114T144346Z-167968ea37f7` likewise has no
+printer sessions, with Save/job controls disabled. These are numerical/native
+application observations, **not hardware protocol or collision-safety evidence**.
+G21/M82 are added versus the working FlashPrint command set, M118 is omitted,
+and homing/offset/clearance/material semantics remain unresolved. Source draft01
+and mounted profiles are unchanged; no generated candidate was uploaded/started.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.

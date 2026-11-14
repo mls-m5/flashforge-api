@@ -3,7 +3,11 @@
 import argparse
 import asyncio
 from dataclasses import asdict
+import json
 import logging
+from pathlib import Path
+
+from .gcode_review import review_file
 
 from .capture import Capture, CaptureError
 from .cli_client import CLIENT_COMMANDS, add_client_commands, client_main
@@ -20,6 +24,9 @@ def parser() -> argparse.ArgumentParser:
     commands = cli.add_subparsers(dest="command", required=True)
     add_client_commands(commands)
     add_web_command(commands)
+    review = commands.add_parser("review", help="offline G-code/GX coordinate and E-delta diagnostics; NOT print approval")
+    review.add_argument("file", type=Path)
+    review.add_argument("--assume-absolute-e", action="store_true", help="label an explicit absolute-E assumption for files without M82/M83")
     mock = commands.add_parser("mock", help="run the offline TCP dummy printer")
     defaults = MockConfig()
     mock.add_argument("--profile", choices=tuple(PROFILES), default=defaults.profile,
@@ -91,6 +98,12 @@ def main():
     cli = parser()
     args = vars(cli.parse_args())
     mode = args.pop("command")
+    if mode == "review":
+        try:
+            print(json.dumps(review_file(args["file"], assume_absolute_e=args["assume_absolute_e"]), indent=2))
+        except (ValueError, OSError) as exc:
+            cli.exit(1, f"Cannot review file: {exc}\n")
+        return
     if mode == "web":
         return web_main(cli, args)
     if mode in CLIENT_COMMANDS:

@@ -16,6 +16,11 @@ files existed in its user folders. No account settings, device registrations,
 plugins or logs were copied. The pre-existing root `result.json` was left alone.
 These local/private profile files are **not committed** as a supported preset.
 
+The user subsequently approved a **separate** Marlin-emission offline experiment:
+[draft 02](ORCA_FINDER_DRAFT_02.md) now generates native cube/holder review
+artifacts. This original draft and its failed Sailfish trials remain unchanged;
+new generation success is not physical-print approval.
+
 ## Provenance and inheritance
 
 Both mounted `Custom.opc` and `OrcaFilamentLibrary.opc` were byte-identical to the
