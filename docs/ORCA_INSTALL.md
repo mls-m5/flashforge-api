@@ -19,6 +19,25 @@ Native validation now succeeds: direct isolated `--help --datadir DATA` exits 0 
 
 During installation only isolated `--help`/loader probes were attempted. No model was sliced, no GUI opened intentionally, and no printer connected. Subsequent user-requested draft profile trials now reach native validation but reject Sailfish before geometry generation; see [ORCA_FINDER_DRAFT_01.md](ORCA_FINDER_DRAFT_01.md). A later explicitly authorized [draft 02](ORCA_FINDER_DRAFT_02.md) Marlin-emission experiment now adds actual cube/holder geometry generation with native 2.3.0 and a read-only web trial. The original Sailfish draft is unchanged. Neither help nor successful generation validates the physical Finder profile, homing, clearance or firmware semantics.
 
+## Host/agent runtime distinction observed during the web test
+
+Host web capture `web-data/offline-test/captures/20261114T153141Z-cd589efc7838`
+failed in the 2.3.0 help stage with exit127 and missing
+`libwebkit2gtk-4.0.so.37`; there were no printer sessions or slicing output.
+The agent's approved Debian runtime packages were not installed on the host.
+The host capture reports glibc2.39 (not proof of a particular distribution).
+
+The user subsequently reported that
+`.local-tools/OrcaSlicer_Linux_AppImage_Ubuntu2404_V2.5.0.AppImage` starts directly
+on the host. The short offline web launcher now prefers that file when present,
+prints its selected path and accepts an explicit `--orca PATH` override; no
+printer-action flags are enabled. Host-vs-Podman packaging is deliberately left
+for later. A successful GUI launch does not establish CLI/resource-limit or
+profile compatibility. The 2.3.0 draft outputs must not be assumed validated
+under 2.5.0: generate/download/review again offline. The agent cannot verify
+this 2.5.0 runtime on its older Debian environment. Do not symlink incompatible
+WebKit ABIs or install another distribution's packages to hide this mismatch.
+
 ## On the host: reuse the shared files
 
 If the host sees this same project directory, the downloads/extracted applications may already be available. From the repository root:

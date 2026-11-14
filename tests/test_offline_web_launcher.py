@@ -43,6 +43,19 @@ class LauncherTests(unittest.TestCase):
         execute.assert_not_called(); chdir.assert_not_called()
         self.assertIn("printer uploads, Start and Cancel are disabled", output.getvalue())
 
+    def test_explicit_executable_and_old_launcher_fallback(self):
+        override = self.root / "host-orca"
+        override.write_text("#!/bin/sh\nexit 98\n")
+        override.chmod(0o700)
+        command = launcher.build_command(orca=Path("host-orca"))
+        self.assertEqual(command[command.index("--orca")+1], str(override))
+        with patch.object(launcher, "ORCA", self.root / "missing-new-appimage"), \
+             patch.object(launcher, "FALLBACK_ORCA", self.orca):
+            command = launcher.build_command()
+        self.assertEqual(command[command.index("--orca")+1], str(self.orca))
+        with self.assertRaises(ValueError):
+            launcher.build_command(orca=self.root / "missing-explicit")
+
     def test_missing_profile_and_invalid_port_are_refused(self):
         for port in (0, 65536):
             with self.assertRaises(ValueError): launcher.build_command(port)

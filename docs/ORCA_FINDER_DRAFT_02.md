@@ -189,7 +189,11 @@ The private profile directory is not supplied by a fresh public clone.
 
 For a **read-only slicing page test** on this workspace, the short launcher
 checks the local paths, uses a separate `web-data/offline-test` workspace and
-always leaves all printer actions disabled:
+always leaves all printer actions disabled. It prefers the user's host-working
+Ubuntu2404 2.5.0 AppImage when present, otherwise the local `orca-slicer`
+launcher, and prints the selected path. `--orca PATH` overrides selection.
+The 2.3.0 findings above do not validate a new 2.5.0 output; review it offline
+again before any separate physical decision:
 
 ```sh
 python3 tools/start_offline_web.py
@@ -206,7 +210,9 @@ Private profiles/executable must already exist locally; `--check` only checks
 files, not native loading or profile/motion safety. No arbitrary flags are
 forwarded by the launcher.
 
-Equivalent expanded invocation:
+For the originally reviewed 2.3.0 executable, explicitly select
+`--orca .local-tools/orca-2.3.0/AppRun` (requires compatible host libraries).
+The earlier observed expanded 2.3.0 invocation is:
 
 ```sh
 python3 -m finderlab web --orca .local-tools/orca-slicer \

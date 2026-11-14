@@ -15,7 +15,13 @@ From the project root, two short executable Bash wrappers are available:
 
 Run them in separate terminals. The web wrapper starts the existing **read-only
 native draft-02 slicing test** on 127.0.0.1:8000 (uploads and job controls remain
-disabled); it requires the local Orca/profiles. The dummy listens on
+disabled); it requires the local Orca/profiles. It now prefers the user's
+host-working `.local-tools/OrcaSlicer_Linux_AppImage_Ubuntu2404_V2.5.0.AppImage`
+when present, otherwise `.local-tools/orca-slicer`. The chosen executable is
+printed; `--orca PATH` explicitly overrides it. Draft-02 output was reviewed
+with 2.3.0, so a different build needs new offline output review, not an assumed
+profile/physical-safety approval. The user reports 2.5.0 starts on the host;
+it cannot run in the agent's older Debian environment. The dummy listens on
 127.0.0.1:9000 and is not needed for offline slicing alone. The web launcher
 labels that same target port but does not connect to it automatically.
 Ctrl+C stops each process. Scripts also work when invoked by absolute path from
