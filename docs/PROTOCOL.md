@@ -299,6 +299,36 @@ Skillnaderna kan bero på firmware, klientversion eller olika discovery-vägar. 
 - Fast paus före M29 och upload med råa byte saknar lokal verifiering.
 - Skriptet skickar inget explicit utskriftsstartkommando, men upload-only-beteendet måste ändå verifieras på aktuell firmware.
 
+## FINDER-PROGRESS-019 — User-host monitor and one-byte terminal overrun
+
+User reported file-byte progress remaining one byte beyond the total. Read-only
+inspection of the ongoing proxy capture `20261114T214419Z-91f9faa3164d`, s0001,
+and the matching host web monitor capture
+`web-data/proxy-test/captures/20261114T214811Z-696f28901933`, s0001, confirms
+repeated raw `SD printing byte 428450/428449` replies. At 21:52:53 UTC the proxy
+also observed MachineStatus/MoveMode READY/READY, nozzle actual 100°C and target 0°C.
+This is device-reported status/cooldown, not proof of physical print quality,
+clearance, completion or safe touch. The same +1 shape appeared previously as
+76580/76579 in the user's cube capture
+`20261114T194822Z-b991640f7b31`, noted in STATUS.md.
+
+The new host monitor's inspected client prefix contains M601/M115 then repeated
+M119/M105/M27 only, with no upload, heat, motion, start or cancel command.
+Captured M115 identifies Flashforge Finder / V1.5 20170419; FlashPrint version
+is unknown and FlashPrint is not the recorded monitor client. Initial M27
+samples in this session rose from 368207/428449. This supplies bounded physical
+observation of user-run persistent monitoring, beyond earlier dummy-only
+orchestration tests, not evidence for error/retry/session-handoff dynamics.
+Both captures were still unfinalized; no final hashes/whole-run success claim.
+The agent only read existing files, made no network connection and did not
+change raw recordings.
+
+The +1 exists in the raw printer reply, not just percentage rounding. Its cause
+(EOF position/counting convention or firmware quirk) remains unknown. Preserve
+raw counters, cap only displayed percentage at 100, retain `over_total:true`
+and `completion_inferred:false`. Do not subtract a byte, alter file payload /
+framing/CRC or infer print-complete from this counter alone.
+
 ## WEB-STATUS-018 — Active monitoring orchestration, dummy only
 
 The web backend now maintains a firmware-gated M601/M115 status session with

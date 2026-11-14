@@ -6,8 +6,10 @@ At the user's request, `./tools/start_proxy_web.sh` now **connects on startup**
 to its explicitly configured loopback proxy for status polling. Verify the
 proxy's upstream first and **close FlashPrint and other control clients before
 launching**. This is a deliberate change from the former no-connect startup.
-There is no discovery. The agent's checks use fresh loopback dummies only;
-physical acceptance of this persistent monitoring session is pending.
+There is no discovery. The agent's checks use fresh loopback dummies only.
+A user-run physical monitoring session is now observed (FINDER-PROGRESS-019
+below); broader firmware/error/session-handoff and browser acceptance remain
+pending. No agent hardware connection was made.
 
 - One firmware-gated session (M601/M115), then serial M119/M105/M27 batches,
   **one second after each completed batch**. These are requested snapshots,
@@ -146,6 +148,25 @@ status reply. Error/invalid newer frames invalidate their metric. Partial JSON
 records while logging are tolerated, not rewritten. No inference of spontaneity,
 request-side execution or physical behavior is added by this parser.
 
+## User-host terminal byte overrun and active monitoring observation
+
+The user reported progress one byte beyond the total. Existing proxy capture
+`20261114T214419Z-91f9faa3164d` / host monitor
+`web-data/proxy-test/captures/20261114T214811Z-696f28901933`, s0001, show repeated
+raw `SD printing byte 428450/428449`. At 21:52:53 UTC the captured state was
+READY/READY, actual nozzle 100°C / target 0°C. The discrepancy is already in the
+printer reply, not caused by page percentage rounding. Earlier cube observations
+showed 76580/76579; its root cause is still unknown. The current UI already caps
+percentage at 100% and flags the raw overrun, without inferring completion or
+subtracting a byte. No payload/parser/framing/timing change is justified.
+
+The inspected host monitor prefix contains only M601/M115 and repeated
+M119/M105/M27; firmware V1.5 20170419 is captured. This is user-run physical
+status-session evidence, not a new agent hardware test, end-quality/touch-safety
+proof or validation of error/reconnect/control-handoff behavior. The recordings
+were ongoing/unfinalized and read without alteration; observations are dated
+snapshots, not a promise of present state. See FINDER-PROGRESS-019 for scope.
+
 ## Evidence and checks
 
 Initial read-only inspection of the user-run active proxy capture
@@ -168,8 +189,9 @@ Active tests additionally use fresh loopback dummies to check startup opt-in,
 manual Stop/Start/gates, persistent sessions, shared-lock Save/resume without
 start/cancel, stop-on-failure/quota, no reconnect after uncertain Save, early
 shutdown and storage failure before connection. Launcher checks verify proxy /
-owned-dummy defaults and offline no-connect. No physical monitoring trial or
-rendered browser acceptance is claimed.
+owned-dummy defaults and offline no-connect. These automated checks claim no
+physical monitoring or rendered browser acceptance; the separate user-host
+observation above has its own bounded evidence.
 
 Passive tests use synthetic recordings, fresh local HTTP contexts and mocked browser
 requests. They cover fragmented/coalesced frames, stale/partial/error samples,
@@ -177,4 +199,5 @@ clock skew, zero/over-total progress, source matching, no cross-session blending
 read-only file hashes, no FinderClient invocation, duplicate poll prevention
 and clearing values on read failure. They do not validate a rendered browser,
 all firmware status variants or physical printer behavior. Passive reading of
-an actual user capture was checked separately; no active hardware test occurred.
+an actual user capture was checked separately. The agent performed no active
+hardware test; the user-host monitor observation is documented above.

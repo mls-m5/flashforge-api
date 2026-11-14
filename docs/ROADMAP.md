@@ -242,8 +242,11 @@ UI Start/Stop affects monitoring only, not print Start/Cancel. Local network
 operations share a lock and yield the monitor session; uncertain printer I/O,
 query/release/recording errors stop it without automatic reconnect. Bounded
 private captures and reserved storage, cached ages, Origin/token gates and
-no automatic job actions are covered by fresh loopback/Node tests. Physical
-monitoring and rendered browser acceptance remain user-run checks. Close
+no automatic job actions are covered by fresh loopback/Node tests. The user's
+ongoing monitor capture now supplies physical persistent-query observation on
+V1.5 plus a terminal raw 428450/428449-byte overrun
+(FINDER-PROGRESS-019). No new agent hardware activity; error/reconnect/handoff
+and rendered browser acceptance remain user-run checks. Close
 FlashPrint before enabling active polling. See STATUS.md for exact behavior.
 
 ## Next requested: simple manual-control panel
