@@ -74,6 +74,19 @@ control would require its own operation/mode/cancellation parser design and
 fault tests, not a blanket line-ending normalization in the recording proxy.
 The proxy still forwards exact bytes and is not a safety filter.
 
+## User clarification: Continuous jog selected
+
+The user subsequently confirmed the UI said **Continuous jog**, and that
+separate millimetre-step choices are available. This supports interpreting the
+large relative targets as continuous-jog implementation details rather than
+ordinary step sizes. The user suggests press starts a long-target movement and
+release sends the interruption. The observed rapid G1→M112 sequence is
+consistent with that hypothesis, but button press/release events and actual
+travel were not independently recorded. Do not label it proven or treat M112 as
+a general emergency stop. Millimetre-mode wire behavior remains unobserved and
+requires its own explicitly approved controlled trial; no agent motion action
+was taken. Do not transplant continuous-jog targets into a generic motion API.
+
 ## Next steps, before implementing motion controls
 
 - Confirm physical completion, actual button behavior, FlashPrint version,
