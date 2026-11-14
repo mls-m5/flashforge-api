@@ -4,6 +4,24 @@ OctoPrint development is **paused**. The main page is now independent of
 OctoPrint: `python3 -m finderlab web`. Python 3.11+ and the standard library are
 sufficient for the page and printer transfer. No pip installation is needed.
 
+## Quick launch scripts
+
+From the project root, two short executable Bash wrappers are available:
+
+```sh
+./tools/start_web_interface.sh
+./tools/start_dummy.sh
+```
+
+Run them in separate terminals. The web wrapper starts the existing **read-only
+native draft-02 slicing test** on 127.0.0.1:8000 (uploads and job controls remain
+disabled); it requires the local Orca/profiles. The dummy listens on
+127.0.0.1:9000 and is not needed for offline slicing alone. The web launcher
+labels that same target port but does not connect to it automatically.
+Ctrl+C stops each process. Scripts also work when invoked by absolute path from
+another directory. `./tools/start_web_interface.sh --port 8001` changes the HTTP
+port; `./tools/start_dummy.sh --port 9001` changes the dummy port.
+
 ## Start with a fresh dummy
 
 Terminal 1, from this repository root:

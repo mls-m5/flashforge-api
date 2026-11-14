@@ -19,7 +19,7 @@ def build_command(port=8000):
     if not ORCA.is_file() or not os.access(ORCA, os.X_OK):
         raise ValueError("Local Orca launcher missing/not executable: " + str(ORCA))
     command = [sys.executable, "-m", "finderlab", "web", "--listen-host", "127.0.0.1",
-               "--listen-port", str(port), "--data-dir", str(ROOT / "web-data/offline-test"),
+               "--listen-port", str(port), "--target-port", "9000", "--data-dir", str(ROOT / "web-data/offline-test"),
                "--orca", str(ORCA.resolve())]
     for kind in ("machine", "process", "filament"):
         path = PROFILE / (kind + ".json")
