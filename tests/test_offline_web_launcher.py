@@ -35,6 +35,13 @@ class LauncherTests(unittest.TestCase):
             self.assertNotIn(forbidden, command)
         self.assertEqual(command[command.index("--machine")+1], str(self.profiles / "machine.json"))
 
+    def test_dummy_mode_only_requests_an_owned_endpoint(self):
+        command = launcher.build_command(dummy_upload_test=True)
+        self.assertIn("--dummy", command)
+        for flag in ("--target-host", "--target-port", "--allow-hardware", "--enable-job-controls"):
+            self.assertNotIn(flag, command)
+        self.assertIn(str(self.root / "web-data/dummy-upload-test"), command)
+
     def test_check_does_not_launch_or_change_directory(self):
         with patch("sys.argv", ["start_offline_web.py", "--check"]), \
              patch.object(launcher.os, "execv") as execute, patch.object(launcher.os, "chdir") as chdir, \

@@ -13,7 +13,7 @@ ARCHIVE_ORCA = ROOT / ".local-tools/OrcaSlicer_Linux_AppImage_Ubuntu2404_V2.5.0.
 FALLBACK_ORCA = ROOT / ".local-tools/orca-slicer"
 
 
-def build_command(port=8000, orca=None):
+def build_command(port=8000, orca=None, *, dummy_upload_test=False):
     if sys.version_info < (3, 11):
         raise ValueError("Python 3.11 or newer is required")
     if not 1 <= port <= 65535:
@@ -30,9 +30,10 @@ def build_command(port=8000, orca=None):
         raise ValueError("Use an extracted Orca AppRun, not a FUSE-mounted AppImage; see docs/ORCA_INSTALL.md")
     if not selected.is_file() or not os.access(selected, os.X_OK):
         raise ValueError("Local Orca launcher missing/not executable: " + str(selected))
+    workspace = "web-data/dummy-upload-test" if dummy_upload_test else "web-data/offline-test"
     command = [sys.executable, "-m", "finderlab", "web", "--listen-host", "127.0.0.1",
-               "--listen-port", str(port), "--target-port", "9000", "--data-dir", str(ROOT / "web-data/offline-test"),
-               "--orca", str(selected.resolve())]
+               "--listen-port", str(port), "--data-dir", str(ROOT / workspace), "--orca", str(selected.resolve())]
+    command += ["--dummy"] if dummy_upload_test else ["--target-port", "9000"]
     for kind in ("machine", "process", "filament"):
         path = PROFILE / (kind + ".json")
         if not path.is_file() or not 0 < path.stat().st_size <= 1024 * 1024:
@@ -47,13 +48,17 @@ def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("--port", type=int, default=8000, help="loopback HTTP port (default: 8000)")
     cli.add_argument("--orca", type=Path, help="trusted native Orca executable; relative paths are project-relative")
+    cli.add_argument("--dummy-upload-test", action="store_true", help="own a fresh dummy and permit save-only to it (no hardware endpoint)")
     cli.add_argument("--check", action="store_true", help="check local files only; do not launch anything")
     args = cli.parse_args()
     try:
-        command = build_command(args.port, args.orca)
+        command = build_command(args.port, args.orca, dummy_upload_test=args.dummy_upload_test)
     except ValueError as exc:
         cli.error(str(exc))
-    print("OFFLINE SLICING ONLY: printer uploads, Start and Cancel are disabled.", flush=True)
+    if args.dummy_upload_test:
+        print("DUMMY UPLOAD TEST: a new owned dummy is created; Start/Cancel remain disabled.", flush=True)
+    else:
+        print("OFFLINE SLICING ONLY: printer uploads, Start and Cancel are disabled.", flush=True)
     print("Draft 02 is experimental and NOT approved for printing.", flush=True)
     print("Orca: " + command[command.index("--orca") + 1], flush=True)
     print("Profile/output review used 2.3.0; another build requires new offline output review.", flush=True)

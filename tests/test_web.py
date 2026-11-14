@@ -14,7 +14,7 @@ from unittest.mock import patch
 from finderlab.client import ClientConfig, FinderClient
 from finderlab.simulator import MockConfig, MockPrinter
 from finderlab.slicer import SliceConfig
-from finderlab.web import MODEL_LIMIT, PRINT_LIMIT, WebCapture, WebConfig, WebServer, Workbench
+from finderlab.web import MODEL_LIMIT, PRINT_LIMIT, WebCapture, WebConfig, WebServer, Workbench, serve_workbench
 from helpers import workspace_tempdir
 from test_slicer import FAKE, PAYLOAD
 
@@ -63,6 +63,14 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
     async def finish(self):
         await asyncio.wait_for(asyncio.shield(self.server.work.task), 5)
         return self.server.work.state
+
+    async def test_cli_dummy_rejects_external_endpoint_options(self):
+        process = await asyncio.create_subprocess_exec(
+            sys.executable, "-m", "finderlab", "web", "--dummy", "--target-port", "9000",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        _, error = await asyncio.wait_for(process.communicate(), 5)
+        self.assertEqual(process.returncode, 2)
+        self.assertIn(b"owns its endpoint", error)
 
     async def test_cli_starts_disabled_and_shuts_down_cleanly(self):
         for signum in (signal.SIGINT, signal.SIGTERM):
@@ -304,6 +312,38 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
         manifest = json.loads((Path(state["capture"]) / "manifest.json").read_text())
         self.assertFalse(manifest["complete"])
         self.assertEqual((await self.post("/api/save", {"confirm": True, "remote_name": "quota.gx"}))[0], 409)
+
+    async def test_owned_dummy_overrides_target_and_accepts_only_virtual_save(self):
+        cfg = WebConfig(port=0, data_dir=self.root / "owned-dummy",
+                        client=ClientConfig(host="192.0.2.1", allow_hardware=True),
+                        enable_job_controls=True)
+        previous = self.server
+        async with serve_workbench(cfg, dummy=True) as owned:
+            self.server = owned
+            address = owned.owned_dummy.address
+            try:
+                code, content = await self.request("GET", "/api/config")
+                capabilities = json.loads(content)
+                self.assertTrue(capabilities["owned_dummy"])
+                self.assertTrue(capabilities["sliced_upload_enabled"])
+                self.assertFalse(capabilities["job_controls_enabled"])
+                self.assertEqual(owned.config.client.host, "127.0.0.1")
+                self.assertFalse(owned.config.client.allow_hardware)
+                payload = b"; synthetic dummy save only\x00~M29"
+                await self.file("virtual.gcode", payload)
+                await self.post("/api/save", {"confirm": True, "remote_name": "virtual.gcode"})
+                result = await self.finish()
+                self.assertTrue(result["saved"])
+                self.assertEqual(owned.owned_dummy.files["virtual.gcode"], payload)
+                self.assertIsNone(owned.owned_dummy.active_file)
+                manifest = json.loads((Path(result["capture"]) / "manifest.json").read_text())
+                self.assertEqual(manifest["metadata"]["target_kind"], "owned_dummy")
+                self.assertIn("emulated", manifest["model"])
+                self.assertEqual((await self.post("/api/start", {"confirm": True, "save_id": result["save_id"]}))[0], 409)
+            finally:
+                self.server = previous
+        with self.assertRaises(OSError):
+            await asyncio.open_connection(*address)
 
     async def test_storage_quota_and_workspace_lock(self):
         with patch("finderlab.web.STORAGE_LIMIT", 100):

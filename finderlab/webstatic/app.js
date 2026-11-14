@@ -15,6 +15,7 @@
             !state.save_id || state.start_attempted || state.phase === "unknown");
         el("stop").disabled = Boolean(busy || !config || !config.job_controls_enabled);
         el("remote").disabled = busy;
+        el("save").textContent = config && config.owned_dummy ? "Save to dummy · no start" : "Save to Finder · no start";
         if (state.phase === "empty") el("incoming").value = 0;
         el("download").hidden = !state.artifact || busy;
         text("selection", state.name || "One file at a time. Choosing a file only stores it locally.");
@@ -127,7 +128,9 @@
         if (confirm("Run trusted server-configured Orca and profiles offline? Output is NOT print-safety validated. No printer connection will be made.")) action("slice", {confirm: true});
     });
     el("save").addEventListener("click", () => {
-        if (confirm(`Save to ${config.target}? A proxy may reach real hardware and an existing remote file may be overwritten. Review the toolpaths first. No print start or stop will be sent.`)) {
+        const message = config.owned_dummy ? `Save to the newly owned dummy at ${config.target}? Files are virtual/RAM-only and no G-code is executed. No start or stop is sent.` :
+            `Save to ${config.target}? A proxy may reach real hardware and an existing remote file may be overwritten. Review the toolpaths first. No print start or stop will be sent.`;
+        if (confirm(message)) {
             action("save", {confirm: true, remote_name: el("remote").value});
         }
     });
@@ -143,7 +146,8 @@
     });
     request("/api/config").then(data => {
         config = data;
-        text("target", `${data.target} · printer uploads ${data.upload_enabled ? "ENABLED" : "disabled"}`);
+        text("target", data.owned_dummy ? `${data.target} · FRESH OWNED DUMMY · virtual upload only, no G-code execution` :
+            `${data.target} · printer uploads ${data.upload_enabled ? "ENABLED" : "disabled"}`);
         text("orca", data.slicing_enabled ? "Trusted server-side Orca/profiles configured. Slice offline, then download and review before a separate Save." :
             "Orca not configured. Supply --orca and trusted self-contained --machine / --process / --filament JSON on the server. Existing FlashPrint GX files work independently.");
         refresh();

@@ -43,7 +43,11 @@ replacement for raw capture output. Captures are retained after explicit slot
 discard and count toward the workbench's conservative 256 MiB storage admission
 budget. Interrupted runs are never resumed automatically. See [WEB.md](WEB.md)
 for workspace quotas, native scratch limits and shutdown/unknown outcomes.
-Neither runtime volumes nor these raw captures belong in Git.
+Owned-dummy web tests also record `target_kind: owned_dummy` and an emulated
+model label; ordinary configured endpoints remain `configured_endpoint` (not a
+claim that a loopback endpoint is virtual). The owned dummy's files are RAM-only;
+web/client captures still preserve the transferred model bytes. Neither runtime
+volumes nor these raw captures belong in Git.
 
 ## Slicer diagnostics and generated files
 

@@ -32,6 +32,34 @@ Ctrl+C stops each process. Scripts also work when invoked by absolute path from
 another directory. `./tools/start_web_interface.sh --port 8001` changes the HTTP
 port; `./tools/start_dummy.sh --port 9001` changes the dummy port.
 
+## One-command slicing and virtual upload test
+
+Stop the previous web server (Ctrl+C), then run:
+
+```sh
+./tools/start_dummy_upload_test.sh
+```
+
+Open the printed URL (default http://127.0.0.1:8000), choose STL, Slice, then
+confirm **Save to dummy · no start**. Existing GX/G-code can also be selected
+without slicing. Wait for final save confirmation. Start/Cancel remain disabled.
+
+This creates its **own new dummy on an ephemeral loopback port** in the same
+process; it does not reuse port9000, an existing proxy or browser-supplied target.
+The target banner explicitly labels the owned dummy. No separate dummy script
+is needed. `--port 8001` changes the HTTP port only. Ctrl+C/SIGTERM stops both;
+virtual files disappear, but private web captures/artifacts persist in the
+separate `web-data/dummy-upload-test/` workspace. Captures label the target as
+emulated. The wrapper uses the same native Orca selection as the offline script.
+
+Generated-output saving is enabled **only for this owned-dummy mode**, which
+runs no G-code and connects to no hardware. This is a transport test, not a
+waiver of profile/motion safety review or permission for a hardware print.
+The normal offline launcher stays read-only; configured external endpoints keep
+the existing upload/generated-output/job-control guards. CLI equivalent:
+`python3 -m finderlab web --dummy` plus the trusted Orca/profile options.
+`--dummy` refuses target/hardware/job-control options and does not enable Start.
+
 ## Start with a fresh dummy
 
 Terminal 1, from this repository root:

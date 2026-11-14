@@ -5,7 +5,8 @@ Not a general purpose web server or an Internet-facing service.
 """
 
 import asyncio
-from dataclasses import dataclass, field
+from contextlib import AsyncExitStack, asynccontextmanager
+from dataclasses import dataclass, field, replace
 import hashlib
 import ipaddress
 import json
@@ -85,6 +86,7 @@ class Workbench:
         self.artifact = None
         self.slot = None
         self.task = None
+        self.owned_dummy = False
         self.state = self.empty()
         # Do not let two servers operate the same workspace at once.
         import fcntl
@@ -231,7 +233,8 @@ class Workbench:
         try:
             capture = WebCapture(self.folder / "captures", "slice" if operation == "slice" else "client", state=self.state,
                               max_bytes=CAPTURE_LIMIT, max_sessions=1,
-                              metadata={"operation": operation, "start_requested": operation == "start", "interface": "standalone-web"})
+                              metadata={"operation": operation, "start_requested": operation == "start", "interface": "standalone-web",
+                                        "target_kind": "owned_dummy" if self.owned_dummy else "configured_endpoint"})
             self.state["capture"] = str(capture.path)
             if operation == "start":
                 capture.manifest["metadata"].update(saved_name=self.state["saved_name"], save_id=self.state["save_id"])
@@ -244,7 +247,7 @@ class Workbench:
                 network = True
                 async with asyncio.timeout(900):
                     async with FinderClient(self.config.client, capture=capture) as client:
-                        capture.manifest.update(model="Flashforge Finder", firmware="V1.5 20170419")
+                        capture.manifest.update(model="Flashforge Finder (emulated)" if self.owned_dummy else "Flashforge Finder", firmware="V1.5 20170419")
                         if operation == "save":
                             self.state["phase"] = "uploading"
                             def progress(count, size):
@@ -300,6 +303,7 @@ class WebServer:
         self.server = None
         self.clients = set()
         self.address = None
+        self.owned_dummy = None
 
     async def __aenter__(self):
         self.work = Workbench(self.config)
@@ -392,7 +396,8 @@ class WebServer:
                     await self.reply(writer, 200, {"token": self.token, "target": f"{self.config.client.host}:{self.config.client.port}",
                         "upload_enabled": self.config.enable_upload, "job_controls_enabled": self.config.enable_job_controls, "slicing_enabled": self.config.slicing is not None,
                         "sliced_upload_enabled": self.config.allow_sliced_upload, "print_limit": PRINT_LIMIT,
-                        "model_limit": MODEL_LIMIT, "storage_limit": STORAGE_LIMIT})
+                        "model_limit": MODEL_LIMIT, "storage_limit": STORAGE_LIMIT,
+                        "owned_dummy": self.owned_dummy is not None})
                 elif uri.path == "/api/state":
                     await self.reply(writer, 200, self.work.state)
                 elif uri.path == "/api/artifact":
@@ -454,6 +459,22 @@ class WebServer:
         await asyncio.wait_for(writer.drain(), 10)
 
 
+@asynccontextmanager
+async def serve_workbench(config, *, dummy=False):
+    """Optional owned simulator: never treat an existing loopback port as safe."""
+    async with AsyncExitStack() as stack:
+        printer = None
+        if dummy:
+            from .simulator import MockConfig, MockPrinter
+            printer = await stack.enter_async_context(MockPrinter(MockConfig(host="127.0.0.1", port=0)))
+            config = replace(config, client=ClientConfig(host="127.0.0.1", port=printer.address[1]),
+                             enable_upload=True, allow_sliced_upload=True, enable_job_controls=False)
+        server = await stack.enter_async_context(WebServer(config))
+        server.owned_dummy = printer
+        server.work.owned_dummy = printer is not None
+        yield server
+
+
 def add_web_command(commands):
     cli = commands.add_parser("web", help="local standalone upload page; optional offline Orca slicing")
     cli.add_argument("--listen-host", default="127.0.0.1")
@@ -461,6 +482,7 @@ def add_web_command(commands):
     cli.add_argument("--data-dir", type=Path, default=Path("web-data"))
     cli.add_argument("--target-host", default="127.0.0.1")
     cli.add_argument("--target-port", type=int, default=8899)
+    cli.add_argument("--dummy", action="store_true", help="own a fresh ephemeral dummy and enable upload-only to it; no hardware target")
     cli.add_argument("--allow-hardware", action="store_true")
     cli.add_argument("--enable-upload", action="store_true")
     cli.add_argument("--enable-job-controls", action="store_true", help="enable separately confirmed start/cancel (may heat/move)")
@@ -472,6 +494,8 @@ def add_web_command(commands):
 
 def web_main(cli, args):
     try:
+        if args["dummy"] and (args["target_host"] != "127.0.0.1" or args["target_port"] != 8899 or args["allow_hardware"] or args["enable_job_controls"]):
+            raise ValueError("--dummy owns its endpoint; do not supply target/hardware/job-control options")
         options = [args.get(k) for k in ("machine", "process", "filament")]
         slicing = None
         if any(options) or args.get("orca"):
@@ -488,11 +512,15 @@ def web_main(cli, args):
         loop = asyncio.get_running_loop()
         loop.add_signal_handler(signal.SIGTERM, stopped.set)
         try:
-            async with WebServer(config) as server:
+            async with serve_workbench(config, dummy=args["dummy"]) as server:
                 print(f"Open http://{server.authority} (exact URL required)", flush=True)
                 print("Private files/captures: " + str(server.work.folder), flush=True)
-                print("No automatic connect, start, stop or retries. Loopback may proxy hardware.", flush=True)
-                print("Explicit job controls: " + ("ENABLED (may heat/move)" if config.enable_job_controls else "disabled"), flush=True)
+                if server.owned_dummy:
+                    print(f"Owned fresh dummy: {server.owned_dummy.address}. RAM-only virtual files; no G-code execution.", flush=True)
+                    print("Save is enabled only to this new dummy. No existing listener/proxy is used; job controls disabled.", flush=True)
+                else:
+                    print("No automatic connect, start, stop or retries. Loopback may proxy hardware.", flush=True)
+                print("Explicit job controls: " + ("ENABLED (may heat/move)" if server.config.enable_job_controls else "disabled"), flush=True)
                 print("Orca: " + ("configured; profiles/toolpaths NOT validated" if slicing else "not configured; no print-approved Finder profile is provided"), flush=True)
                 await stopped.wait()
         finally:
