@@ -50,11 +50,23 @@ class LauncherTests(unittest.TestCase):
         command = launcher.build_command(orca=Path("host-orca"))
         self.assertEqual(command[command.index("--orca")+1], str(override))
         with patch.object(launcher, "ORCA", self.root / "missing-new-appimage"), \
-             patch.object(launcher, "FALLBACK_ORCA", self.orca):
+             patch.object(launcher, "FALLBACK_ORCA", self.orca), \
+             patch.object(launcher, "ARCHIVE_ORCA", self.root / "missing-archive"):
             command = launcher.build_command()
         self.assertEqual(command[command.index("--orca")+1], str(self.orca))
         with self.assertRaises(ValueError):
             launcher.build_command(orca=self.root / "missing-explicit")
+
+    def test_missing_extraction_or_direct_appimage_is_refused(self):
+        archive = self.root / "Orca.AppImage"
+        archive.write_text("not executed")
+        archive.chmod(0o700)
+        with patch.object(launcher, "ORCA", self.root / "missing-AppRun"), \
+             patch.object(launcher, "ARCHIVE_ORCA", archive):
+            with self.assertRaisesRegex(ValueError, "Extracted Orca"):
+                launcher.build_command()
+        with self.assertRaisesRegex(ValueError, "extracted Orca AppRun"):
+            launcher.build_command(orca=archive)
 
     def test_missing_profile_and_invalid_port_are_refused(self):
         for port in (0, 65536):

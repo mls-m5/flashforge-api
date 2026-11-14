@@ -116,6 +116,9 @@ async function main() {
     const before = posts.length;
     click("start"); click("stop");
     assert.equal(posts.length, before);
+    state = {busy: false, phase: "failed", error: "Transport endpoint is not connected", slicer_log: ""};
+    click("refresh"); await flush();
+    assert.match(element("slicer-log").textContent, /Transport endpoint is not connected/);
     console.log("Standalone page selection, confirmations, slice/save separation and uncertainty tests passed.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

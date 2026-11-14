@@ -189,9 +189,12 @@ The private profile directory is not supplied by a fresh public clone.
 
 For a **read-only slicing page test** on this workspace, the short launcher
 checks the local paths, uses a separate `web-data/offline-test` workspace and
-always leaves all printer actions disabled. It prefers the user's host-working
-Ubuntu2404 2.5.0 AppImage when present, otherwise the local `orca-slicer`
-launcher, and prints the selected path. `--orca PATH` overrides selection.
+always leaves all printer actions disabled. It prefers the extracted
+`orca-2.5.0/AppRun` from the user's host-working Ubuntu2404 2.5.0 build and prints
+the selected path. Direct AppImage FUSE mounts failed workspace checks on the
+host, so the launcher now requires extraction (see ORCA_INSTALL.md).
+`--orca PATH` selects another extracted launcher; the old `orca-slicer` fallback
+is used only when neither 2.5.0 extraction nor its archive is present.
 The 2.3.0 findings above do not validate a new 2.5.0 output; review it offline
 again before any separate physical decision:
 

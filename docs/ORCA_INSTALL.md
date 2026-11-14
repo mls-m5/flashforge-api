@@ -29,14 +29,36 @@ The host capture reports glibc2.39 (not proof of a particular distribution).
 
 The user subsequently reported that
 `.local-tools/OrcaSlicer_Linux_AppImage_Ubuntu2404_V2.5.0.AppImage` starts directly
-on the host. The short offline web launcher now prefers that file when present,
-prints its selected path and accepts an explicit `--orca PATH` override; no
-printer-action flags are enabled. Host-vs-Podman packaging is deliberately left
+on the host. The short offline web launcher initially selected that direct AppImage, but
+subsequent host attempts failed on FUSE mounts, as documented below. It now
+selects the existing extracted `.local-tools/orca-2.5.0/AppRun` instead, prints
+the selected path and accepts `--orca PATH` for another extracted launcher;
+no printer-action flags are enabled. Host-vs-Podman packaging is deliberately left
 for later. A successful GUI launch does not establish CLI/resource-limit or
 profile compatibility. The 2.3.0 draft outputs must not be assumed validated
 under 2.5.0: generate/download/review again offline. The agent cannot verify
 this 2.5.0 runtime on its older Debian environment. Do not symlink incompatible
 WebKit ABIs or install another distribution's packages to hide this mismatch.
+
+### Direct AppImage FUSE failure during the bounded web job
+
+Host attempts `20261114T154141Z-064e2a84670a` and
+`20261114T154236Z-485d3a0ab89e` under `web-data/offline-test/captures/` selected
+the direct 2.5.0 AppImage. Both logged `slicer_command` for help, then OSError107
+`Transport endpoint is not connected` referencing `.mount_OrcaSl...`, before
+capturing stdout/stderr or a slicer exit code. There were zero printer sessions.
+This is an observed FUSE/workspace failure, not a profile rejection or proof
+that the application never launched. Do not weaken the bounded workspace checks
+or ignore broken mounts to hide it. The launcher now uses the extracted AppRun
+and refuses direct `.AppImage` selection. That removes the FUSE dependency,
+but the agent cannot validate native 2.5.0 on its older ABI; host retry is needed.
+The UI diagnostic excerpt now falls back to the job error when no native output
+was captured, instead of incorrectly claiming no native process ran.
+
+The already extracted directory must keep its sibling libraries/resources.
+For a host without that directory, use the extraction procedure below in a fresh
+scratch folder before selecting AppRun. Do not overwrite a prior extraction or
+symlink incompatible WebKit ABIs.
 
 ## On the host: reuse the shared files
 

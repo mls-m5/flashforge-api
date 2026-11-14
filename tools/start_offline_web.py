@@ -8,7 +8,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "local-profiles/finder-offline-02"
-ORCA = ROOT / ".local-tools/OrcaSlicer_Linux_AppImage_Ubuntu2404_V2.5.0.AppImage"
+ORCA = ROOT / ".local-tools/orca-2.5.0/AppRun"
+ARCHIVE_ORCA = ROOT / ".local-tools/OrcaSlicer_Linux_AppImage_Ubuntu2404_V2.5.0.AppImage"
 FALLBACK_ORCA = ROOT / ".local-tools/orca-slicer"
 
 
@@ -20,9 +21,13 @@ def build_command(port=8000, orca=None):
     if orca is not None:
         selected = Path(orca).expanduser()
     else:
+        if not ORCA.exists() and ARCHIVE_ORCA.exists():
+            raise ValueError("Extracted Orca 2.5.0 AppRun is missing. Direct AppImage FUSE mounts fail the bounded workspace checks; see docs/ORCA_INSTALL.md")
         selected = ORCA if ORCA.exists() else FALLBACK_ORCA
     if not selected.is_absolute():
         selected = ROOT / selected
+    if selected.suffix.lower() == ".appimage":
+        raise ValueError("Use an extracted Orca AppRun, not a FUSE-mounted AppImage; see docs/ORCA_INSTALL.md")
     if not selected.is_file() or not os.access(selected, os.X_OK):
         raise ValueError("Local Orca launcher missing/not executable: " + str(selected))
     command = [sys.executable, "-m", "finderlab", "web", "--listen-host", "127.0.0.1",

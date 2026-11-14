@@ -22,7 +22,7 @@
         text("hash", state.sha256);
         text("capture", state.capture);
         text("warning", state.warning);
-        text("slicer-log", state.slicer_log || "No native process has run.");
+        text("slicer-log", state.slicer_log || state.error || "No Orca output recorded yet.");
         text("bytes", `${state.acknowledged || 0} / ${state.size || 0} bytes acknowledged`);
         el("outgoing").value = state.size ? 100 * (state.acknowledged || 0) / state.size : 0;
         text("result", state.saved ? "Final save confirmed. Saving does not start or stop a print." :
