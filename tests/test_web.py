@@ -14,7 +14,7 @@ from unittest.mock import patch
 from finderlab.client import ClientConfig, FinderClient
 from finderlab.simulator import MockConfig, MockPrinter
 from finderlab.slicer import SliceConfig
-from finderlab.web import MODEL_LIMIT, PRINT_LIMIT, WebCapture, WebConfig, WebServer, Workbench, serve_workbench
+from finderlab.web import MODEL_LIMIT, PRINT_LIMIT, WebCapture, WebConfig, WebServer, Workbench, serve_workbench, suggested_name
 from helpers import workspace_tempdir
 from test_slicer import FAKE, PAYLOAD
 
@@ -390,6 +390,8 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             client.assert_not_called()
         self.assertEqual(state["phase"], "review")
         self.assertTrue(state["sliced"])
+        self.assertEqual(state["suggested_name"], "model.gcode")
+        self.assertEqual(self.server.work.artifact.name, "model.gcode")
         self.assertEqual((await self.request("GET", "/api/artifact"))[1], PAYLOAD)
         self.assertEqual((await self.post("/api/save", {"confirm": True, "remote_name": "sliced.gcode"}))[0], 409)
         self.server.work.config = replace(self.server.work.config, allow_sliced_upload=True)
@@ -438,6 +440,16 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
 
 
 class WebConfigTests(unittest.TestCase):
+    def test_source_based_safe_filenames(self):
+        self.assertEqual(suggested_name("WN_field_4x4_halfpans_lid.stl"), "WN_field_4x4_halfpans_lid.gcode")
+        self.assertEqual(suggested_name("Räcke.stl"), "Racke.gcode")
+        for source in ('...stl', '☃.stl', 'a";bad.stl', 'a' * 190 + '.stl'):
+            result = suggested_name(source)
+            self.assertLessEqual(len(result), 128)
+            self.assertNotIn('..', result)
+            self.assertNotIn('"', result)
+            self.assertTrue(result.endswith('.gcode'))
+
     def test_loopback_only_and_fixed_limits(self):
         with self.assertRaises(ValueError): WebConfig(host="0.0.0.0")
         with self.assertRaises(ValueError): WebConfig(client=ClientConfig(max_file_size=100))

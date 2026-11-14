@@ -56,7 +56,7 @@ async function main() {
     assert.equal(xhrs.length, 1);
     assert.equal(posts.length, 0, "file selection only posts file bytes");
     assert.equal(xhrs[0].headers["X-Finder-Token"], config.token);
-    xhrs[0].finish({phase: "file_ready", busy: false, name: "sample.gx", artifact: true, size: 5129});
+    xhrs[0].finish({phase: "file_ready", busy: false, name: "sample.gx", suggested_name: "sample.gx", artifact: true, size: 5129});
     assert.equal(element("remote").value, "sample.gx");
     confirmation = false; click("save"); assert.equal(posts.length, 0);
     confirmation = true; click("save"); click("save");
@@ -83,8 +83,9 @@ async function main() {
     assert.match(element("job-result").textContent, /does NOT prove READY/);
     click("discard"); await flush();
     choose("model.stl", 100);
-    xhrs[1].finish({phase: "model_ready", busy: false, name: "model.stl", artifact: false, size: 100});
+    xhrs[1].finish({phase: "model_ready", busy: false, name: "model.stl", suggested_name: "model.gcode", artifact: false, size: 100});
     assert.equal(element("save").disabled, true);
+    assert.equal(element("remote").value, "model.gcode");
     click("slice"); await flush();
     assert.equal(posts.at(-1).url, "/api/slice");
     assert.equal(posts.filter(p => p.url === "/api/save").length, 1, "slice does not automatically save");

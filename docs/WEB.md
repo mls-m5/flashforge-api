@@ -89,7 +89,12 @@ rejected in this experimental version.
 2. A print file can be downloaded/reviewed immediately. An STL requires the
    separately configured Orca stage below; clicking Slice never connects to a
    printer. The page has no model/toolpath preview yet.
-3. Review the output and choose an unused ASCII remote basename. Confirm
+3. Review the output and choose an unused ASCII remote basename. The suggested
+   name and download attachment now derive from the input basename (`part.stl`
+   → `part.gcode`), with bounded ASCII normalization for unsafe/non-ASCII names.
+   Generated disk filenames use that same name inside a server-generated private
+   slot; user input never selects a host path. The editable remote name remains
+   separate from the exact server-recorded name used by a subsequent Start. Confirm
    **Save to Finder · no start**. It opens a printer connection only after
    confirmation and can overwrite an existing remote file. Optional job controls
    below are separate actions and never appended to Save.

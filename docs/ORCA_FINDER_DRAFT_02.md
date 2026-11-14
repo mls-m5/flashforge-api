@@ -59,6 +59,23 @@ startup homing/offsets remain. Numerical results do **not** clear the physical
 blockers below or prove firmware/plain-file execution support. No artifact was
 uploaded/started by the agent. The public notes omit full user geometry/hashes.
 
+### Subsequent user-run save via proxy (not print validation)
+
+User web captures under `web-data/proxy-test/captures/`:
+`20261114T192353Z-245ae7241e69` records successful slicing;
+`20261114T192422Z-4ec844b04db3` records confirmed Save to
+`WN_field_4x4_halfpans_lid.gcode`. The finalized client stream contains102 upload
+frames and M601/M115/M119/M28/M29/M602 only; reconstructed payload equals the
+416392-byte generated artifact exactly. No M23/Start or M26/Cancel was sent.
+This is review of a user-run endpoint trace, not a new agent hardware action or
+independent physical file read-back.
+
+Offline diagnostics of that artifact show final E delta−1.3 mm, no unresolved
+E moves, resolved nominal Z component at most7 mm/s, and two unresolved startup
+Z segments after homing/offsets. Explicit endpoints are within the nominal box;
+that is not head/clip clearance evidence. The previous startup-impact concern
+is not cleared. No physical-print approval follows from successful Save.
+
 ## Candidate configuration and deliberate differences
 
 The current three JSON files are **stage C**; stage A/B snapshots are retained

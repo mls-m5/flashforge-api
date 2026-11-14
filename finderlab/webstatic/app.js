@@ -109,7 +109,7 @@
                 const data = JSON.parse(xhr.responseText);
                 if (xhr.status !== 200) throw new Error(data.error || "File was not accepted");
                 state = data; pending = false;
-                el("remote").value = stl ? "sliced.gcode" : (/^[A-Za-z0-9_][A-Za-z0-9_. -]{0,127}$/.test(file.name) && !file.name.includes("..") ? file.name : "upload." + file.name.split(".").pop().toLowerCase());
+                el("remote").value = state.suggested_name || "";
                 render();
             } catch (error) { failed(error.message); }
         };

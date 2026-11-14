@@ -11,6 +11,8 @@ import hashlib
 import ipaddress
 import json
 import os
+import re
+import unicodedata
 from pathlib import Path
 import secrets
 import shutil
@@ -27,6 +29,18 @@ PRINT_LIMIT = 8 * 1024 * 1024
 MODEL_LIMIT = 64 * 1024 * 1024
 CAPTURE_LIMIT = 64 * 1024 * 1024
 STORAGE_LIMIT = 256 * 1024 * 1024
+
+
+def suggested_name(name):
+    """Safe bounded ASCII basename derived from display name, never a path."""
+    suffix = ".gcode" if Path(name).suffix.lower() == ".stl" else Path(name).suffix.lower()
+    stem = unicodedata.normalize("NFKD", Path(name).stem).encode("ascii", "ignore").decode()
+    stem = re.sub(r"[^A-Za-z0-9_. -]", "_", stem)
+    stem = re.sub(r"\.{2,}", "_", stem).strip(" .-_") or "model"
+    stem = stem[:128-len(suffix)].rstrip(" .")
+    result = stem + suffix
+    remote_path(result)
+    return result
 
 
 class WebError(ValueError):
@@ -102,7 +116,7 @@ class Workbench:
         return {"busy": False, "phase": "empty", "saved": False, "acknowledged": 0,
                 "size": 0, "name": "", "error": "", "warning": "", "capture": "",
                 "sha256": "", "sliced": False, "artifact": False, "slicer_log": "",
-                "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested", "slicer_stage": ""}
+                "suggested_name": "", "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested", "slicer_stage": ""}
 
     def capacity(self, reserve):
         total = count = 0
@@ -154,7 +168,8 @@ class Workbench:
             self.source = path
             self.artifact = path if suffix != ".stl" else None
             self.state.update(phase="model_ready" if suffix == ".stl" else "file_ready",
-                              size=length, sha256=digest.hexdigest(), artifact=self.artifact is not None)
+                              size=length, sha256=digest.hexdigest(), artifact=self.artifact is not None,
+                              suggested_name=suggested_name(name))
         except BaseException:
             shutil.rmtree(self.slot, ignore_errors=True)
             self.slot = None
@@ -239,7 +254,7 @@ class Workbench:
             if operation == "start":
                 capture.manifest["metadata"].update(saved_name=self.state["saved_name"], save_id=self.state["save_id"])
             if operation == "slice":
-                result = await slice_model(self.source, self.slot / "sliced.gcode", self.config.slicing, capture=capture)
+                result = await slice_model(self.source, self.slot / self.state["suggested_name"], self.config.slicing, capture=capture)
                 self.artifact = result.path
                 self.state.update(phase="review", sliced=True, artifact=True, size=result.size, sha256=result.sha256)
                 capture.manifest["metadata"]["slicing_confirmed"] = True
@@ -408,7 +423,7 @@ class WebServer:
                     with path.open("rb") as file:
                         async with asyncio.timeout(30):
                             await self.head(writer, 200, "application/octet-stream", path.stat().st_size,
-                                            'Content-Disposition: attachment; filename="artifact' + path.suffix + '"\r\n')
+                                            'Content-Disposition: attachment; filename="' + self.work.state["suggested_name"] + '"\r\n')
                             while chunk := file.read(65536):
                                 writer.write(chunk)
                                 await writer.drain()
