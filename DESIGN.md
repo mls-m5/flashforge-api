@@ -117,6 +117,17 @@ Implemented client contract: `.gx`/`.gcode`/`.g` byte-preserving transfer (no co
 
 `finderlab/web.py` and `finderlab/webstatic/` implement a dependency-free loopback page. One bounded raw file receive stores an STL/print file; a separate confirmed Slice uses server-owned Orca/profiles; a third confirmed Save uses the existing client without start/stop. Generated G-code is downloadable for review and cannot be sent unless the operator explicitly enables generated-output saving. Separately opt-in job controls (`--enable-job-controls`) expose confirmed Start of the exact saved filename (per-save identity, one attempt, fresh READY check) and confirmed Cancel (not emergency stop). They share the operation lock, never run automatically and preserve save confirmation separately from uncertain job results. No HTTP request can select targets, profiles, host paths or arbitrary native flags. Startup and GET cached status never connect to a printer. Host/Origin/token checks, bounded HTTP parsing/timeouts, single-slot/process locks, capture quotas and conservative persistent storage admission bound this experimental local service. Native process limits are not a sandbox. No validated Finder Orca profile ships: the original Sailfish rejection remains; a separate Marlin-emission draft 02 now generates offline review artifacts with unresolved physical blockers. See [docs/WEB.md](docs/WEB.md). The default Compose now starts this page; Podman CLI is also documented.
 
+### Per-slice quality settings
+
+`slice_settings.py` validates only layer height and brim mode/width. The web
+API accepts that typed object only on confirmed Slice, not Save/Start or a
+running operation. The adapter applies an allowlist to its private process
+snapshot, records original/effective hashes and settings, and leaves machine,
+filament, first-layer and retraction/templates unchanged. Defaults preserve
+profile bytes. Cached applied values belong to the generated artifact; controls
+cannot mutate an existing print file. This is not generic JSON editing, a
+native-code sandbox or physical bed/clearance validation. See WEB.md for limits.
+
 ### Separate OctoPrint plugin experiment (paused)
 
 The research repo includes a separately packaged GPLv3 plugin in `plugins/octoprint-flashforge-finder2` (registered as a Git submodule). It uses OctoPrint admin-only Settings/Simple API/Template mixins to upload an OctoPrint local file through a bounded background worker. It does not replace OctoPrint's PrinterInterface or serial transport, and exposes no start/stop, arbitrary G-code, automatic connection or slicer. The plugin is disabled by default and is independently installable. Its Linux Compose test shares host networking only to reach a deliberately configured host-loopback dummy/proxy; OctoPrint binds its UI to loopback. Docker runtime/browser acceptance is still pending. See [docs/OCTOPRINT.md](docs/OCTOPRINT.md) and the plugin's own README/SOURCE for exact limits and evidence.

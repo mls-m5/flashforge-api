@@ -53,6 +53,15 @@ volumes nor these raw captures belong in Git.
 
 Standalone slicing uses mode `slice` with no printer sessions; combined `upload --slice` keeps mode `client`. `slicer_command`, `slicer_output`, `slicer_exit` and `slicer_result` events describe capability probing, slicing argv, stdout/stderr bytes (authoritative `data_hex`, plus readable derived text), completed exit codes and candidate output hashes. The manifest retains input hashes/basenames, limits, executable path and `slicing_confirmed` when completed. Errors in phase `slicing` stop before any printer connection. `slicer_result` is not a toolpath safety assertion or proof that output publication/upload later succeeded.
 
+`slicer_settings` records the normalized typed quality options, actual allowlisted
+process changes, original process hash and effective process hash/quality values.
+The same fields are retained in manifest metadata. `slicing_inputs.process`
+still hashes the original server-owned snapshot; it is **not** silently
+relabelled as the modified version. `effective_process_sha256` hashes the
+bytes actually passed to Orca. No overrides means identical original/effective
+bytes. Original profiles and all machine/filament/start/end/retraction settings
+are not edited. Settings capture improves reproducibility, not print safety.
+
 Generated `sliced.gcode` is retained under the run directory by default, or at standalone slice's explicit `--output`. It has a **separate** size bound (`--max-file-size`) and is outside `--max-capture-bytes`; original profiles/model snapshots and native temporary data are cleaned from project-local `.tmp/`. Raw slicer log chunks are bounded independently and count toward the existing event/log quota. Full details and trust limits: [SLICING.md](SLICING.md).
 
 ## Offline numerical review reports
@@ -82,7 +91,7 @@ Event types currently emitted:
 - `error`: phase and error type, with a message where available;
 - `connection_close`: session close reason;
 - `capture_end`: orderly recorder finalization;
-- `slicer_command`, `slicer_output`, `slicer_exit`, `slicer_result`: optional Orca stages described above.
+- `slicer_settings`, `slicer_command`, `slicer_output`, `slicer_exit`, `slicer_result`: optional Orca stages described above.
 
 Each event includes `v`, monotonically increasing `seq`, `session_id` (or null for run-level events), UTC timestamp and `monotonic_ns` elapsed since capture start. Sequence order is logging order, not proof of causality between simultaneous directions.
 

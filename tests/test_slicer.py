@@ -134,6 +134,37 @@ class SlicerTests(unittest.IsolatedAsyncioTestCase):
             await self.slice()
         self.assertEqual(self.output.read_bytes(), PAYLOAD)
 
+    async def test_quality_options_only_change_private_process_snapshot(self):
+        originals = {kind: getattr(self.config, kind).read_bytes() for kind in ("machine", "process", "filament")}
+        check = '''
+effective = json.loads(pathlib.Path(settings[1]).read_text())
+assert effective["layer_height"] == "0.12"
+assert effective["initial_layer_print_height"] == "0.27"
+assert effective["brim_type"] == "outer_only"
+assert effective["brim_width"] == "5"
+assert "machine_start_gcode" not in effective and "retraction_length" not in effective
+'''
+        self.fake.write_text(self.fake.read_text().replace('print("READY "', check + '\nprint("READY "'))
+        settings = {"layer_height": 0.12, "brim": "outer", "brim_width": 5}
+        result = await slice_model(self.source, self.output, self.config, capture=self.capture, settings=settings)
+        self.assertEqual(result.path.read_bytes(), PAYLOAD)
+        for kind, raw in originals.items():
+            self.assertEqual(getattr(self.config, kind).read_bytes(), raw)
+        metadata = self.capture.manifest["metadata"]
+        self.assertEqual(metadata["slice_settings"], settings)
+        self.assertEqual(metadata["process_overrides"], {"layer_height": "0.12", "brim_type": "outer_only", "brim_width": "5"})
+        self.assertEqual(metadata["effective_quality"]["initial_layer_print_height"], "0.27")
+        self.assertEqual(metadata["slicing_inputs"]["process"]["sha256"], hashlib.sha256(originals["process"]).hexdigest())
+        self.assertNotEqual(metadata["effective_process_sha256"], metadata["slicing_inputs"]["process"]["sha256"])
+        self.assertEqual(metadata["slicing_inputs"]["machine"]["sha256"], hashlib.sha256(originals["machine"]).hexdigest())
+        self.assertEqual(metadata["slicing_inputs"]["filament"]["sha256"], hashlib.sha256(originals["filament"]).hexdigest())
+
+    async def test_default_quality_options_preserve_profile_bytes(self):
+        await self.slice()
+        metadata = self.capture.manifest["metadata"]
+        self.assertEqual(metadata["process_overrides"], {})
+        self.assertEqual(metadata["effective_process_sha256"], metadata["slicing_inputs"]["process"]["sha256"])
+
     async def test_bad_outputs_and_failed_exit_never_publish(self):
         for behavior in ("missing", "multiple", "empty", "binary", "symlink", "fail", "old", "large", "flood"):
             with self.subTest(behavior=behavior):

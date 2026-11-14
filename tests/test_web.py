@@ -381,6 +381,39 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
         cfg = SliceConfig(**profiles, orca=str(fake), timeout=3)
         self.server.work.config = replace(self.config, slicing=cfg)
 
+    async def test_invalid_quality_settings_rejected_before_native_or_printer_action(self):
+        self.configure_fake_orca()
+        await self.file("model.stl", b"solid synthetic\nendsolid synthetic")
+        with patch("finderlab.web.slice_model") as slicer, patch("finderlab.web.FinderClient") as client:
+            for settings in ({"brim_width": 100}, {"layer_height": "0.2"}, {"brim": "unknown"},
+                             {"layer_height": True}, {"layer_height": 10**1000}, {"post_process": "untrusted"}, []):
+                code, _ = await self.post("/api/slice", {"confirm": True, "settings": settings})
+                self.assertEqual(code, 400)
+            self.assertEqual(self.server.work.state["phase"], "model_ready")
+            self.assertFalse(self.server.work.state["busy"])
+            slicer.assert_not_called(); client.assert_not_called()
+            self.assertEqual((await self.post("/api/save", {"confirm": True, "remote_name": "test.gcode", "settings": {}}))[0], 400)
+
+    async def test_web_quality_settings_recorded_and_locked_to_artifact(self):
+        self.configure_fake_orca()
+        await self.file("model.stl", b"solid synthetic\nendsolid synthetic")
+        settings = {"layer_height": 0.12, "brim": "outer", "brim_width": 5}
+        with patch("finderlab.web.FinderClient") as client:
+            code, _ = await self.post("/api/slice", {"confirm": True, "settings": settings})
+            self.assertEqual(code, 200)
+            state = await self.finish()
+            client.assert_not_called()
+        self.assertEqual(state["slice_settings"], settings)
+        self.assertEqual(state["effective_quality"]["layer_height"], "0.12")
+        self.assertEqual(state["effective_quality"]["brim_width"], "5")
+        self.assertEqual(state["effective_quality"]["initial_layer_print_height"], "0.2")
+        manifest = json.loads((Path(state["capture"]) / "manifest.json").read_text())
+        self.assertEqual(manifest["metadata"]["slice_settings"], settings)
+        self.assertEqual((await self.post("/api/slice", {"confirm": True, "settings": {"brim": "off"}}))[0], 409)
+        self.assertEqual(self.server.work.state["slice_settings"], settings)
+        await self.post("/api/discard", {"confirm": True})
+        self.assertIsNone(self.server.work.state["slice_settings"])
+
     async def test_fake_slice_then_separate_review_and_save_gate(self):
         self.configure_fake_orca()
         await self.file("model.stl", b"solid synthetic\nendsolid synthetic")

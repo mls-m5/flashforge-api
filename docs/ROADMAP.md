@@ -219,6 +219,21 @@ live browser file/drop/error flow, actual Podman image
 build/runtime, and separately approved hardware upload if desired. No model/
 toolpath preview or GX generator is provided. See [WEB.md](WEB.md).
 
+## Web quality controls: brim/layer-height foundation
+
+User-requested GUI controls now allow profile/default, Off/Outer brim (bounded
+1–10mm width), and profile/default or bounded layer height. Explicit Slice uses
+only these typed process overrides on private validated snapshots, logs source
+and effective hashes/settings, and displays applied values with the artifact.
+Original profiles, first-layer height and retraction remain unchanged; the user
+asked to defer end-retract changes. Completed files are immutable: discard and
+reselect before slicing with different settings. No mid-print control, automatic
+reslice/save/start or arbitrary native options are added. Tests use fake Orca,
+HTTP loopback and Node viewmodels; an actual offline2.3 cube trial confirmed
+Brim paths/0.12 layers/5mm brim with original profile hashes unchanged. Host2.5
+GUI/browser and physical adhesion improvement remain to be verified. Expanded
+footprint/purge overlap still requires review. See WEB.md and CAPTURES.md.
+
 ## M6 implementation update: standalone OctoPrint plugin checkpoint (paused)
 
 A separate GPLv3 repository is registered as `plugins/octoprint-flashforge-finder2`. Its initial admin-only tab/API uploads existing OctoPrint local files to a configured Finder V1.5 endpoint, disabled by default, with bounded snapshots/captures and no automatic start/stop. It is deliberately not a full PrinterInterface/serial driver. SDK mixin/permission tests and independent loopback protocol tests pass; its service worker also transferred the supplied GX byte-for-byte to a fresh dummy with no virtual print started. This is not Docker/browser or physical plugin acceptance. The Linux Compose example builds from the local submodule and makes the host dummy/proxy reachable while binding the OctoPrint UI to loopback; Docker is not available in this environment, so build/run remain pending. See [OCTOPRINT.md](OCTOPRINT.md).

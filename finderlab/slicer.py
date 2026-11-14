@@ -18,6 +18,8 @@ import stat
 import sys
 import tempfile
 
+from .slice_settings import normalize_settings, process_overrides
+
 ROOT = Path(__file__).resolve().parents[1]
 MIB = 1024 * 1024
 PROFILE_KEYS = {
@@ -216,12 +218,14 @@ def _slice_slot(scratch):
         yield
 
 
-async def slice_model(source, output, config: SliceConfig, *, capture) -> SliceResult:
+async def slice_model(source, output, config: SliceConfig, *, capture, settings=None) -> SliceResult:
     """STL -> exactly one plain G-code file. Never overwrite an existing output.
 
     The caller owns the output/capture lifetime. Temporary inputs and tool data
     are removed even on failure/cancellation; failed output is never published.
     """
+    chosen_settings = normalize_settings(settings)
+    overrides = process_overrides(chosen_settings)
     source, output = Path(source), Path(output)
     if source.suffix.lower() != ".stl":
         raise SliceError("Slicing accepts STL (.stl) only, interpreted as millimetres")
@@ -248,6 +252,26 @@ async def slice_model(source, output, config: SliceConfig, *, capture) -> SliceR
             path = work / (kind + ".json")
             inputs[kind] = _copy_bounded(getattr(config, kind), path, MIB)
             _check_profile(path, kind)
+        # Apply only the typed quality allowlist to a private profile snapshot.
+        # Never edit the server-owned originals, templates, machine or filament.
+        process_path = work / "process.json"
+        if overrides:
+            effective = json.loads(process_path.read_bytes())
+            effective.update(overrides)
+            encoded = (json.dumps(effective, indent=2) + "\n").encode()
+            if len(encoded) > MIB:
+                raise SliceError("Effective process profile exceeds 1 MiB")
+            process_path.write_bytes(encoded)
+            _check_profile(process_path, "process")
+        effective_hash = hashlib.sha256(process_path.read_bytes()).hexdigest()
+        effective_process = json.loads(process_path.read_bytes())
+        quality = {key: effective_process.get(key) for key in
+                   ("layer_height", "initial_layer_print_height", "brim_type", "brim_width", "brim_object_gap")}
+        capture.manifest["metadata"].update(slice_settings=chosen_settings, process_overrides=overrides,
+                                              effective_process_sha256=effective_hash, effective_quality=quality)
+        capture.event("slicer_settings", settings=chosen_settings, process_overrides=overrides,
+                      source_process_sha256=inputs["process"]["sha256"], effective_process_sha256=effective_hash,
+                      effective_quality=quality)
         capture.manifest["metadata"]["orca_executable"] = executable
         capture.manifest["metadata"]["slicing_limits"] = {
             key: getattr(config, key) for key in ("timeout", "max_model_size", "max_output_size",

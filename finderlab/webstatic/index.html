@@ -15,6 +15,14 @@
 <section><h2>2 <span>Slice and review</span></h2>
 <p id="orca">Orca configuration loading…</p><p id="slice-status" role="status">Choose an STL, then click Slice.</p>
 <p class="warning">No print-ready Finder Orca profile ships here. The original Sailfish draft is rejected; a separate experimental Marlin-emission draft now slices offline but is NOT approved for printing. Successful slicing is not proof of safe toolpaths. No silent Marlin substitution or disabled validity checks.</p>
+<fieldset id="quality-settings" disabled><legend>Quality settings · next slice only</legend>
+<label for="layer-height">Layer height (mm)</label>
+<select id="layer-height"><option value="">Use server profile</option><option value="0.12">0.12 · finer</option><option value="0.18">0.18</option><option value="0.20">0.20</option><option value="0.24">0.24</option><option value="0.28">0.28 · coarser</option></select>
+<label for="brim-mode">Brim</label><select id="brim-mode"><option value="profile">Use server profile</option><option value="off">Off</option><option value="outer">Outer brim</option></select>
+<label for="brim-width">Outer brim width (1–10 mm)</label><input id="brim-width" type="number" min="1" max="10" step="0.5" value="5" disabled>
+<p>Try a 5 mm outer brim for lifting corners. Extra material must be removed and can mark the bottom edge. Keep the bed clean/level and avoid drafts. Brim needs additional space around the model; Orca may reject a plate that no longer fits.</p>
+<p>First-layer height and brim separation use the server profile; temperature, start/end code and retraction are unchanged. These controls do not change an already sliced file or running print. To change a completed slice, discard/reselect and slice again.</p>
+</fieldset><p id="applied-quality"></p>
 <button id="slice" disabled>Slice STL offline</button> <a id="download" href="/api/artifact" hidden>Download print file for review</a>
 <p>No 3D preview, GX thumbnail generation or toolpath safety validator is implemented yet.</p>
 <details><summary>Latest Orca diagnostic excerpt (private)</summary><pre id="slicer-log">No Orca output recorded yet.</pre></details></section>

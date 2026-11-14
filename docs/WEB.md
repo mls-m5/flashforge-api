@@ -319,6 +319,67 @@ part of the standalone workflow.
   trusted. Never forward its port, put it on a public reverse proxy, or expose
   it to LAN/internet. No security-sandbox claim is made for native STL parsing.
 
+## Quality controls: brim and layer height
+
+The Slice section now offers **Layer height** and **Brim** controls. Defaults
+are **Use server profile** for both; this preserves previous output settings,
+not an implicit new brim or layer height. Controls apply only to the next
+explicitly confirmed Slice. They do not reslice, save, start or change a running
+print automatically. Existing GX/G-code files are never rewritten.
+
+- Layer choices in the page: profile, 0.12, 0.18, 0.20, 0.24, 0.28 mm. The typed
+  API accepts only finite numeric 0.08–0.28 mm or null (profile); this bounded
+  UI policy is aimed at the current 0.4 mm nozzle experiment, not a certificate
+  of compatibility with arbitrary machine/nozzle profiles. Orca checks remain
+  enabled. **First-layer height stays in the server profile** (draft02:0.27).
+- Brim: profile, Off (`no_brim`, width0), Outer (`outer_only`, width1–10 mm,
+  UI initially5 mm). Width is ignored for profile/Off. The existing profile's
+  brim/object gap stays unchanged (draft02:0.1 mm); it is shown after slicing.
+- A 5 mm outer brim is a reasonable experiment for lifting edges, not a
+  guarantee. It consumes bed area/material, needs removal and can mark the
+  bottom edge. Keep the bed clean/level and avoid drafts. Cold room conditions
+  may contribute; do not infer that extra nozzle heat alone fixes adhesion.
+- Brim expands the generated footprint. Orca may reject a plate that no longer
+  fits. Review its placement/preview in a slicer if needed: the page has no
+  collision/toolpath-preview validator. A wider brim can intersect a fixed
+  custom purge line; this is model/profile dependent, not automatically solved.
+- Temperature, filament flow, machine/start/end templates and **retraction
+  remain untouched**. The user's request to defer final-retract tuning is
+  preserved. No extra end E move is introduced.
+
+Applied values are displayed separately from controls after success and remain
+bound to that artifact. To change a completed slice, discard/reselect the STL
+and Slice again. Restart/current-slot resets are not saved global quality
+preferences. A newly selected print file does not inherit G-code edits.
+
+The API accepts `settings` only on confirmed `/api/slice`, for example:
+
+```json
+{"confirm":true,"settings":{"layer_height":0.12,"brim":"outer","brim_width":5}}
+```
+
+Unknown fields, strings in numeric fields, booleans, non-finite values and
+out-of-range numbers are rejected before native execution or printer access.
+No executable/path/profile/template or arbitrary Orca JSON key becomes an HTTP
+parameter. Only the allowlisted process fields are changed on the already
+validated **private workspace copy**, never the original profiles.
+
+Each slice records the normalized settings, exact process overrides, original
+process hash, effective process hash and applied layer/first-layer/brim/gap
+values in its private capture. Effective quality also appears in cached state.
+With profile defaults, profile bytes and their hash are preserved exactly.
+
+### Native offline settings trial
+
+Native Orca2.3 on generated20×20×5 cube, layer0.12 / outer brim5:
+`captures/quality-ui/20261114T200743Z-4ddfcec1d4f5`. Actual output contains Brim
+paths, body endpoints expand from about±9.8 to±14.3, first-layer0.27/gap0.1
+remain unchanged, final requested E delta remains−1.3 mm and resolved nominal Z
+component is at most7 mm/s. All three source profile hashes stayed unchanged;
+recording finalized with zero printer sessions. This verifies native option
+wiring, not physical adhesion/quality or every model placement. Host2.5 GUI
+and printed brim quality still need user validation. No hardware was contacted.
+
 ## Help text versus slice result
 
 Orca's help text is a normal capability probe, not a failure by itself. Once the
@@ -343,7 +404,7 @@ save or slice success; poll `/api/state` while `busy`.
 | GET `/api/config` | Per-run token, fixed endpoint, capabilities and limits |
 | GET `/api/state` | Current slot/job state and bounded private diagnostic excerpt |
 | POST `/api/file?name=NAME` | Bounded raw bytes into empty slot; no slicing/printer connection |
-| POST `/api/slice` | `{"confirm":true}`; offline Orca only |
+| POST `/api/slice` | `{"confirm":true,"settings":{...}}`; optional typed quality settings, offline Orca only |
 | GET `/api/artifact` | Idle-slot print file download, fixed safe attachment name |
 | POST `/api/save` | `{"confirm":true,"remote_name":"sample.gx"}`; upload only |
 | POST `/api/discard` | `{"confirm":true}`; remove idle slot files, retain logs |

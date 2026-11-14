@@ -36,6 +36,8 @@ Open **http://127.0.0.1:8000**. Drop an existing FlashPrint `.gx` (or `.gcode`/`
 
 For a one-command local slicing/upload test, stop any previous web server and run `./tools/start_dummy_upload_test.sh`. It owns a fresh ephemeral dummy (not an existing hardware proxy), enables virtual Save and separately confirmed virtual Start/Cancel (no G-code execution). No separate dummy process is needed. This requires the local Orca/draft profiles and does not authorize physical printing.
 
+The Slice section now has **layer-height and brim controls** (including a 5 mm outer-brim option). Defaults preserve the server profile; first-layer height and retraction are unchanged. Applied values are recorded per generated file. Review the expanded footprint and removal needs—brim is not a cure for poor bed preparation.
+
 See **[docs/WEB.md](docs/WEB.md)** for the workflow, native Orca configuration, private storage, limits and Podman commands. The default Compose now starts this standalone page, not OctoPrint. No printer is discovered and a loopback proxy can still reach real hardware.
 
 For deliberate proxy use, `./tools/start_printer_proxy.sh CONFIRMED_PRINTER_IP`

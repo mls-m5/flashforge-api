@@ -9,6 +9,11 @@
         el("file").disabled = busy || state.phase !== "empty";
         el("discard").disabled = busy || state.phase === "empty";
         el("slice").disabled = busy || !config || !config.slicing_enabled || state.phase !== "model_ready";
+        el("quality-settings").disabled = el("slice").disabled;
+        el("brim-width").disabled = el("slice").disabled || el("brim-mode").value !== "outer";
+        const applied = state.effective_quality;
+        text("applied-quality", applied ? `Applied to this file: layer ${applied.layer_height} mm · first layer ${applied.initial_layer_print_height} mm · brim ${applied.brim_type || "profile default"} · width ${applied.brim_width || "0"} mm · gap ${applied.brim_object_gap || "profile default"} mm.` :
+            state.slice_settings ? "Slicing options submitted; effective values appear after successful slicing." : "No quality overrides applied yet. Default controls leave the server profile unchanged.");
         el("save").disabled = Boolean(busy || !config || !config.upload_enabled || !state.artifact || state.saved ||
             state.phase === "unknown" || (state.sliced && !config.sliced_upload_enabled));
         el("start").disabled = Boolean(busy || !config || !config.job_controls_enabled || !state.saved ||
@@ -129,8 +134,21 @@
             action("discard", {confirm: true}); el("file").value = "";
         }
     });
+    el("brim-mode").addEventListener("change", render);
     el("slice").addEventListener("click", () => {
-        if (confirm("Run trusted server-configured Orca and profiles offline? Output is NOT print-safety validated. No printer connection will be made.")) action("slice", {confirm: true});
+        const layer = el("layer-height").value;
+        const width = Number(el("brim-width").value);
+        const settings = {layer_height: layer === "" ? null : Number(layer), brim: el("brim-mode").value,
+            brim_width: width};
+        if (!Number.isFinite(width) || width < 1 || width > 10 || (settings.layer_height !== null &&
+                (!Number.isFinite(settings.layer_height) || settings.layer_height < 0.08 || settings.layer_height > 0.28))) {
+            text("error", "Use a layer height from 0.08–0.28 mm and brim width from 1–10 mm."); return;
+        }
+        const summary = `Layer: ${layer || "server profile"}; brim: ${settings.brim}` +
+            (settings.brim === "outer" ? ` (${width} mm)` : "");
+        if (confirm(`Slice offline? ${summary}. First layer/retraction/templates stay unchanged. Output is NOT print-safety validated. No printer connection will be made.`)) {
+            action("slice", {confirm: true, settings});
+        }
     });
     el("save").addEventListener("click", () => {
         const message = config.owned_dummy ? `Save to the newly owned dummy at ${config.target}? Files are virtual/RAM-only and no G-code is executed. No start or stop is sent.` :

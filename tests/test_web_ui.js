@@ -9,7 +9,7 @@ const config = {token: "test-token", target: "127.0.0.1:9000", upload_enabled: t
     slicing_enabled: true, sliced_upload_enabled: false, job_controls_enabled: true, model_limit: 64 * 1024 ** 2, print_limit: 8 * 1024 ** 2};
 let state = {phase: "empty", busy: false};
 function element(id) {
-    if (!elements.has(id)) elements.set(id, {value: "", textContent: "", disabled: false, hidden: false,
+    if (!elements.has(id)) elements.set(id, {value: id === "brim-width" ? "5" : id === "brim-mode" ? "profile" : "", textContent: "", disabled: false, hidden: false,
         handlers: {}, classList: {add() {}, remove() {}},
         addEventListener(name, fn) { this.handlers[name] = fn; }});
     return elements.get(id);
@@ -39,7 +39,9 @@ const context = {
             if (url === "/api/start") state = {...state, start_attempted: true, job_result: "start_acknowledged"};
             if (url === "/api/stop") state = {...state, job_result: "cancel_acknowledged"};
             if (url === "/api/discard") state = {busy: false, phase: "empty"};
-            if (url === "/api/slice") state = {...state, busy: false, phase: "review", sliced: true, artifact: true};
+            if (url === "/api/slice") state = {...state, busy: false, phase: "review", sliced: true, artifact: true,
+                slice_settings: data.settings, effective_quality: {layer_height: data.settings.layer_height || "0.18",
+                    initial_layer_print_height: "0.27", brim_type: "outer_only", brim_width: "5", brim_object_gap: "0.1"}};
         }
         return {ok: true, json: async () => url === "/api/config" ? config : {...state}};
     }
@@ -86,8 +88,25 @@ async function main() {
     xhrs[1].finish({phase: "model_ready", busy: false, name: "model.stl", suggested_name: "model.gcode", artifact: false, size: 100});
     assert.equal(element("save").disabled, true);
     assert.equal(element("remote").value, "model.gcode");
+    assert.equal(element("quality-settings").disabled, false);
+    assert.equal(element("brim-width").disabled, true);
+    element("brim-mode").value = "outer";
+    element("brim-mode").handlers.change();
+    assert.equal(element("brim-width").disabled, false);
+    element("brim-width").value = "99";
+    const beforeSlice = posts.length;
     click("slice"); await flush();
+    assert.equal(posts.length, beforeSlice, "invalid width must not submit");
+    element("brim-width").value = "5";
+    element("layer-height").value = "0.12";
+    confirmation = false; click("slice");
+    assert.equal(posts.length, beforeSlice, "quality choice alone does not slice");
+    confirmation = true; click("slice"); await flush();
     assert.equal(posts.at(-1).url, "/api/slice");
+    assert.deepEqual(posts.at(-1).data.settings, {layer_height: 0.12, brim: "outer", brim_width: 5});
+    assert.equal(element("quality-settings").disabled, true);
+    assert.match(element("applied-quality").textContent, /layer 0.12 mm/);
+    assert.match(element("applied-quality").textContent, /first layer 0.27 mm/);
     assert.equal(posts.filter(p => p.url === "/api/save").length, 1, "slice does not automatically save");
     assert.equal(element("download").hidden, false);
     assert.match(element("slice-status").textContent, /Slice completed/);

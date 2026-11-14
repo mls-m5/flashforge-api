@@ -37,6 +37,19 @@ To prevent critical settings silently being omitted, each profile must explicitl
 
 Presence checks are **not** a semantic or safety certificate. Other settings must also be resolved correctly. Inspect Orca's warnings/substitutions and the complete start/body/end transitions. Profiles with host `post_process` scripts are rejected; embedded printer G-code templates remain profile contents for offline generation, not host commands. No scripts, safety limits or temperature/bed defaults are synthesized for Finder 2.
 
+## Web quality overrides
+
+The web Slice form adds a narrow typed allowlist for layer height and brim;
+see [WEB.md](WEB.md). These values change only a validated private process JSON
+snapshot before help/slice, with original/effective hashes and applied settings
+recorded. No arbitrary JSON fields, CLI flags, templates, temperatures, machine
+or filament settings are accepted. Profile/default selections preserve original
+bytes. First-layer height, brim gap and retraction remain as configured by the
+server. The standalone CLI is unchanged and supplies no quality overrides by
+default; the adapter's optional `settings` argument is independently validated.
+Native2.3 cube trial verifies actual Brim paths/0.12mm layers with5mm outer brim,
+not physical adhesion performance or every model's fit/clearance.
+
 ## Offline first
 
 From the repository root, using your own reviewed profile files:

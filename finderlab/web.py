@@ -23,6 +23,7 @@ import uuid
 from .capture import Capture, CaptureError
 from .client import ClientConfig, FinderClient, remote_path
 from .slicer import SliceConfig, slice_model
+from .slice_settings import normalize_settings
 
 STATIC = Path(__file__).with_name("webstatic")
 PRINT_LIMIT = 8 * 1024 * 1024
@@ -116,7 +117,8 @@ class Workbench:
         return {"busy": False, "phase": "empty", "saved": False, "acknowledged": 0,
                 "size": 0, "name": "", "error": "", "warning": "", "capture": "",
                 "sha256": "", "sliced": False, "artifact": False, "slicer_log": "",
-                "suggested_name": "", "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested", "slicer_stage": ""}
+                "suggested_name": "", "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested", "slicer_stage": "", "slice_settings": None,
+                "effective_quality": None}
 
     def capacity(self, reserve):
         total = count = 0
@@ -189,7 +191,8 @@ class Workbench:
         self.idle()
         if operation not in ("slice", "save", "start", "stop"):
             raise WebError(400, "Unknown operation")
-        allowed = {"confirm", "remote_name"} if operation == "save" else {"confirm", "save_id"} if operation == "start" else {"confirm"}
+        allowed = ({"confirm", "remote_name"} if operation == "save" else {"confirm", "save_id"} if operation == "start"
+                   else {"confirm", "settings"} if operation == "slice" else {"confirm"})
         if set(data) - allowed or data.get("confirm") is not True:
             raise WebError(400, "Explicit confirmation and only documented fields are required")
         if operation in ("start", "stop"):
@@ -215,6 +218,10 @@ class Workbench:
                 raise WebError(409, "Orca is not configured; no validated Finder profile ships with this page")
             if self.source.suffix != ".stl" or self.artifact:
                 raise WebError(409, "Slicing needs a new STL; discard before slicing another version")
+            try:
+                settings = normalize_settings(data.get("settings"))
+            except ValueError as exc:
+                raise WebError(400, str(exc)) from exc
         else:
             if not self.config.enable_upload:
                 raise WebError(409, "Printer uploads are disabled on the server")
@@ -240,6 +247,8 @@ class Workbench:
         if operation == "slice":
             self.state["slicer_log"] = ""
             self.state["slicer_stage"] = ""
+            self.state["slice_settings"] = settings
+            self.state["effective_quality"] = None
         self.task = asyncio.create_task(self._operation(operation, data))
 
     async def _operation(self, operation, data):
@@ -254,9 +263,11 @@ class Workbench:
             if operation == "start":
                 capture.manifest["metadata"].update(saved_name=self.state["saved_name"], save_id=self.state["save_id"])
             if operation == "slice":
-                result = await slice_model(self.source, self.slot / self.state["suggested_name"], self.config.slicing, capture=capture)
+                result = await slice_model(self.source, self.slot / self.state["suggested_name"], self.config.slicing,
+                                           capture=capture, settings=self.state["slice_settings"])
                 self.artifact = result.path
-                self.state.update(phase="review", sliced=True, artifact=True, size=result.size, sha256=result.sha256)
+                self.state.update(phase="review", sliced=True, artifact=True, size=result.size, sha256=result.sha256,
+                                  effective_quality=capture.manifest["metadata"].get("effective_quality"))
                 capture.manifest["metadata"]["slicing_confirmed"] = True
             else:
                 network = True
