@@ -219,6 +219,24 @@ live browser file/drop/error flow, actual Podman image
 build/runtime, and separately approved hardware upload if desired. No model/
 toolpath preview or GX generator is provided. See [WEB.md](WEB.md).
 
+## Next requested: placement-aware priming / skirt (deferred until status view is done)
+
+The user reports the current fixed purge line lies inside the footprint of some
+larger prints and asks to record this for the next change, not interrupt current
+status work. The present draft02 uses holder-derived fixed priming geometry;
+brim can also overlap it, as previously noted. Do not claim it adapts already.
+
+Investigate Orca-generated **skirt** (detached from the model, bounded offset and
+minimum priming length) versus using brim for priming. Derive placement from
+the final arranged/oriented footprint, not the original STL bounds. Account
+for expanded brim/skirt footprint, real printable margins and start/nozzle
+clearance; fail rather than silently place a purge across the part or bed edge.
+Do not simply disable the existing prime when brim is selected: verify first
+extrusion order, material volume, temperature readiness, E mode/G92/retraction
+handoff and first-path continuity. Preserve originals and compare native output
+offline on small/large/edge placements before any separately approved physical
+trial. This request adds no code/profile/motion change yet.
+
 ## Web quality controls: brim/layer-height foundation
 
 User-requested GUI controls now allow profile/default, Off/Outer brim (bounded
