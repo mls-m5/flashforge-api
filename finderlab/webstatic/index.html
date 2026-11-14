@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Finder · local workbench</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body><main>
+<header><p class="eyebrow">LOCAL · EXPERIMENTAL · FINDER V1.5</p><h1>A file, not a print.</h1>
+<p>Prepare a model, review the output, then explicitly save it to Finder. Nothing starts printing automatically.</p></header>
+<aside><strong>Know your endpoint.</strong> <span id="target">Loading configuration…</span>
+<p>Loopback may be a proxy to a real printer. This page never discovers printers, heats, moves, starts or cancels a print. Close competing printer clients.</p></aside>
+<section><h2>1 <span>Choose a file</span></h2>
+<div id="drop" tabindex="0"><strong>Drop an STL or print file here</strong><p>STL up to 64 MiB · GX / G-code / G up to 8 MiB</p>
+<label for="file">or choose a file</label><input id="file" type="file" accept=".stl,.gx,.gcode,.g"></div>
+<p id="selection">One file at a time. Choosing a file only stores it locally.</p>
+<label>Browser → local server <progress id="incoming" max="100" value="0"></progress></label>
+<button id="discard" disabled>Discard current file</button></section>
+<section><h2>2 <span>Slice and review</span></h2>
+<p id="orca">Orca configuration loading…</p>
+<p class="warning">No print-ready Finder Orca profile ships here. The existing local Sailfish draft is rejected by Orca. Successful slicing is not proof of safe toolpaths. No silent Marlin substitution or disabled validity checks.</p>
+<button id="slice" disabled>Slice STL offline</button> <a id="download" href="/api/artifact" hidden>Download print file for review</a>
+<p>No 3D preview, GX thumbnail generation or toolpath safety validator is implemented yet.</p>
+<details><summary>Latest Orca diagnostic excerpt (private)</summary><pre id="slicer-log">No native process has run.</pre></details></section>
+<section><h2>3 <span>Save, without starting</span></h2>
+<label for="remote">Remote ASCII basename (may overwrite an existing file)</label><input id="remote" type="text" maxlength="128" placeholder="sample.gx" autocomplete="off">
+<button id="save" disabled>Save to Finder · no start</button>
+<p id="gating"></p>
+<label>Printer block acknowledgements <progress id="outgoing" max="100" value="0"></progress></label>
+<p id="bytes">0 / 0 bytes acknowledged</p><p id="result"></p></section>
+<section><h2>Result and private diagnostics</h2><p>Phase: <strong id="phase">empty</strong></p>
+<p id="error" role="alert"></p><p id="warning"></p><button id="refresh">Refresh result</button>
+<dl><dt>Source/artifact SHA-256 (not remote read-back)</dt><dd id="hash">—</dd><dt>Private capture directory</dt><dd id="capture">—</dd></dl>
+<p>Captures include full model bytes. Inputs/generated files remain local; discard removes the current files, not captures. Storage is capped; archive old captures manually. Lost responses do not cancel a job. Never blindly retry an unknown save.</p></section>
+<footer>Standalone workbench · OctoPrint integration is paused · No account, cloud upload or telemetry</footer>
+</main></body></html>

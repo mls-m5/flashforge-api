@@ -8,7 +8,7 @@ Implemented: `slice MODEL.stl` for offline export, and `upload MODEL.stl --slice
 
 A user-requested local Finder draft has since been copied/edited, but its native offline trial is blocked by Orca rejecting `gcode_flavor=sailfish`. See [ORCA_FINDER_DRAFT_01.md](ORCA_FINDER_DRAFT_01.md) for the private artifact paths, source attribution, exact changes, failed trial captures and the next dialect decision. The earlier internal Sailfish enum observation was not evidence of an accepted Orca profile option.
 
-This is a CLI/library foundation for a future local web API, **not an implemented HTTP endpoint**. The user request's “sdl” is interpreted as **STL**. 3MF/OBJ/SDL inputs are not accepted in this first adapter. STL coordinates are interpreted as millimetres: no automatic unit conversion, scaling, repair or auto-orientation. Orca is asked to arrange the object and ensure it is on the bed, using the supplied machine profile.
+The CLI/library is also used by the new [standalone local page](WEB.md). The page accepts an STL into a bounded local slot, requires an explicit offline Slice, offers output download/review, and requires a separate confirmed Save. Generated-output saving is server-disabled by default, independently of ordinary GX upload. Orca executable/profiles remain trusted server configuration, not HTTP parameters. The user request's “sdl” is interpreted as **STL**. 3MF/OBJ/SDL inputs are not accepted in this first adapter. STL coordinates are interpreted as millimetres: no automatic unit conversion, scaling, repair or auto-orientation. Orca is asked to arrange the object and ensure it is on the bed, using the supplied machine profile.
 
 ## Install and prepare profiles on the host
 
@@ -100,7 +100,7 @@ Defaults per job:
 
 Timeout, cancellation, logging failure and invalid output kill the process group, drain/reap it and clean temporary files. No fixed delay masks a parser error. The workspace monitor can overshoot between samples; use filesystem/container quotas for a hard aggregate disk boundary. The final G-code artifact is separately bounded by `--max-file-size` and is **outside** the recorder's byte counter. Repeated captures/outputs still accumulate; there is no global retention/rotation policy.
 
-This is **not a security sandbox** for an arbitrary executable, native mesh parser, plugin or malicious profile. The trusted executable still has the user's filesystem/network permissions, and can write outside its workspace; only its fixed slicing/help actions are requested. A future web API must use server-owned executables/profiles/targets, isolate native slicing of untrusted meshes, enforce a bounded queue and total storage, and must not accept arbitrary CLI flags or paths from HTTP clients.
+This is **not a security sandbox** for an arbitrary executable, native mesh parser, plugin or malicious profile. The trusted executable still has the user's filesystem/network permissions, and can write outside its workspace; only its fixed slicing/help actions are requested. The loopback workbench uses server-owned executables/profiles/targets, a single slot without a queue, bounded storage and no HTTP-supplied native flags/paths. It is restricted to trusted local inputs. A future multi-user/untrusted-mesh service still needs genuine native-code isolation in addition to resource limits; the current wrapper is not that sandbox.
 
 ## Evidence and next acceptance step
 
@@ -113,4 +113,4 @@ External interface references, not Finder 2 protocol evidence:
 
 These upstream pages/main branch can change. No upstream implementation/profile code was copied. Downloaded versions and the successful native 2.3.0 help probe are recorded in [ORCA_INSTALL.md](ORCA_INSTALL.md); actual slicing/profile validation is still pending.
 
-Next: resolve the draft's dialect/slicer choice explicitly, then run **offline slicing only**, inspect complete output plus logs, and only then transfer to a fresh dummy. Physical start remains a separate approved decision. GX/thumbnail generation, a verified Finder Orca profile and the web API remain unimplemented.
+Next: resolve the draft's dialect/slicer choice explicitly, then run **offline slicing only**, inspect complete output plus logs, and only then transfer to a fresh dummy. Physical start remains a separate approved decision. GX/thumbnail generation and a verified Finder Orca profile remain unimplemented. The standalone page's adapter wiring is now implemented and fake-executable tested; this does not resolve native profile compatibility or validate generated toolpaths.

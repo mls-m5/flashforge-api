@@ -48,7 +48,7 @@ File/name preflight errors are now recorded without opening a network connection
 
 Implemented at the user's request: offline `slice STL` and opt-in `upload STL --slice`, backed by a separate async Orca CLI adapter. It uses explicit self-contained machine/process/filament JSON, isolated local work/data directories, shell-free arguments, input hashes, persisted diagnostics, process/resource limits and a one-job lock. All slicing/validation must succeed before the upload client connects. Upload-only remains the default. Failed/multiple/binary/oversized outputs, timeout, cancellation and recorder failures are tested with a fake executable; combined transfers/start opt-in use fresh loopback dummies.
 
-This is orchestration, not a validated slicer/profile milestone: no model was actually sliced by Orca, and no new hardware action was taken. Subsequent official AppImage download/extraction is documented in [ORCA_INSTALL.md](ORCA_INSTALL.md); native 2.3.0 help/capability probing now succeeds after user-approved runtime installation, including under adapter limits. Actual slicing/profile validation remains outstanding, and the 2.5.0 build requires newer glibc. Native build/profile validation, safe Finder 2 toolpaths, GX/thumbnail packaging and the web API remain open. See [SLICING.md](SLICING.md) for current commands, prerequisites and the next offline host trial.
+This is orchestration, not a validated slicer/profile milestone: no model was actually sliced by Orca, and no new hardware action was taken. Subsequent official AppImage download/extraction is documented in [ORCA_INSTALL.md](ORCA_INSTALL.md); native 2.3.0 help/capability probing now succeeds after user-approved runtime installation, including under adapter limits. Actual slicing/profile validation remains outstanding, and the 2.5.0 build requires newer glibc. Native build/profile validation, safe Finder 2 toolpaths and GX/thumbnail packaging remain open. The standalone web foundation is now implemented in the later M6 update below. See [SLICING.md](SLICING.md) for current commands, prerequisites and the next offline host trial.
 
 ## Local Finder draft: native flavor blocker
 
@@ -148,11 +148,28 @@ Implement local drag-and-drop/file selection, explicit upload confirmation, conf
 - End-to-end tests use the simulator; physical-printer tests remain opt-in.
 - Loopback is the default; LAN serving is documented as a separate security configuration.
 
-## M6 implementation update: standalone OctoPrint plugin checkpoint
+## M6 implementation update: standalone local page
+
+At the user's request, OctoPrint development is paused. `python3 -m finderlab web`
+now provides a dependency-free loopback page: drag/drop into one bounded local
+slot, optional explicit offline Orca Slice, output download/review, and separate
+confirmed Save without start/stop. The target/executable/profiles are server
+configuration, not browser parameters; generated-output saving is separately
+disabled until an operator deliberately enables it. The default Compose and
+new Podman recipe target the standalone page. Independent HTTP tests, fresh
+loopback dummies and a fake Orca exercise orchestration, guards and exact upload
+bytes; no successful native Finder slicing or physical trial is claimed.
+
+**Remaining acceptance:** native Finder Orca profile/dialect decision (Sailfish
+rejection is unchanged), live browser file/drop/error flow, actual Podman image
+build/runtime, and separately approved hardware upload if desired. No model/
+toolpath preview or GX generator is provided. See [WEB.md](WEB.md).
+
+## M6 implementation update: standalone OctoPrint plugin checkpoint (paused)
 
 A separate GPLv3 repository is registered as `plugins/octoprint-flashforge-finder2`. Its initial admin-only tab/API uploads existing OctoPrint local files to a configured Finder V1.5 endpoint, disabled by default, with bounded snapshots/captures and no automatic start/stop. It is deliberately not a full PrinterInterface/serial driver. SDK mixin/permission tests and independent loopback protocol tests pass; its service worker also transferred the supplied GX byte-for-byte to a fresh dummy with no virtual print started. This is not Docker/browser or physical plugin acceptance. The Linux Compose example builds from the local submodule and makes the host dummy/proxy reachable while binding the OctoPrint UI to loopback; Docker is not available in this environment, so build/run remain pending. See [OCTOPRINT.md](OCTOPRINT.md).
 
-**Next acceptance:** user-run `docker compose config` and image build/runtime on Linux, complete first-run/admin setup in a browser, verify the plugin is present and disabled, then point it to a newly started dummy at a deliberate host port and perform an upload-only test. Physical upload is a separate, explicitly approved trial; a loopback proxy can reach hardware. No production OctoPrint volume or existing proxy should be used accidentally.
+**If this paused experiment resumes:** user-run `docker compose -f compose.octoprint.yml config` and image build/runtime on Linux, complete first-run/admin setup in a browser, verify the plugin is present and disabled, then point it to a newly started dummy at a deliberate host port and perform an upload-only test. Physical upload is a separate, explicitly approved trial; a loopback proxy can reach hardware. No production OctoPrint volume or existing proxy should be used accidentally.
 
 ## Future: systematic reviewed scenario corpus and replay
 

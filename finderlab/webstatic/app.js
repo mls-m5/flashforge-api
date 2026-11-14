@@ -1,0 +1,126 @@
+"use strict";
+(() => {
+    const el = id => document.getElementById(id);
+    let config, state = {busy: false, phase: "empty"}, pending = false, uncertain = false;
+    let timer = null, polling = false;
+    function text(id, value) { el(id).textContent = value || ""; }
+    function render() {
+        const busy = pending || polling || state.busy || uncertain;
+        el("file").disabled = busy || state.phase !== "empty";
+        el("discard").disabled = busy || state.phase === "empty";
+        el("slice").disabled = busy || !config || !config.slicing_enabled || state.phase !== "model_ready";
+        el("save").disabled = Boolean(busy || !config || !config.upload_enabled || !state.artifact || state.saved ||
+            state.phase === "unknown" || (state.sliced && !config.sliced_upload_enabled));
+        el("remote").disabled = busy;
+        if (state.phase === "empty") el("incoming").value = 0;
+        el("download").hidden = !state.artifact || busy;
+        text("selection", state.name || "One file at a time. Choosing a file only stores it locally.");
+        text("phase", uncertain ? "HTTP response unknown — refresh before continuing" : state.phase);
+        text("hash", state.sha256);
+        text("capture", state.capture);
+        text("warning", state.warning);
+        text("slicer-log", state.slicer_log || "No native process has run.");
+        text("bytes", `${state.acknowledged || 0} / ${state.size || 0} bytes acknowledged`);
+        el("outgoing").value = state.size ? 100 * (state.acknowledged || 0) / state.size : 0;
+        text("result", state.saved ? "Final save confirmed. No print start or stop was sent." :
+            state.phase === "unknown" ? "Remote result UNKNOWN. Inspect logs and physical state before retrying." :
+            "Acknowledged bytes are not final save confirmation.");
+        if (state.error) text("error", state.error);
+        text("gating", !config || !config.upload_enabled ? "Printer uploads disabled: start the server with --enable-upload for an explicitly chosen endpoint." :
+            state.sliced && !config.sliced_upload_enabled ? "Generated-output saving is blocked pending profile review and server --allow-sliced-upload." :
+            "Only a confirmed Save opens a printer connection.");
+    }
+    async function request(url, options) {
+        const response = await fetch(url, {cache: "no-store", ...options});
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        return data;
+    }
+    async function refresh() {
+        clearTimeout(timer); timer = null;
+        if (polling || pending || !config) return;
+        polling = true; render();
+        try {
+            state = await request("/api/state");
+            uncertain = false;
+            if (!state.error) text("error", "");
+            if (state.busy) timer = setTimeout(refresh, 1000);
+        } catch (error) {
+            text("error", error.message + " Job may still be running; refresh, do not resubmit.");
+        } finally { polling = false; render(); }
+    }
+    async function action(operation, body) {
+        if (pending || polling || state.busy || uncertain) return;
+        pending = true; clearTimeout(timer); text("error", ""); render();
+        let accepted = false;
+        try {
+            state = await request("/api/" + operation, {method: "POST", headers: {
+                "Content-Type": "application/json", "X-Finder-Token": config.token
+            }, body: JSON.stringify(body)});
+            accepted = true;
+        } catch (error) {
+            uncertain = true;
+            text("error", error.message + " Refresh the result before another operation.");
+        } finally { pending = false; render(); }
+        // GET only reads cached state, never printer status.
+        if (accepted) await refresh();
+    }
+    function receive(file) {
+        if (!config || pending || polling || state.busy || uncertain || state.phase !== "empty" || !file) return;
+        const stl = /\.stl$/i.test(file.name);
+        if (!/\.(stl|gx|gcode|g)$/i.test(file.name) || !file.size || file.size > (stl ? config.model_limit : config.print_limit)) {
+            text("error", "Choose a nonempty STL (up to 64 MiB) or GX/G-code/G (up to 8 MiB)."); return;
+        }
+        pending = true; clearTimeout(timer); text("error", ""); el("incoming").value = 0; render();
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/file?name=" + encodeURIComponent(file.name));
+        xhr.setRequestHeader("Content-Type", "application/octet-stream");
+        xhr.setRequestHeader("X-Finder-Token", config.token);
+        xhr.timeout = 70000;
+        xhr.upload.onprogress = event => { if (event.lengthComputable) el("incoming").value = 100 * event.loaded / event.total; };
+        function failed(message) {
+            uncertain = true; pending = false; text("error", message + " Refresh the result before selecting again."); render();
+        }
+        xhr.onerror = xhr.ontimeout = () => failed("Browser upload response lost.");
+        xhr.onload = () => {
+            try {
+                const data = JSON.parse(xhr.responseText);
+                if (xhr.status !== 200) throw new Error(data.error || "File was not accepted");
+                state = data; pending = false;
+                el("remote").value = stl ? "sliced.gcode" : (/^[A-Za-z0-9_][A-Za-z0-9_. -]{0,127}$/.test(file.name) && !file.name.includes("..") ? file.name : "upload." + file.name.split(".").pop().toLowerCase());
+                render();
+            } catch (error) { failed(error.message); }
+        };
+        xhr.send(file);
+    }
+    el("file").addEventListener("change", event => receive(event.target.files[0]));
+    el("drop").addEventListener("dragover", event => { event.preventDefault(); el("drop").classList.add("over"); });
+    el("drop").addEventListener("dragleave", () => el("drop").classList.remove("over"));
+    el("drop").addEventListener("drop", event => {
+        event.preventDefault(); el("drop").classList.remove("over");
+        if (event.dataTransfer.files.length !== 1) { text("error", "Drop one file at a time."); return; }
+        receive(event.dataTransfer.files[0]);
+    });
+    el("refresh").addEventListener("click", refresh);
+    el("discard").addEventListener("click", () => {
+        if (confirm("Remove current input/generated files? Private captures remain. This does not undo a printer save or cancel a print.")) {
+            action("discard", {confirm: true}); el("file").value = "";
+        }
+    });
+    el("slice").addEventListener("click", () => {
+        if (confirm("Run trusted server-configured Orca and profiles offline? Output is NOT print-safety validated. No printer connection will be made.")) action("slice", {confirm: true});
+    });
+    el("save").addEventListener("click", () => {
+        if (confirm(`Save to ${config.target}? A proxy may reach real hardware and an existing remote file may be overwritten. Review the toolpaths first. No print start or stop will be sent.`)) {
+            action("save", {confirm: true, remote_name: el("remote").value});
+        }
+    });
+    request("/api/config").then(data => {
+        config = data;
+        text("target", `${data.target} · printer uploads ${data.upload_enabled ? "ENABLED" : "disabled"}`);
+        text("orca", data.slicing_enabled ? "Trusted server-side Orca/profiles configured. Slice offline, then download and review before a separate Save." :
+            "Orca not configured. Supply --orca and trusted self-contained --machine / --process / --filament JSON on the server. Existing FlashPrint GX files work independently.");
+        refresh();
+    }).catch(error => text("error", error.message + " Reload the page using the exact server URL."));
+    render();
+})();

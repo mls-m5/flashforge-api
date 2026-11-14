@@ -1,4 +1,4 @@
-"""Run local mock or recording proxy without installation."""
+"""Run lab services, clients and the standalone workbench without installation."""
 
 import argparse
 import asyncio
@@ -10,6 +10,7 @@ from .cli_client import CLIENT_COMMANDS, add_client_commands, client_main
 from .proxy import ProxyConfig, RecordingProxy
 from .simulator import MockConfig, MockPrinter
 from .simulator.profile import PROFILES
+from .web import add_web_command, web_main
 
 
 def parser() -> argparse.ArgumentParser:
@@ -18,6 +19,7 @@ def parser() -> argparse.ArgumentParser:
     )
     commands = cli.add_subparsers(dest="command", required=True)
     add_client_commands(commands)
+    add_web_command(commands)
     mock = commands.add_parser("mock", help="run the offline TCP dummy printer")
     defaults = MockConfig()
     mock.add_argument("--profile", choices=tuple(PROFILES), default=defaults.profile,
@@ -89,6 +91,8 @@ def main():
     cli = parser()
     args = vars(cli.parse_args())
     mode = args.pop("command")
+    if mode == "web":
+        return web_main(cli, args)
     if mode in CLIENT_COMMANDS:
         return client_main(cli, mode, args)
     verbose = args.pop("verbose")

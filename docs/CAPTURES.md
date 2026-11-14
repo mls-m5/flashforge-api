@@ -30,6 +30,19 @@ The initial manifest has `complete: false`. It is finalized on orderly shutdown 
 
 Tell the assistant the printed capture path when it exists in the same accessible workspace. No remote log collection or automatic external upload is implemented. Recordings on another computer must be copied into the workspace or otherwise shared deliberately.
 
+## Standalone web recordings
+
+The standalone page creates a separate `web-data/captures/<run>/` per explicitly
+requested Slice or Save, reusing format v1 (`slice`/`client`). Metadata includes
+`interface: standalone-web`, operation and `start_requested: false`. Browser
+file receipt alone makes no printer session; files stay in its private single
+slot. The page displays a bounded 4000-character Orca diagnostic excerpt, not a
+replacement for raw capture output. Captures are retained after explicit slot
+discard and count toward the workbench's conservative 256 MiB storage admission
+budget. Interrupted runs are never resumed automatically. See [WEB.md](WEB.md)
+for workspace quotas, native scratch limits and shutdown/unknown outcomes.
+Neither runtime volumes nor these raw captures belong in Git.
+
 ## Slicer diagnostics and generated files
 
 Standalone slicing uses mode `slice` with no printer sessions; combined `upload --slice` keeps mode `client`. `slicer_command`, `slicer_output`, `slicer_exit` and `slicer_result` events describe capability probing, slicing argv, stdout/stderr bytes (authoritative `data_hex`, plus readable derived text), completed exit codes and candidate output hashes. The manifest retains input hashes/basenames, limits, executable path and `slicing_confirmed` when completed. Errors in phase `slicing` stop before any printer connection. `slicer_result` is not a toolpath safety assertion or proof that output publication/upload later succeeded.

@@ -2,6 +2,9 @@
 **
 !docker/
 !docker/octoprint.Dockerfile
+!docker/web.Dockerfile
+!finderlab/
+!finderlab/**
 !plugins/
 !plugins/octoprint-flashforge-finder2/
 !plugins/octoprint-flashforge-finder2/setup.py
@@ -15,3 +18,12 @@
 **/__pycache__
 **/*.pyc
 **/.git
+**/captures/
+**/web-data/
+**/.tmp/
+**/spool/
+**/local-profiles/
+**/upload/
+**/uploads/
+**/.env
+**/.env.*

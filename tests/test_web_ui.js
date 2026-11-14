@@ -1,0 +1,97 @@
+// Minimal DOM/API model. No browser, HTTP listener, slicer or printer is started.
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const vm = require("node:vm");
+const path = require("node:path");
+const elements = new Map(), posts = [], xhrs = [];
+let confirmation = true, failNextPost = false;
+const config = {token: "test-token", target: "127.0.0.1:9000", upload_enabled: true,
+    slicing_enabled: true, sliced_upload_enabled: false, model_limit: 64 * 1024 ** 2, print_limit: 8 * 1024 ** 2};
+let state = {phase: "empty", busy: false};
+function element(id) {
+    if (!elements.has(id)) elements.set(id, {value: "", textContent: "", disabled: false, hidden: false,
+        handlers: {}, classList: {add() {}, remove() {}},
+        addEventListener(name, fn) { this.handlers[name] = fn; }});
+    return elements.get(id);
+}
+const fakeWindowTimers = new Map();
+let timerId = 0;
+class XHR {
+    constructor() { this.upload = {}; this.headers = {}; xhrs.push(this); }
+    open(method, url) { this.method = method; this.url = url; }
+    setRequestHeader(key, value) { this.headers[key] = value; }
+    send(file) { this.file = file; }
+    finish(next) { state = next; this.status = 200; this.responseText = JSON.stringify(next); this.onload(); }
+}
+const context = {
+    document: {getElementById: element},
+    XMLHttpRequest: XHR,
+    confirm: () => confirmation,
+    clearTimeout: id => fakeWindowTimers.delete(id),
+    setTimeout: fn => { fakeWindowTimers.set(++timerId, fn); return timerId; },
+    async fetch(url, options = {}) {
+        if (options.method === "POST") {
+            assert.equal(options.headers["X-Finder-Token"], config.token);
+            const data = JSON.parse(options.body);
+            posts.push({url, data});
+            if (failNextPost) { failNextPost = false; throw new Error("synthetic lost POST response"); }
+            if (url === "/api/save") state = {...state, saved: true, phase: "saved", busy: false};
+            if (url === "/api/discard") state = {busy: false, phase: "empty"};
+            if (url === "/api/slice") state = {...state, busy: false, phase: "review", sliced: true, artifact: true};
+        }
+        return {ok: true, json: async () => url === "/api/config" ? config : {...state}};
+    }
+};
+const flush = () => new Promise(resolve => setImmediate(resolve));
+function click(id) { if (!element(id).disabled) element(id).handlers.click(); }
+function choose(name, size) { element("file").handlers.change({target: {files: [{name, size}]}}); }
+async function main() {
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../finderlab/webstatic/app.js"), "utf8"), context);
+    await flush();
+    assert.equal(posts.length, 0, "initial configuration/state reads must not save or slice");
+    choose("bad.3mf", 10); assert.equal(xhrs.length, 0);
+    choose("sample.gx", 5129);
+    assert.equal(xhrs.length, 1);
+    assert.equal(posts.length, 0, "file selection only posts file bytes");
+    assert.equal(xhrs[0].headers["X-Finder-Token"], config.token);
+    xhrs[0].finish({phase: "file_ready", busy: false, name: "sample.gx", artifact: true, size: 5129});
+    assert.equal(element("remote").value, "sample.gx");
+    confirmation = false; click("save"); assert.equal(posts.length, 0);
+    confirmation = true; click("save"); click("save");
+    await flush();
+    assert.equal(posts.length, 1, "double click submits once");
+    assert.equal(posts[0].url, "/api/save");
+    assert.equal(posts[0].data.confirm, true);
+    assert.match(element("result").textContent, /Final save confirmed/);
+    assert.equal(element("save").disabled, true);
+    click("discard"); await flush();
+    choose("model.stl", 100);
+    xhrs[1].finish({phase: "model_ready", busy: false, name: "model.stl", artifact: false, size: 100});
+    assert.equal(element("save").disabled, true);
+    click("slice"); await flush();
+    assert.equal(posts.at(-1).url, "/api/slice");
+    assert.equal(posts.filter(p => p.url === "/api/save").length, 1, "slice does not automatically save");
+    assert.equal(element("download").hidden, false);
+    assert.equal(element("save").disabled, true, "unreviewed generated output stays blocked");
+    click("discard"); await flush();
+    choose("again.gx", 20);
+    xhrs[2].onerror();
+    assert.equal(element("file").disabled, true, "lost file response requires a state refresh");
+    assert.equal(element("save").disabled, true);
+    click("refresh"); await flush();
+    assert.equal(element("file").disabled, false);
+    assert.equal(fakeWindowTimers.size, 0);
+    choose("uncertain.gx", 20);
+    xhrs[3].finish({phase: "file_ready", busy: false, name: "uncertain.gx", artifact: true, size: 20});
+    failNextPost = true;
+    click("save"); await flush();
+    assert.equal(element("save").disabled, true);
+    assert.match(element("error").textContent, /lost POST response/);
+    assert.match(element("phase").textContent, /HTTP response unknown/);
+    const count = posts.length;
+    click("save"); assert.equal(posts.length, count, "lost submission is not retried");
+    click("refresh"); await flush();
+    assert.equal(element("save").disabled, false);
+    console.log("Standalone page selection, confirmations, slice/save separation and uncertainty tests passed.");
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });

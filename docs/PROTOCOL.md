@@ -211,6 +211,27 @@ Skillnaderna kan bero på firmware, klientversion eller olika discovery-vägar. 
 - Fast paus före M29 och upload med råa byte saknar lokal verifiering.
 - Skriptet skickar inget explicit utskriftsstartkommando, men upload-only-beteendet måste ändå verifieras på aktuell firmware.
 
+## WEB-WORKBENCH-001 — Standalone HTTP workflow, dummy only
+
+Local application evidence, not a new physical-printer protocol observation:
+HTTP file receipt followed by a separate confirmed Save transferred the supplied
+3668165-byte GX to a freshly started ephemeral `finder-v1.5` dummy, exact bytes,
+896 frames, no virtual print. Private capture
+`web-data/manual-gx/captures/20261114T132526Z-4112e567c689`, session `s0001`.
+Commands were M601/M115/M119/M28/M29/M602 only. FlashPrint was not involved;
+its version is not applicable. The dummy reports the existing Finder V1.5
+fingerprint; host Python is 3.11 on Debian 12. Self-consistent client/dummy
+success does not extend firmware/hardware evidence.
+
+A separate offline HTTP Slice with native Orca 2.3.0 and the unchanged private
+Finder draft reached the known Sailfish validation failure with a generated
+binary review cube. Capture
+`web-data/native-profile-check/captures/20261114T132526Z-fe43872dc961` has no
+printer sessions or generated output. The page reports the failure instead of
+substituting a flavor or attempting a save. See [WEB.md](WEB.md) for trial
+limits, the initial mesh-loading failure and reproducible fake/native setup.
+No physical printer/proxy was contacted and no additional commands were inferred.
+
 ## Frågor som fångster ska besvara
 
 1. Öppnar FlashPrint en eller flera TCP-anslutningar? Krävs kontroll innan identifiering/status?

@@ -1,4 +1,9 @@
-# OctoPrint plugin experiment — checkpoint
+# OctoPrint plugin experiment — paused
+
+The user paused this integration in favor of the standalone page in [WEB.md](WEB.md).
+The submodule is retained, not presented as a native OctoPrint printer driver.
+The default Compose now starts the standalone page; use `compose.octoprint.yml`
+only when deliberately returning to this old experiment.
 
 Plugin submodule: `plugins/octoprint-flashforge-finder2`, remote
 `git@github.com:mls-m5/octoprint-flashforge-finder2.git`.
@@ -16,8 +21,8 @@ git submodule update --init --recursive
 # Separate terminal, own fresh dummy, not a hardware proxy:
 python3 -m finderlab mock --port 9000
 # Experimental root:
-docker compose config
-docker compose up --build
+docker compose -f compose.octoprint.yml config
+docker compose -f compose.octoprint.yml up --build
 ```
 
 Visit http://127.0.0.1:5000 and complete OctoPrint's first-run/admin setup. The

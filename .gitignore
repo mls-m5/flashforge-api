@@ -18,6 +18,7 @@ dist/
 /upload/
 /uploads/
 /storage/
+/web-data/
 /local-profiles/
 /.local-tools/
 *.pcap

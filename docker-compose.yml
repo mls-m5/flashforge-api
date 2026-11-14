@@ -1,25 +1,24 @@
-# Adapted from OctoPrint/octoprint-docker's Compose example (GPLv3).
-# See docs/OCTOPRINT.md for provenance, Linux host networking and safe first test.
+# Standalone loopback workbench. OctoPrint is paused: see compose.octoprint.yml.
+# Orca is not bundled in this initial image. See docs/WEB.md for native slicing.
 services:
-  octoprint:
+  finder-web:
     build:
       context: .
-      dockerfile: docker/octoprint.Dockerfile
-    image: finder2-octoprint-experiment:local
-    # Linux: share the host's loopback dummy/proxy, not a container-local 127.0.0.1.
+      dockerfile: docker/web.Dockerfile
+    image: localhost/finderlab-web:local
     network_mode: host
     restart: "no"
-    init: true
     volumes:
-      - octoprint-test-data:/octoprint
+      - web-data:/app/web-data
+      - web-scratch:/app/.tmp
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
     pids_limit: 128
     mem_limit: 1g
-    # No USB/serial/camera devices, Docker socket, privileged mode or host mounts.
-    # The Dockerfile binds OctoPrint itself to 127.0.0.1:5000; no HAProxy/S6.
-
+    # Uploads remain disabled unless --enable-upload is explicitly added.
+    # No serial devices, Docker/Podman socket, privileged mode or host directories.
 volumes:
-  octoprint-test-data:
+  web-data:
+  web-scratch:
