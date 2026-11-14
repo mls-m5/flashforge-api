@@ -48,8 +48,10 @@ interaction or physical printing.
 The current three JSON files are **stage C**; stage A/B snapshots are retained
 privately for comparison.
 
-- Nominal 140×140×140 mm, centered XY ±70, single assumed 0.4 mm nozzle and
-  1.75 mm PLA. Nominal dimensions are not a measured origin/clearance certificate.
+- Nominal 140×140×140 mm, centered XY ±70. The user subsequently confirmed a
+  0.4 mm nozzle and PLA; this is user-reported, not independently measured.
+  Filament diameter 1.75 mm remains an assumption. Nominal dimensions are not a
+  measured origin/clearance certificate.
 - User/requested and FlashPrint Standard comparison: layers 0.18 / first 0.27 mm,
   nozzle 220, bed 0. Retraction 1.3 mm at 30 mm/s in/out; 2 walls, 3 top/bottom
   layers, 15% infill; first layer 10 mm/s, outer wall 30, inner wall 42,
@@ -90,6 +92,32 @@ There is no diagnosed large positive end E-only step in these outputs.
 This proves a difference in intended numeric code, not the physical firmware's
 interpretation. The retained end homing/offset/motor suffix
 (G162 Z → G28 X Y → M132 → M652 → G91 → M18) is still unmodeled physical motion.
+
+## User-reported startup impact clarification
+
+After this experiment the user confirmed 0.4 mm nozzle / PLA and described the
+previous impact as occurring at or near an X extreme (maximum versus minimum
+unknown), possibly a straight downward motion after leaving home. There is no
+video, raw motion trace, exact command/line identification or direction/frame
+measurement. This is a **user-reported symptom**, not a confirmed root cause.
+The word downward does not identify the sign of logical Z on a moving-bed
+machine.
+
+The old Prusa file, working FlashPrint reference and current candidate all
+contain G28/M132, then G1 Z50 F420, then G161 X Y F3300. Later, after an XY
+staging command, each requests G1 Z0.2 F420 for priming. The old Prusa staging
+point is X5/Y30; the reference and current candidate use X−25/Y−20. These are
+code observations, not proof of the actual physical head location. An impact
+near X home during a vertical move may involve homing/offset/staging or physical
+clearance; the current nominal XY-bound check cannot distinguish those causes.
+
+Do not diagnose this as simply an oversized bed or assume that slower layer
+changes fixed startup. Stage C addresses **body layer-change speed**, not these
+retained startup homing/Z moves. Do not change home/origin commands on a guess
+or repeat the failing print for diagnosis. Next useful clarification is whether
+the head had visibly moved from the X end position onto the plate before the
+vertical motion, and whether this happened before the first purge extrusion.
+No new hardware attempt is authorized by this clarification.
 
 ## Coordinates and layer-change Z finding
 
@@ -174,8 +202,8 @@ download/review is available; printer actions remain disabled.
 
 ## Remaining physical blockers / next review
 
-- Confirm actual nozzle and PLA/material diameter; inherited flow/cooling and
-  speed assumptions are not calibrated for this particular spool/printer.
+- Nozzle 0.4 mm and PLA are now user-confirmed. Confirm filament diameter and
+  retain flow/cooling/speed as uncalibrated assumptions for this spool/printer.
 - Confirm M82/G21 behavior and M118 necessity on the observed firmware. These
   are the two added command codes versus the supplied working FlashPrint file;
   command parameters (e.g. M106 S PWM), origin, templates and trajectories also
