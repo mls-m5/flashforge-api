@@ -2,6 +2,11 @@
 
 from contextlib import redirect_stdout
 import io
+import ipaddress
+import os
+import struct
+import subprocess
+import sys
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -111,6 +116,83 @@ class LauncherTests(unittest.TestCase):
         execute.assert_not_called()
         self.assertIn("HTTP is unencrypted", output.getvalue())
         self.assertIn("192.168.1.20", output.getvalue())
+
+    def test_automatic_lan_choice_keeps_proxy_local_and_prints_selected_url(self):
+        with patch.object(launcher, "local_ipv4_addresses", return_value={"127.0.0.1", "10.1.2.3", "192.168.1.20"}):
+            command = launcher.build_command(proxy_port=9000, lan_host="auto")
+            self.assertEqual(command[command.index("--listen-host")+1], "192.168.1.20")
+            self.assertEqual(command[command.index("--target-host")+1], "127.0.0.1")
+            self.assertEqual(command[command.index("--target-port")+1], "9000")
+            self.assertIn("--lan", command)
+            with patch("sys.argv", ["start_offline_web.py", "--lan-host", "auto", "--check"]), \
+                 patch.object(launcher.os, "execv") as execute, redirect_stdout(io.StringIO()) as output:
+                launcher.main()
+            execute.assert_not_called()
+            self.assertIn("Open http://192.168.1.20:8000", output.getvalue())
+            self.assertNotIn("http://auto", output.getvalue())
+
+    def test_auto_selection_does_not_guess_on_missing_or_ambiguous_address(self):
+        for addresses in ({"127.0.0.1", "10.1.2.3"}, {"192.168.1.20", "192.168.2.20"}):
+            with patch.object(launcher, "local_ipv4_addresses", return_value=addresses), self.assertRaises(ValueError):
+                launcher.build_command(lan_host="auto")
+        with patch.object(launcher, "local_ipv4_addresses", return_value={"192.168.1.20", "192.168.2.20"}):
+            command = launcher.build_command(lan_host="auto", lan_network="192.168.1.0/24")
+            self.assertEqual(command[command.index("--listen-host")+1], "192.168.1.20")
+        with patch.object(launcher, "local_ipv4_addresses", side_effect=OSError("synthetic permission failure")), \
+             self.assertRaisesRegex(ValueError, "Cannot read local interface"):
+            launcher.build_command(lan_host="auto")
+
+    def test_default_and_explicit_address_never_enumerate_interfaces(self):
+        with patch.object(launcher, "local_ipv4_addresses", side_effect=AssertionError("unexpected enumeration")):
+            self.assertNotIn("--lan", launcher.build_command())
+            self.assertIn("--lan", launcher.build_command(lan_host="192.168.1.20"))
+
+    @unittest.skipUnless(sys.platform == "linux", "Linux ioctl reader")
+    def test_local_interface_reader_uses_only_ioctl_no_connection_or_packets(self):
+        names = [(1, "lo"), (2, "eth0"), (3, "down0"), (4, "noipv4")]
+        def ioctl(fd, opcode, request):
+            name = request.split(b"\x00", 1)[0].decode()
+            result = bytearray(256)
+            if opcode == 0x8913:
+                struct.pack_into("H", result, 16, 0 if name == "down0" else 1)
+            else:
+                self.assertEqual(opcode, 0x8915)
+                self.assertNotEqual(name, "down0", "down interfaces must not be selected")
+                if name == "noipv4": raise OSError("no address")
+                result[20:24] = ipaddress.IPv4Address("127.0.0.1" if name == "lo" else "192.168.1.20").packed
+            return bytes(result)
+        with patch.object(launcher.socket, "if_nameindex", return_value=names), \
+             patch.object(launcher.socket, "socket") as socket_factory, patch("fcntl.ioctl", side_effect=ioctl):
+            self.assertEqual(launcher.local_ipv4_addresses(), {"127.0.0.1", "192.168.1.20"})
+            control = socket_factory.return_value.__enter__.return_value
+            for method in ("connect", "connect_ex", "send", "sendto", "bind"):
+                getattr(control, method).assert_not_called()
+            socket_factory.assert_called_once_with(launcher.socket.AF_INET, launcher.socket.SOCK_DGRAM)
+
+    def test_auto_interface_reader_is_bounded_and_does_not_guess_on_other_platforms(self):
+        with patch.object(launcher.sys, "platform", "unsupported"), self.assertRaisesRegex(ValueError, "requires Linux"):
+            launcher.local_ipv4_addresses()
+        with patch.object(launcher.sys, "platform", "linux"), \
+             patch.object(launcher.socket, "if_nameindex", return_value=[(1, "lo")] * 257), \
+             patch.object(launcher.socket, "socket") as factory, self.assertRaisesRegex(ValueError, "Too many"):
+            launcher.local_ipv4_addresses()
+        factory.assert_not_called()
+
+    def test_short_lan_wrapper_needs_no_ip_and_keeps_explicit_override(self):
+        # Replace python3 with an argv-only stub: never launch a listener/proxy/native slicer.
+        stub = self.root / "python3"
+        stub.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
+        stub.chmod(0o700)
+        script = Path(launcher.__file__).resolve().with_name("start_lan_web.sh")
+        env = {**os.environ, "PATH": str(self.root) + os.pathsep + os.environ.get("PATH", "")}
+        for args, host in (([], "auto"), (["--check"], "auto"), (["192.168.1.20", "--check"], "192.168.1.20")):
+            result = subprocess.run(["bash", str(script), *args], env=env, cwd=self.root, capture_output=True, text=True, timeout=5)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            command = result.stdout.splitlines()
+            self.assertEqual(command[command.index("--lan-host")+1], host)
+            self.assertEqual(command[command.index("--proxy-port")+1], "9000")
+            self.assertIn("--enable-job-controls", command)
+            self.assertIn("--allow-sliced-upload", command)
 
     def test_check_does_not_launch_or_change_directory(self):
         with patch("sys.argv", ["start_offline_web.py", "--check"]), \

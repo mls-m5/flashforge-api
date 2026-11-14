@@ -270,8 +270,10 @@ Light command observations do not validate every color/on-off policy either.
 ## Explicit trusted-LAN sharing implemented
 
 The user requested another trusted person to have upload/Slice/Start/status.
-`tools/start_lan_web.sh COMPUTER_192.168_IP` now selects the full existing
-workflow with mandatory per-run shared Basic login, specific private-interface
+`tools/start_lan_web.sh` now needs no address argument: it selects the sole
+eligible primary192.168 address from bounded local Linux interface configuration
+without network probes/DNS/target connections. Ambiguity fails with candidates;
+explicit IP/CIDR overrides remain. It selects the full existing workflow with mandatory per-run shared Basic login, specific private-interface
 bind and socket-peer CIDR filter. Default modes remain loopback. The fixed
 Host/Origin/token guards, single slot, exact saved identity and separate Start
 confirmation remain; no automatic print-start/cancel or physical manual control.

@@ -59,9 +59,10 @@ filter and the new candidate's physical startup remains unverified.
 
 ## Share the full page on a trusted home network
 
-`./tools/start_lan_web.sh COMPUTER_192.168_IP` deliberately shares Slice, Save,
-confirmed Start/Cancel and status using the existing proxy/profile setup. Use
-**this computer's** interface IP, not the printer's. The browser asks for user
+Run `./tools/start_lan_web.sh`—no IP argument needed. It selects this Linux
+computer's local192.168 address and prints the link to share. The printer proxy
+stays on localhost. Slice, Save, confirmed Start/Cancel and status use the
+existing proxy/profile setup. The browser asks for user
 `finder` and the random password printed by the server (new each restart).
 Only192.168 peers plus local IPv4 are allowed; an optional narrower CIDR can
 be selected. All users share one printer/file slot. **HTTP is unencrypted**;

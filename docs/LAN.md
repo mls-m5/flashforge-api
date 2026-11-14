@@ -35,14 +35,34 @@ the old web process when it is not saving/slicing; do not interrupt printer or
 proxy. Both old/new web launchers use the same workspace lock and cannot run
 concurrently against that slot.
 
-Substitute **this computer's** LAN interface IP (example only, not a discovered
-address; check the OS network settings or `hostname -I`):
+No IP argument is needed:
 
 ```sh
-./tools/start_lan_web.sh 192.168.1.20
-# Optional tighter source filter (match your actual LAN subnet):
-./tools/start_lan_web.sh 192.168.1.20 --lan-network 192.168.1.0/24
+./tools/start_lan_web.sh
 ```
+
+Share the link printed by the launcher/server, then log in as described below.
+The printer proxy remains **localhost9000**; it is not the browser's address.
+The script reads only this Linux computer's local interface configuration
+(SIOCGIFFLAGS/SIOCGIFADDR, at most256 interfaces). No DNS, network probes,
+printer discovery, outgoing connection or packet is used to select the address.
+It chooses the sole primary IPv4 address on an UP interface in the allowed
+192.168 subnet. Password, source filter, exact Host/Origin checks and the
+specific-interface bind remain unchanged—no wildcard/LAN trust broadening.
+
+If no eligible address exists, connect to the home network and retry. If several
+exist (for example a VPN and Wi-Fi), it lists candidates instead of guessing.
+Advanced overrides still work; example addresses below are not actual targets:
+
+```sh
+./tools/start_lan_web.sh --lan-network 192.168.1.0/24
+./tools/start_lan_web.sh 192.168.1.20
+# Equivalent automatic selection on the normal proxy launcher:
+./tools/start_proxy_web.sh --lan-host auto
+```
+
+Automatic selection requires Linux and reads primary addresses only; use the
+explicit override for secondary addresses or other supported POSIX hosts.
 
 The wrapper explicitly enables existing upload, generated-output Save and
 confirmed Start/Cancel, uses the existing private draft02/Orca setup, and starts
@@ -54,7 +74,8 @@ full-workflow policy selection; normal proxy/offline launchers keep their
 existing action gates. It requires the same local Orca/private profiles as the
 ordinary proxy page; missing profiles are not auto-downloaded or substituted.
 `--proxy-port`, `--port`, `--orca`, `--no-monitor` and `--check` work as before.
-`--check` validates local inputs only, binds nothing and generates no password.
+`--check` reads local interface/file configuration only, binds nothing, sends
+no packets and generates no password.
 
 The server prints:
 
@@ -105,7 +126,9 @@ binds. HTTP tests cover401 challenges, all protected assets/read/mutating routes
 no side effects before authentication, no password in config/printer captures,
 shared exact Save and separately confirmed Start/Cancel, status polling and
 fake offline Slice, plus Host/Origin/token and peer rejection. Wrapper checks
-verify explicit interfaces/CIDR and unchanged capability gates. Existing Python,
+verify automatic/no-argument startup, explicit interfaces/CIDR, missing/multiple
+addresses, bounded local ioctl reads without connect/send/DNS, and unchanged
+capability gates. Existing Python,
 Node UI and reviewed-trace checks remain applicable.
 
 An actual CLI smoke check also ran `web --dummy --lan` with an ephemeral

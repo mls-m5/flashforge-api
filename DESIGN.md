@@ -124,8 +124,11 @@ socket peers to192.168/16 or a narrower configured subnet plus local IPv4, and
 requires a random per-run Basic password for all routes/assets. Forwarded
 headers are never identity. Default startup remains loopback; wildcard/public
 binds are rejected. Host/Origin/token/capability/file/job guards remain unchanged.
-The full-workflow LAN wrapper explicitly selects existing Save/Start/generated
-output flags; sharing by itself does not grant capabilities. Users share one
+The full-workflow LAN wrapper needs no IP argument: bounded Linux local
+interface ioctls select the sole eligible primary192.168 address without DNS,
+probes or a target connection. Missing/multiple candidates fail rather than
+falling back to a wildcard. Explicit overrides remain. The wrapper selects
+existing Save/Start/generated-output flags; sharing alone does not grant capabilities. Users share one
 workspace/login, not per-user jobs/roles. Basic HTTP is unencrypted and suitable
 only for a deliberately trusted home network, never a public tunnel/router
 forward/reverse proxy. No TLS or production-security claim. See LAN.md.

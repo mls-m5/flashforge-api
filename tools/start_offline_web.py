@@ -4,6 +4,8 @@
 import argparse
 import ipaddress
 import os
+import socket
+import struct
 from pathlib import Path
 import sys
 
@@ -15,15 +17,54 @@ ARCHIVE_ORCA = ROOT / ".local-tools/OrcaSlicer_Linux_AppImage_Ubuntu2404_V2.5.0.
 FALLBACK_ORCA = ROOT / ".local-tools/orca-slicer"
 
 
+def local_ipv4_addresses():
+    """Read Linux interface configuration only: no connect, send, DNS or probes."""
+    if sys.platform != "linux":
+        raise ValueError("Automatic LAN address selection requires Linux; use --lan-host COMPUTER_IP")
+    import fcntl
+    interfaces = socket.if_nameindex()
+    if len(interfaces) > 256:
+        raise ValueError("Too many local interfaces for automatic selection; use --lan-host COMPUTER_IP")
+    addresses = set()
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as control:
+        for _, name in interfaces:
+            request = struct.pack("256s", os.fsencode(name))
+            try:
+                flags = fcntl.ioctl(control.fileno(), 0x8913, request)  # Linux SIOCGIFFLAGS
+                if not struct.unpack_from("H", flags, 16)[0] & 1:  # IFF_UP
+                    continue
+                reply = fcntl.ioctl(control.fileno(), 0x8915, request)  # Linux SIOCGIFADDR
+            except OSError:
+                continue  # No primary IPv4 (or interface disappeared).
+            addresses.add(str(ipaddress.IPv4Address(reply[20:24])))
+    return addresses
+
+
+def select_lan_address(subnet):
+    try:
+        addresses = local_ipv4_addresses()
+    except OSError as exc:
+        raise ValueError("Cannot read local interface configuration; use --lan-host COMPUTER_IP") from exc
+    candidates = sorted({ipaddress.IPv4Address(value) for value in addresses
+                         if ipaddress.IPv4Address(value) in subnet})
+    if not candidates:
+        raise ValueError("No local 192.168 address found in the allowed subnet. Connect this computer to your home network and retry, or specify --lan-host COMPUTER_IP")
+    if len(candidates) > 1:
+        raise ValueError("Several local LAN addresses found: " + ", ".join(map(str, candidates))
+                         + ". Choose one with --lan-host IP, or narrow --lan-network; no address was guessed")
+    return candidates[0]
+
+
 def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=None,
                   enable_job_controls=False, allow_sliced_upload=False, status_capture=None, native_skirt_test=False, monitor=None, lan_host=None, lan_network=None):
     if lan_network is not None and lan_host is None:
         raise ValueError("--lan-network needs --lan-host")
     if lan_host is not None:
-        address = ipaddress.ip_address(lan_host)
         subnet = ipaddress.ip_network(lan_network or "192.168.0.0/16", strict=True)
-        if (address.version != 4 or subnet.version != 4 or
-                not subnet.subnet_of(ipaddress.ip_network("192.168.0.0/16")) or address not in subnet):
+        if subnet.version != 4 or not subnet.subnet_of(ipaddress.ip_network("192.168.0.0/16")):
+            raise ValueError("LAN subnet must be within 192.168.0.0/16")
+        address = select_lan_address(subnet) if lan_host == "auto" else ipaddress.ip_address(lan_host)
+        if address.version != 4 or address not in subnet:
             raise ValueError("LAN mode needs this COMPUTER's specific 192.168 address in the allowed private subnet")
     if native_skirt_test and proxy_port is not None:
         raise ValueError("Draft03 native skirt is offline/owned-dummy only in this launcher; changed startup needs separate review")
@@ -90,7 +131,7 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("--port", type=int, default=8000, help="HTTP port (default: 8000)")
-    cli.add_argument("--lan-host", help="explicit COMPUTER interface 192.168 IP; password-protected trusted-LAN sharing, no TLS")
+    cli.add_argument("--lan-host", help="COMPUTER interface IP, or 'auto' to read local 192.168 configuration; password-protected sharing, no TLS")
     cli.add_argument("--lan-network", help="optional narrower allowed CIDR within 192.168/16")
     cli.add_argument("--orca", type=Path, help="trusted native Orca executable; relative paths are project-relative")
     cli.add_argument("--native-skirt-test", action="store_true", help="use independent offline draft03 native-skirt profiles; no proxy mode")
@@ -123,7 +164,7 @@ def main():
     print(("Draft 03 native skirt" if args.native_skirt_test else "Draft 02") + " is experimental; changed paths are NOT a print approval.", flush=True)
     print("Orca: " + command[command.index("--orca") + 1], flush=True)
     print("Profile/output review used 2.3.0; another build requires new offline output review.", flush=True)
-    print("Open http://" + (args.lan_host or "127.0.0.1") + ":" + str(args.port), flush=True)
+    print("Open http://" + command[command.index("--listen-host") + 1] + ":" + str(args.port), flush=True)
     if args.lan_host:
         print("LAN SHARING: per-run password printed by server on launch. HTTP is unencrypted; trusted network only. All users share one printer/file slot.", flush=True)
     print("Test cube: " + str(PROFILE / "review/cube-20x20x5.stl"), flush=True)

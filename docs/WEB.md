@@ -7,13 +7,13 @@ sufficient for the page and printer transfer. No pip installation is needed.
 ## Optional trusted-LAN sharing
 
 The default remains loopback. To share the full implemented workflow, use
-`./tools/start_lan_web.sh COMPUTER_192.168_IP` after verifying the existing proxy
+`./tools/start_lan_web.sh` (no IP argument needed) after verifying the existing proxy
 and closing FlashPrint. It explicitly enables Slice / confirmed Save / Start /
 Cancel and status, with a per-run random password for every page/API route and
 a private-IPv4 peer filter. All logged-in users share one file slot/printer;
 physical manual controls stay locked. **HTTP has no encryption**: trusted home
 network only, never router port forwarding/public tunnels. See [LAN.md](LAN.md)
-for the exact login, narrower subnet, firewall and acceptance limits. Nothing
+for automatic local address selection, login, narrower subnet, firewall and acceptance limits. Nothing
 is opened automatically by installing this change; the operator starts it.
 
 ## Printer status
