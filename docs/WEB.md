@@ -388,11 +388,11 @@ part of the standalone workflow.
   private-IP filtering does not establish trust. See LAN.md for cleartext and
   shared-slot limitations. No security-sandbox claim is made for native STL parsing.
 
-## Quality controls: brim and layer height
+## Quality controls: brim, layer height and XY hole compensation
 
-The Slice section now offers **Layer height** and **Brim** controls. Defaults
-are **Use server profile** for both; this preserves previous output settings,
-not an implicit new brim or layer height. Controls apply only to the next
+The Slice section offers **Layer height**, **Brim**, and **XY hole compensation**.
+Layer/brim default to **Use server profile**; hole compensation defaults to
+**0 mm (off)**, or clear its field to keep the server profile value. Controls apply only to the next
 explicitly confirmed Slice. They do not reslice, save, start or change a running
 print automatically. Existing GX/G-code files are never rewritten.
 
@@ -404,6 +404,16 @@ print automatically. Existing GX/G-code files are never rewritten.
 - Brim: profile, Off (`no_brim`, width0), Outer (`outer_only`, width1–10 mm,
   UI initially5 mm). Width is ignored for profile/Off. The existing profile's
   brim/object gap stays unchanged (draft02:0.1 mm); it is shown after slicing.
+- XY hole compensation: finite **−0.5 to +0.5 mm per edge**, numeric UI initially0.
+  Positive enlarges internal XY openings: **+0.2 mm per edge increases a circular
+  hole's diameter by about0.4 mm**. Negative shrinks them. This is not a percent
+  scale or a diameter input. Empty/null means profile; omitted API/library key
+  also preserves it. Explicit0 disables an existing nonzero profile setting.
+  Only `xy_hole_compensation` in the private process snapshot changes; existing
+  outer-contour compensation is displayed but never overridden by this control.
+  Holes in other orientations, first-layer squish and material/flow errors may
+  need different calibration. Enlarging openings can thin/remove narrow walls;
+  inspect the generated output and test a small part before relying on fits.
 - A 5 mm outer brim is a reasonable experiment for lifting edges, not a
   guarantee. It consumes bed area/material, needs removal and can mark the
   bottom edge. Keep the bed clean/level and avoid drafts. Cold room conditions
@@ -424,7 +434,7 @@ preferences. A newly selected print file does not inherit G-code edits.
 The API accepts `settings` only on confirmed `/api/slice`, for example:
 
 ```json
-{"confirm":true,"settings":{"layer_height":0.12,"brim":"outer","brim_width":5}}
+{"confirm":true,"settings":{"layer_height":0.12,"brim":"outer","brim_width":5,"xy_hole_compensation":0.2}}
 ```
 
 Unknown fields, strings in numeric fields, booleans, non-finite values and
@@ -434,9 +444,11 @@ parameter. Only the allowlisted process fields are changed on the already
 validated **private workspace copy**, never the original profiles.
 
 Each slice records the normalized settings, exact process overrides, original
-process hash, effective process hash and applied layer/first-layer/brim/gap
-values in its private capture. Effective quality also appears in cached state.
-With profile defaults, profile bytes and their hash are preserved exactly.
+process hash, effective process hash and applied layer/first-layer/brim/gap /
+hole/outer-contour values in its private capture. Effective quality also appears in cached state.
+With all overrides omitted/profile, profile bytes and their hash are preserved
+exactly. The UI's default explicit hole0 is an override, even if geometrically
+identical to the current draft02 value0; only its private snapshot is serialized.
 
 ### Native offline settings trial
 

@@ -39,13 +39,19 @@ Presence checks are **not** a semantic or safety certificate. Other settings mus
 
 ## Web quality overrides
 
-The web Slice form adds a narrow typed allowlist for layer height and brim;
-see [WEB.md](WEB.md). These values change only a validated private process JSON
+The web Slice form adds a narrow typed allowlist for layer height, brim and
+per-edge XY hole compensation; see [WEB.md](WEB.md). These values change only a validated private process JSON
 snapshot before help/slice, with original/effective hashes and applied settings
 recorded. No arbitrary JSON fields, CLI flags, templates, temperatures, machine
-or filament settings are accepted. Profile/default selections preserve original
-bytes. First-layer height, brim gap and retraction remain as configured by the
-server. The standalone CLI is unchanged and supplies no quality overrides by
+or filament settings are accepted. Omitted/profile selections preserve original
+bytes. Hole values are finite−0.5..+0.5mm (positive expands openings); null/omitted
+preserves the profile, explicit0 disables its compensation. The UI starts at0.
+Only `xy_hole_compensation` changes, never `xy_contour_compensation`; both
+actual values are captured/displayed. This does not fix every hole orientation
+or ensure a fit; inspect thin walls and calibrate. See HOLE_COMPENSATION.md for
+six native2.3 square/circular ring comparisons with unchanged outer bounds and
+original profiles, no printer sessions, and pending host2.5/physical checks.
+First-layer height, brim gap and retraction remain as configured by the server. The standalone CLI is unchanged and supplies no quality overrides by
 default; the adapter's optional `settings` argument is independently validated.
 Native2.3 cube trial verifies actual Brim paths/0.12mm layers with5mm outer brim,
 not physical adhesion performance or every model's fit/clearance.

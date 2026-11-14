@@ -102,7 +102,12 @@ still hashes the original server-owned snapshot; it is **not** silently
 relabelled as the modified version. `effective_process_sha256` hashes the
 bytes actually passed to Orca. No overrides means identical original/effective
 bytes. Original profiles and all machine/filament/start/end/retraction settings
-are not edited. Settings capture improves reproducibility, not print safety.
+are not edited. `xy_hole_compensation`, when selected, records a bounded per-edge
+process override; omitted/null preserves the profile, explicit0 disables it.
+Effective quality records both hole and unchanged outer-contour compensation.
+These fields describe the artifact, not measured print dimensions or a global
+calibration. See HOLE_COMPENSATION.md for native offline evidence. Settings
+capture improves reproducibility, not print safety.
 
 Generated `sliced.gcode` is retained under the run directory by default, or at standalone slice's explicit `--output`. It has a **separate** size bound (`--max-file-size`) and is outside `--max-capture-bytes`; original profiles/model snapshots and native temporary data are cleaned from project-local `.tmp/`. Raw slicer log chunks are bounded independently and count toward the existing event/log quota. Full details and trust limits: [SLICING.md](SLICING.md).
 

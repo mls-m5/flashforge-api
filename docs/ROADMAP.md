@@ -339,6 +339,22 @@ Brim paths/0.12 layers/5mm brim with original profile hashes unchanged. Host2.5
 GUI/browser and physical adhesion improvement remain to be verified. Expanded
 footprint/purge overlap still requires review. See WEB.md and CAPTURES.md.
 
+## XY hole compensation: implemented for the next confirmed Slice
+
+The user confirmed holes are approximately0.4mm undersize in diameter and
+requested an adjustable setting. The UI now defaults to0mm/off, with typed
+per-edge−0.5..+0.5mm allowance; +0.2 is an experiment for about+0.4mm diameter.
+Empty/null/omitted preserves the source profile, while explicit0 disables it.
+Only the private process `xy_hole_compensation` changes; effective hole/outer
+values and hashes are retained. No global scaling, outer-contour override,
+first-layer/retraction change, file rewriting or automatic upload/start.
+Six offline native2.3 runs on generated square/circular rings confirmed sign /
+approximate magnitude and unchanged outer path bounds/original profiles/final
+retract. Unit/fake-slicer/HTTP/Node tests cover typed bounds, profile behavior,
+immutable artifacts and displayed applied settings. Host2.5 compensation output,
+rendered browsers and physical fit remain acceptance checks; no agent hardware
+contact/compensated upload occurred. See HOLE_COMPENSATION.md.
+
 ## M6 implementation update: standalone OctoPrint plugin checkpoint (paused)
 
 A separate GPLv3 repository is registered as `plugins/octoprint-flashforge-finder2`. Its initial admin-only tab/API uploads existing OctoPrint local files to a configured Finder V1.5 endpoint, disabled by default, with bounded snapshots/captures and no automatic start/stop. It is deliberately not a full PrinterInterface/serial driver. SDK mixin/permission tests and independent loopback protocol tests pass; its service worker also transferred the supplied GX byte-for-byte to a fresh dummy with no virtual print started. This is not Docker/browser or physical plugin acceptance. The Linux Compose example builds from the local submodule and makes the host dummy/proxy reachable while binding the OctoPrint UI to loopback; Docker is not available in this environment, so build/run remain pending. See [OCTOPRINT.md](OCTOPRINT.md).

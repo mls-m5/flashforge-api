@@ -13,6 +13,17 @@ class QualitySettingsTests(unittest.TestCase):
                          {"layer_height": "0.28", "brim_type": "outer_only", "brim_width": "4.5"})
         self.assertIsNone(normalize_settings({})["layer_height"])
 
+    def test_hole_compensation_is_per_edge_typed_and_profile_is_preserved_when_omitted(self):
+        self.assertNotIn("xy_hole_compensation", normalize_settings({}))
+        self.assertEqual(process_overrides({"xy_hole_compensation": None}), {})
+        for value in (-0.5, -0.2, 0, 0.2, 0.5):
+            self.assertEqual(process_overrides({"xy_hole_compensation": value}), {"xy_hole_compensation": format(value, ".8g")})
+        for value in (True, "0.2", float("nan"), float("inf"), -float("inf"), -0.51, 0.51, 10**1000, [], {}):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                normalize_settings({"xy_hole_compensation": value})
+        with self.assertRaises(ValueError):
+            normalize_settings({"xy_contour_compensation": 0.2})
+
     def test_rejects_non_numeric_non_finite_and_untrusted_keys(self):
         bad = [[], "outer", 2, {"post_process": ["shell"]}, {"machine_start_gcode": "G28"},
                {"brim": "auto_brim"}, {"brim": []}, {"layer_height": True}, {"layer_height": "0.12"},

@@ -159,6 +159,25 @@ assert "machine_start_gcode" not in effective and "retraction_length" not in eff
         self.assertEqual(metadata["slicing_inputs"]["machine"]["sha256"], hashlib.sha256(originals["machine"]).hexdigest())
         self.assertEqual(metadata["slicing_inputs"]["filament"]["sha256"], hashlib.sha256(originals["filament"]).hexdigest())
 
+    async def test_hole_compensation_changes_only_its_private_process_field(self):
+        source = json.loads(self.config.process.read_text())
+        source.update(xy_hole_compensation="0.07", xy_contour_compensation="-0.03")
+        self.config.process.write_text(json.dumps(source))
+        originals = {kind: getattr(self.config, kind).read_bytes() for kind in ("machine", "process", "filament")}
+        for index, value in enumerate((0.2, -0.2, 0, None)):
+            expected = {**source, **({"xy_hole_compensation": format(value, ".8g")} if value is not None else {})}
+            self.set_behavior("ok")
+            check = f'assert json.loads(pathlib.Path(settings[1]).read_text()) == {expected!r}\n'
+            self.fake.write_text(self.fake.read_text().replace('print("READY "', check + 'print("READY "'))
+            await slice_model(self.source, self.root / f"hole-{index}.gcode", self.config, capture=self.capture,
+                              settings={"xy_hole_compensation": value})
+            metadata = self.capture.manifest["metadata"]
+            self.assertEqual(metadata["effective_quality"]["xy_hole_compensation"], expected["xy_hole_compensation"])
+            self.assertEqual(metadata["effective_quality"]["xy_contour_compensation"], "-0.03")
+            self.assertEqual(metadata["process_overrides"], {} if value is None else {"xy_hole_compensation": format(value, ".8g")})
+            for kind, data in originals.items(): self.assertEqual(getattr(self.config, kind).read_bytes(), data)
+        self.assertEqual(metadata["effective_process_sha256"], metadata["slicing_inputs"]["process"]["sha256"])
+
     async def test_default_quality_options_preserve_profile_bytes(self):
         await self.slice()
         metadata = self.capture.manifest["metadata"]

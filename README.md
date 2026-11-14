@@ -42,7 +42,14 @@ warm-nozzle flag are toy state, not hardware feedback. Physical/proxy manual
 controls remain locked pending verified small-step/thermal/mode behavior. See
 [docs/MANUAL_CONTROLS.md](docs/MANUAL_CONTROLS.md).
 
-The Slice section now has **layer-height and brim controls** (including a 5 mm outer-brim option). Defaults preserve the server profile; first-layer height and retraction are unchanged. Applied values are recorded per generated file. Review the expanded footprint and removal needs—brim is not a cure for poor bed preparation.
+The Slice section has **layer-height, brim and XY hole-compensation controls**.
+Layer/brim default to the server profile; hole compensation starts at0mm (off).
+For holes about0.4mm too small in diameter, +0.2mm per edge is a calibration
+trial, not a guaranteed fit. Clear the hole field to use the profile. Only a
+new confirmed Slice changes: existing files, original profiles, outer-contour
+compensation, first-layer height and retraction are untouched. Applied values
+are recorded per artifact. See [docs/HOLE_COMPENSATION.md](docs/HOLE_COMPENSATION.md).
+Review brim/hole footprint and thin walls before printing.
 
 See **[docs/WEB.md](docs/WEB.md)** for the workflow, native Orca configuration, private storage, limits and Podman commands. The default Compose now starts this standalone page, not OctoPrint. No printer is discovered and a loopback proxy can still reach real hardware.
 
@@ -240,6 +247,7 @@ New documentation is English; older Swedish sections will be translated incremen
 - [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md): reverse-engineering procedures.
 - [docs/ROADMAP.md](docs/ROADMAP.md): milestones and acceptance criteria.
 - [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md): local AppImage versions, runtime blockers, integrity provenance and host setup.
+- [docs/HOLE_COMPENSATION.md](docs/HOLE_COMPENSATION.md): per-edge XY hole adjustment, native offline geometry evidence and calibration limits.
 - [docs/SLICING.md](docs/SLICING.md): implemented Orca CLI adapter, offline/combined workflows, trusted profile requirements and native-validation limitations.
 - [docs/FLASHFORGE_PROFILE_REVIEW.md](docs/FLASHFORGE_PROFILE_REVIEW.md): inspection of the user's official Orca ZIP and Finder material settings in FlashPrint; not a print-ready Orca profile.
 - [docs/ORCA_FINDER_DRAFT_02.md](docs/ORCA_FINDER_DRAFT_02.md): native offline Marlin-emission experiment, extrusion/coordinate/Z diagnostics and unresolved physical blockers; not print approved.

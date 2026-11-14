@@ -266,7 +266,8 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
         effective_hash = hashlib.sha256(process_path.read_bytes()).hexdigest()
         effective_process = json.loads(process_path.read_bytes())
         quality = {key: effective_process.get(key) for key in
-                   ("layer_height", "initial_layer_print_height", "brim_type", "brim_width", "brim_object_gap")}
+                   ("layer_height", "initial_layer_print_height", "brim_type", "brim_width", "brim_object_gap",
+                    "xy_hole_compensation", "xy_contour_compensation")}
         capture.manifest["metadata"].update(slice_settings=chosen_settings, process_overrides=overrides,
                                               effective_process_sha256=effective_hash, effective_quality=quality)
         capture.event("slicer_settings", settings=chosen_settings, process_overrides=overrides,
