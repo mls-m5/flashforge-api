@@ -61,6 +61,20 @@ claim that a loopback endpoint is virtual). The owned dummy's files are RAM-only
 web/client captures still preserve the transferred model bytes. Neither runtime
 volumes nor these raw captures belong in Git.
 
+## Virtual manual-control intents (no network sessions)
+
+Owned-dummy manual rehearsal creates mode`manual-virtual`, operation
+`manual_virtual`, metadata`wire_commands_sent:false` captures in the web
+workspace. `manual_virtual_intent` records the typed intent, previous state and
+a candidate snapshot before commit. Capture finalization must succeed before
+counter/light state changes; a persisted intent alone does not prove a commit
+if recording failed/the process crashed. No G-code/physical actions or raw
+sessions are generated. Each action has64KiB recording bound and conservative
+workspace admission; accumulated runs/entry count remain bounded by existing
+web quota. Rejected validation/stale/busy/locked actions create no new capture.
+File discard does not discard captures or reset counters. These are synthetic
+UI-policy records, not protocol evidence. See MANUAL_CONTROLS.md.
+
 ## Active status monitoring recordings
 
 A started monitor writes a separate mode`client` capture under the web workspace,
@@ -120,6 +134,7 @@ Event types currently emitted:
 - `connection_close`: session close reason;
 - `capture_end`: orderly recorder finalization;
 - `status_snapshot`: optional active-monitor parsed status batch with completion timestamp (raw stream still authoritative);
+- `manual_virtual_intent`: synthetic owned-dummy control intent/before/candidate, no wire command and not physical-motion evidence;
 - `slicer_settings`, `slicer_command`, `slicer_output`, `slicer_exit`, `slicer_result`: optional Orca stages described above.
 
 Each event includes `v`, monotonically increasing `seq`, `session_id` (or null for run-level events), UTC timestamp and `monotonic_ns` elapsed since capture start. Sequence order is logging order, not proof of causality between simultaneous directions.

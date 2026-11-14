@@ -87,7 +87,15 @@ a general emergency stop. Millimetre-mode wire behavior remains unobserved and
 requires its own explicitly approved controlled trial; no agent motion action
 was taken. Do not transplant continuous-jog targets into a generic motion API.
 
-## Next steps, before implementing motion controls
+## Virtual panel update (no physical implementation)
+
+A separate counter-only owned-dummy panel is now implemented in
+[MANUAL_CONTROLS.md](MANUAL_CONTROLS.md). It adds no manual TCP/G-code encoder,
+replay or parser relaxation and cannot unlock configured targets. UI tests of
+small toy counters do not establish the millimetre-mode semantics missing here.
+The physical prerequisites below remain outstanding.
+
+## Next steps, before implementing physical motion controls
 
 - Confirm physical completion, actual button behavior, FlashPrint version,
   jog-step/continuous settings, locale and whether controls are press-and-hold.

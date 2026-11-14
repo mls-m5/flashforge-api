@@ -36,6 +36,12 @@ Open **http://127.0.0.1:8000**. Drop an existing FlashPrint `.gx` (or `.gcode`/`
 
 For a one-command local slicing/upload test, stop any previous web server and run `./tools/start_dummy_upload_test.sh`. It owns a fresh ephemeral dummy (not an existing hardware proxy), enables virtual Save and separately confirmed virtual Start/Cancel (no G-code execution). No separate dummy process is needed. This requires the local Orca/draft profiles and does not authorize physical printing.
 
+For a simple **virtual** light/XYZ/extruder panel without Orca or profiles, run
+`./tools/start_control_panel_test.sh`. It owns a fresh dummy; counters and its
+warm-nozzle flag are toy state, not hardware feedback. Physical/proxy manual
+controls remain locked pending verified small-step/thermal/mode behavior. See
+[docs/MANUAL_CONTROLS.md](docs/MANUAL_CONTROLS.md).
+
 The Slice section now has **layer-height and brim controls** (including a 5 mm outer-brim option). Defaults preserve the server profile; first-layer height and retraction are unchanged. Applied values are recorded per generated file. Review the expanded footprint and removal needs—brim is not a cure for poor bed preparation.
 
 See **[docs/WEB.md](docs/WEB.md)** for the workflow, native Orca configuration, private storage, limits and Podman commands. The default Compose now starts this standalone page, not OctoPrint. No printer is discovered and a loopback proxy can still reach real hardware.
@@ -184,6 +190,7 @@ python3 -m unittest discover -s tests -v
 node tests/test_web_ui.js
 node tests/test_passive_status_ui.js
 node tests/test_active_status_ui.js
+node tests/test_manual_ui.js
 ```
 
 Tests use ephemeral loopback ports and never connect to a physical printer. Generated test files use the ignored project-local `.tmp/` directory and are cleaned up; do not use the system temporary directory for project work. No third-party dependencies are required. One integration test retains the uploader's existing three-second pause.
@@ -204,6 +211,7 @@ A real-printer connection/status capture now supplies independent regression fix
 New documentation is English; older Swedish sections will be translated incrementally.
 
 - [DESIGN.md](DESIGN.md): architecture, realism goals and safety boundaries.
+- [docs/MANUAL_CONTROLS.md](docs/MANUAL_CONTROLS.md): virtual-only light/XYZ/extruder panel, safeguards and physical enablement blockers.
 - [docs/STATUS.md](docs/STATUS.md): active status polling/default proxy startup, passive observer, source identity and stale-data limits.
 - [docs/GX_PREVIEW.md](docs/GX_PREVIEW.md): observed GX/BMP thumbnail encoding and read-only extraction tool (not a GX generator).
 - [docs/WEB.md](docs/WEB.md): standalone page, Podman, optional Orca configuration and current profile blocker.

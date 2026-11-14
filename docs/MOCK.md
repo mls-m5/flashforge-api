@@ -47,6 +47,15 @@ Read-only queries/listing do not require control in the mock. A second session c
 
 Unknown commands (including generic motion/heating commands) are logged and rejected, not silently acknowledged. The mock has **no outgoing printer connection and never executes G-code**. Temperature targets and endstops are virtual response values only.
 
+## Web-only manual rehearsal is separate from this wire protocol
+
+The owned-dummy web page now has a counter/light rehearsal panel
+([MANUAL_CONTROLS.md](MANUAL_CONTROLS.md)). It does not send or acknowledge
+motion/heating/LED G-code, change M114/M105 replies or execute stored files.
+Its synthetic warm flag and relative counters are explicitly not printer
+feedback or a validated firmware model. Configured loopback endpoints do not
+gain this capability; only a new dummy owned by the web process does.
+
 ## Captured block-upload mode
 
 ```text

@@ -26,6 +26,7 @@ from .slicer import SliceConfig, slice_model
 from .slice_settings import normalize_settings
 from .passive_status import status_from_capture
 from .active_status import ActiveMonitor
+from .manual_controls import VirtualControls, StaleControls
 
 STATIC = Path(__file__).with_name("webstatic")
 PRINT_LIMIT = 8 * 1024 * 1024
@@ -111,6 +112,9 @@ class Workbench:
         self.network_lock = asyncio.Lock()
         self.monitor = None
         self.owned_dummy = False
+        self.manual_controls = None
+        self.owned_printer = None
+        self.manual_capture = ""
         self.state = self.empty()
         # Do not let two servers operate the same workspace at once.
         import fcntl
@@ -262,6 +266,43 @@ class Workbench:
             self.state["effective_quality"] = None
         self.task = asyncio.create_task(self._operation(operation, data))
 
+    def manual_snapshot(self):
+        enabled = self.manual_controls is not None and self.owned_printer is not None
+        job_active = bool(self.owned_printer and self.owned_printer.active_file)
+        return {"enabled": enabled, "virtual_only": True, "busy": self.state["busy"], "job_active": job_active,
+                "blocked": self.state["phase"] == "unknown", "capture": self.manual_capture,
+                "state": self.manual_controls.snapshot() if enabled else None,
+                "message": "Virtual rehearsal only; no G-code or heater/motion/light commands are sent. Counters are NOT position feedback."
+                           if enabled else "Physical manual controls are locked pending step-mode, extrusion and reply-format verification. Use an owned dummy to rehearse."}
+
+    def manual_action(self, data):
+        # Being loopback, having upload/job flags or claiming owned_dummy in JSON is NOT authorization.
+        if self.manual_controls is None or self.owned_printer is None:
+            raise WebError(409, "Manual controls are owned-dummy rehearsal only; hardware/proxy controls remain locked")
+        self.idle()
+        if self.owned_printer.active_file or self.state["phase"] == "unknown":
+            raise WebError(409, "Manual rehearsal blocked during a virtual job or unknown local printer result")
+        try:
+            candidate = self.manual_controls.prepare(data)
+        except StaleControls as exc:
+            raise WebError(409, str(exc)) from exc
+        except ValueError as exc:
+            raise WebError(400, str(exc)) from exc
+        self.capacity(128 * 1024)
+        capture = Capture(self.folder / "captures", "manual-virtual", max_bytes=64 * 1024, max_sessions=1,
+                          metadata={"interface": "standalone-web", "operation": "manual_virtual", "target_kind": "owned_dummy",
+                                    "start_requested": False, "wire_commands_sent": False})
+        try:
+            capture.event("manual_virtual_intent", intent=data, before=self.manual_controls.snapshot(), candidate=candidate)
+        finally:
+            capture.close()
+        if capture.failed:
+            raise CaptureError("Manual rehearsal recording incomplete; no counter/light change committed")
+        # No await or network calls between validation and this commit: duplicate revisions cannot race.
+        self.manual_controls.state = candidate
+        self.manual_capture = capture.path.name
+        return self.manual_snapshot()
+
     def toggle_monitor(self, data):
         if set(data) != {"enabled", "confirm"} or type(data["enabled"]) is not bool or data["confirm"] is not True:
             raise WebError(400, "Monitoring needs explicit confirmation and a boolean enabled flag")
@@ -377,6 +418,9 @@ class WebServer:
     async def __aenter__(self):
         self.work = Workbench(self.config)
         self.work.owned_dummy = self.owned_dummy is not None
+        self.work.owned_printer = self.owned_dummy
+        if self.owned_dummy is not None:
+            self.work.manual_controls = VirtualControls()
         try:
             self.server = await asyncio.start_server(self.handle, self.config.host, self.config.port, limit=16384)
             self.address = self.server.sockets[0].getsockname()[:2]
@@ -460,6 +504,9 @@ class WebServer:
                         data = json.loads(await reader.readexactly(length))
                     if not isinstance(data, dict):
                         raise WebError(400, "Expected a JSON object")
+                    if uri.path == "/api/manual":
+                        await self.reply(writer, 200, self.work.manual_action(data))
+                        return
                     if uri.path == "/api/monitor":
                         self.work.toggle_monitor(data)
                         await self.reply(writer, 200, self.work.monitor.report() if self.work.monitor else {"monitor_running": False})
@@ -481,10 +528,13 @@ class WebServer:
                         "model_limit": MODEL_LIMIT, "storage_limit": STORAGE_LIMIT,
                         "passive_status_enabled": self.config.status_capture is not None,
                         "active_monitor_enabled": self.config.enable_monitor, "auto_monitor": self.config.auto_monitor,
+                        "manual_virtual_enabled": self.work.manual_controls is not None,
                         "owned_dummy": self.owned_dummy is not None})
                 elif uri.path == "/api/printer-status":
                     await self.reply(writer, 200, self.work.monitor.report() if self.work.monitor else
                                      status_from_capture(self.config.status_capture, self.config.client.host, self.config.client.port))
+                elif uri.path == "/api/manual-state":
+                    await self.reply(writer, 200, self.work.manual_snapshot())
                 elif uri.path == "/api/state":
                     await self.reply(writer, 200, self.work.state)
                 elif uri.path == "/api/artifact":
@@ -499,9 +549,9 @@ class WebServer:
                             while chunk := file.read(65536):
                                 writer.write(chunk)
                                 await writer.drain()
-                elif uri.path in ("/", "/app.js", "/style.css"):
+                elif uri.path in ("/", "/app.js", "/manual.js", "/style.css"):
                     name = "index.html" if uri.path == "/" else uri.path[1:]
-                    types = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8", "style.css": "text/css; charset=utf-8"}
+                    types = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8", "manual.js": "text/javascript; charset=utf-8", "style.css": "text/css; charset=utf-8"}
                     data = (STATIC / name).read_bytes()
                     await self.reply(writer, 200, data, types[name])
                 else:

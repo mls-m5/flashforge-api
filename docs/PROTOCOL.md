@@ -174,6 +174,11 @@ LF-only`ok\n`, unlike status/M112 CRLF. See
 byte ranges, evidence limits and safety questions. No replay, new hardware
 connection, parser change or motion API is introduced. Large relative targets
 are not a small-step implementation or emergency-stop specification.
+A later owned-dummy-only [manual panel](MANUAL_CONTROLS.md) now rehearses typed
+intents with bounded counters and a synthetic warm flag. It sends no wire
+commands, changes no parser/TCP mock replies and supplies no independent
+physical small-step/thermal/limit evidence. Configured printer/proxy controls
+remain locked; this does not clear the missing evidence above.
 
 ## FINDER-START-016 — User physical cube startup, no collision reported
 

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Finder · local workbench</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<title>Finder · local workbench</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/manual.js" defer></script></head>
 <body><main>
 <header><p class="eyebrow">LOCAL · EXPERIMENTAL · FINDER V1.5</p><h1>Prepare. Save. You decide.</h1>
 <p>Prepare a model, review the output, then explicitly save it to Finder. Nothing starts printing automatically.</p></header>
@@ -18,6 +18,26 @@
 <button id="monitor-stop" disabled>Stop status polling · not print cancel</button>
 <p id="monitor-error" role="alert"></p>
 <p id="printer-status-policy" class="muted">Loading status policy…</p></section>
+<section><h2>Manual controls <span>· virtual rehearsal only</span></h2>
+<p id="manual-policy">Loading manual-control capability…</p>
+<fieldset id="manual-controls" disabled><legend>Owned dummy only · no hardware commands</legend>
+<label for="manual-colour">Light colour</label><input id="manual-colour" type="color" value="#888a85">
+<button id="manual-light">Apply colour · virtual</button><button id="manual-dark">Light off · virtual</button>
+<p>Single-click steps only; no press-and-hold, homing, motor release or emergency-stop emulation.</p>
+<label for="manual-xy-step">XY step (mm)</label><select id="manual-xy-step"><option value="0.1">0.1</option><option value="1">1</option><option value="5">5</option></select>
+<button id="manual-x-minus">X−</button><button id="manual-x-plus">X+</button>
+<button id="manual-y-minus">Y−</button><button id="manual-y-plus">Y+</button>
+<label for="manual-z-step">Z step (mm)</label><select id="manual-z-step"><option value="0.1">0.1</option><option value="1">1</option></select>
+<button id="manual-z-minus">Z−</button><button id="manual-z-plus">Z+</button>
+<p>Virtual counters are bounded to ±10 mm; these are not physical coordinates or travel limits.</p>
+<label><input id="manual-warm" type="checkbox"> Simulate warm nozzle for extruder rehearsal (no heating)</label>
+<label for="manual-e-step">Extruder step (mm)</label><select id="manual-e-step"><option value="1">1</option><option value="5">5</option></select>
+<button id="manual-feed">Feed · virtual</button><button id="manual-retract">Retract · virtual</button>
+<p>No heater controls. The simulated warm flag is not a temperature measurement or hardware extrusion permission.</p>
+</fieldset>
+<p id="manual-values">No manual state loaded.</p><p id="manual-result" role="status"></p>
+<p id="manual-error" role="alert"></p><button id="manual-refresh">Refresh control state · no commands</button>
+</section>
 <section><h2>1 <span>Choose a file</span></h2>
 <div id="drop" tabindex="0"><strong>Drop an STL or print file here</strong><p>STL up to 64 MiB · GX / G-code / G up to 8 MiB</p>
 <label for="file">or choose a file</label><input id="file" type="file" accept=".stl,.gx,.gcode,.g"></div>

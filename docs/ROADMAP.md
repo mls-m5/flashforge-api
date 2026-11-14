@@ -249,7 +249,14 @@ FlashPrint before enabling active polling. See STATUS.md for exact behavior.
 ## Next requested: simple manual-control panel
 
 After polling, the user requests a simple GUI for light, extruder feed/retract
-and XYZ jogging. This is queued, **not implemented or hardware-authorized**.
+and XYZ jogging. A virtual-only panel is now implemented for owned-dummy
+rehearsal, not physical control. `./tools/start_control_panel_test.sh` runs it
+without Orca/profiles. Typed bounded counters, explicit confirmation, revision
+replay protection, cold-extruder simulation lock, job/busy/unknown guards and
+private intent recording are covered by unit/HTTP/Node tests. Configured
+hardware/proxy targets remain locked with no bypass flag or manual wire encoder.
+See [MANUAL_CONTROLS.md](MANUAL_CONTROLS.md). Physical enablement remains
+**not implemented or hardware-authorized**.
 Use FINDER-MANUAL-017 / MANUAL_CONTROLS_CAPTURE.md as scoped evidence, not a
 replay script. The captured Continuous jog uses huge relative targets; do not
 reuse those as bounded step buttons or claim M112 is a verified emergency stop.

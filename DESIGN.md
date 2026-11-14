@@ -145,6 +145,22 @@ closes its session, never sends M26. Per-run bounded private captures reserve
 workspace capacity; cache timestamps reflect batch completion, not physical
 execution. See STATUS.md for limits and pending hardware/browser acceptance.
 
+### Manual-control rehearsal, not hardware motion
+
+`manual_controls.py` implements a typed, bounded counter/light model with no
+wire-command encoder. Only an owned fresh dummy web server installs it;
+configured targets (including loopback proxies) cannot unlock it via flags or
+JSON. Independent `manual.js` provides explicit confirmed, revision-bound
+single-click actions and cached local-state reads; it never automatically
+repeats an action. Busy/active-job/unknown state and toy cold-extrusion guards
+are server enforced. Capture finalization precedes in-memory commit; counter
+state cannot silently mutate on recording failure. This model does not change
+TCP mock replies or execute G-code. Small-step semantics, mode restoration,
+scoped LF-only manual reply parsing and real temperature/position/limit guards
+still need separate reviewed evidence before implementing physical controls.
+See MANUAL_CONTROLS.md; the existing shared network lock is not claimed tested
+for physical manual motion by a counter-only rehearsal.
+
 ### Per-slice quality settings
 
 `slice_settings.py` validates only layer height and brim mode/width. The web
