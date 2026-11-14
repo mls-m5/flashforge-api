@@ -12,11 +12,13 @@ The CLI/library is also used by the new [standalone local page](WEB.md). The pag
 
 The user's official Finder download page is now under a separate read-only
 review: [FLASHFORGE_PROFILE_REVIEW.md](FLASHFORGE_PROFILE_REVIEW.md). The exact
-Linux Orca ZIP contains an AppImage labelled V1.8.1, not loose JSON presets;
-its embedded presets still need inspection. The linked FlashPrint 5.8.3 DEB
-contains concrete older Finder material/process values, kept as local reference,
-not a redistributed or converted Orca profile. This has not yet resolved the
-native flavor/profile blocker.
+Linux Orca ZIP contains an AppImage labelled V1.8.1, not loose JSON presets.
+Read-only inspection of its actual embedded filesystem found no Finder in all
+2062 bundled profile JSON files; its Flashforge machines are Adventurer 5M/5M
+Pro, not Finder. The linked FlashPrint 5.8.3 DEB contains concrete older Finder
+material/process values, kept as local reference, not a redistributed or
+converted Orca profile. This has not resolved the native flavor/profile blocker;
+a separate explicit offline dialect/slicer decision is still needed.
 
 ## Install and prepare profiles on the host
 

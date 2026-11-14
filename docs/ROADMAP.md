@@ -58,6 +58,20 @@ Structural adapter checks pass. Three native 2.3.0 offline attempts on a generat
 
 Do not substitute Marlin or disable checks silently. Next decision is an explicitly reviewed Orca/Marlin compatibility experiment versus a slicer supporting the existing Sailfish comparison configuration. This failure does not independently prove the Finder's required dialect. Native successful slicing, generated-body safety, nozzle/material confirmation and physical trials remain open.
 
+## Official Finder download inspection
+
+The user's exact official Linux Orca ZIP contains an AppImage labelled V1.8.1.
+Read-only SquashFS inspection of all 2062 profile JSON files finds no Finder
+profile; its Flashforge vendor manifest covers Adventurer 5M/5M Pro only. The
+separately linked FlashPrint 5.8.3 DEB contains `FlashForge Finder-0.4` PLA/TPU
+process/material settings, distinct from Finder 3. These give factual reference
+values, not a complete Orca machine/dialect definition or redistribution grant.
+No vendor executable/installer or firmware was run, no local profiles were
+changed and no printer was contacted. See
+[FLASHFORGE_PROFILE_REVIEW.md](FLASHFORGE_PROFILE_REVIEW.md) for artifact hashes,
+methods and limitations. The next step needs an explicit offline dialect/slicer
+choice; copying an Adventurer profile or disabling flavor checks is not a fix.
+
 ## M0 — Agree on the test setup
 
 - Confirm the model, firmware, FlashPrint version, host OS and GitHub reference.

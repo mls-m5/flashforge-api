@@ -1,4 +1,4 @@
-# Official Finder download review (in progress)
+# Official Finder download review
 
 ## Scope and sources
 
@@ -28,10 +28,43 @@ Locally calculated SHA-256 values are integrity references, not vendor signature
   `__MACOSX/._OrcaSlicer_Linux_V1.8.1.AppImage` (1029 bytes).
 - Thus this outer ZIP is a full application package, **not a loose JSON profile
   bundle**. The filename labels it V1.8.1; runtime version was not probed.
-- Its embedded AppImage presets still need read-only filesystem inspection.
-  Do not infer its contents from a newer public source tree or execute it just
-  to list files. The absence of loose profiles in the outer ZIP does not prove
-  absence of bundled profiles inside the application.
+- The AppImage itself has SHA-256
+  `055f22ec27f65e606c07100be5eba11f7123ff1c36da02565314602fc017b386`.
+  It was copied out of the ZIP as data, never executed. Approved Debian
+  `squashfs-tools` read its valid SquashFS v4 filesystem at byte offset 189632.
+- The complete filesystem listing contains no Finder-named preset. All **2062
+  profile JSON files** (3426512 bytes total) were read with `unsquashfs -cat`;
+  case-insensitive `finder` occurs in none of those bytes. All 2062 records also
+  decode as JSON without errors, and their decoded contents contain no Finder
+  match (including Unicode-escaped strings). Concatenated JSON
+  bytes SHA-256, in filesystem-listing order:
+  `63b32859f19de71ad1015890598b5c0b92f12b6a16445880c1d159be9ab6c27e`.
+- The actual bundled `resources/profiles/Flashforge.json` lists only
+  **Flashforge Adventurer 5M** and **Flashforge Adventurer 5M Pro** machine
+  models, with 0.4/0.6 nozzle variants. Manifest SHA-256:
+  `9ea635b139d5f68308e4dda1f299022b01d0463739d509f9c2dbe45e76754439`.
+  Its generic Flashforge filament presets
+  are not a Finder machine definition and do not solve origin, dialect or
+  start/end behavior. No Adventurer settings were transplanted to Finder.
+- Conclusion scoped to this exact binary artifact: it supplies no named Finder
+  or Finder 2 profile. Its placement on a Finder download page is not evidence
+  of bundled Finder presets. Runtime/CLI/ABI compatibility of this older
+  AppImage was not tested; do not replace the current executable merely to
+  evade profile validity checks.
+
+Read-only reproduction, after unzipping only the AppImage as data into a local
+ignored scratch directory and verifying its hash:
+
+```sh
+unsquashfs -s -o 189632 PATH/OrcaSlicer_Linux_V1.8.1.AppImage
+unsquashfs -ll -o 189632 PATH/OrcaSlicer_Linux_V1.8.1.AppImage
+unsquashfs -cat -o 189632 PATH/OrcaSlicer_Linux_V1.8.1.AppImage \
+  resources/profiles/Flashforge.json
+```
+
+Offset 189632 applies to the hash-pinned artifact above, not arbitrary
+AppImages. The complete listings/read-only data remain under the ignored review
+folder; no full vendor profiles have been added to runtime or Git.
 
 Separately inspected public Orca-Flashforge source tree:
 https://github.com/FlashForge/Orca-Flashforge/tree/c45cc8216c184574c36873314ae7caea67c7a1ad
@@ -99,10 +132,18 @@ The DEB's `usr/share/doc/flashprint5/copyright` contains placeholder license tex
 permission to redistribute the profiles. Full vendor payloads remain local;
 this note records limited factual settings/provenance, not a shipped profile.
 
-Next: inspect the **actual supplied AppImage's** bundled presets without running
-it, determine whether it contains a relevant older Finder profile/flavor, then
-compare any candidate settings with the FlashPrint reference. The goal remains
-independent slicing followed by our own byte-preserving transfer, not shipping
-or invoking FlashPrint. Successful native slicing and complete generated-output
-review are still required before any physical trial. Never silently substitute
-Marlin for the blocked Sailfish draft or disable validity checks.
+The exact AppImage inspection is complete: this download is not a missing
+Finder preset bundle. The goal remains independent slicing followed by our own
+byte-preserving transfer, not shipping or invoking FlashPrint.
+
+Next decision: either explicitly investigate an Orca-compatible output dialect
+as a new **offline** candidate, or evaluate another standalone slicer accepting
+the current comparison flavor. The earlier Sailfish choice came from the user's
+Prusa comparison, not a proven firmware requirement. Neither path may assume
+that resolving an enum/profile error makes the resulting toolpaths safe. The
+FlashPrint values above provide a real material/process baseline, not all
+machine or code-generation semantics. Keep build envelope/origin, homing,
+extrusion resets, machine commands and start/end transitions as separate review
+items. Successful native slicing and complete generated-output review are still
+required before any physical trial. Do not silently substitute Marlin for the
+blocked Sailfish draft, import Finder 3/Adventurer settings, or disable checks.
