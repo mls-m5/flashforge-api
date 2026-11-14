@@ -24,6 +24,17 @@ If FlashPrint runs on another computer, explicitly bind the proxy to the proxy h
 
 Automatic discovery is not proxied. FlashPrint might rediscover the real printer and bypass our endpoint: verify that a session actually appears in the printed capture directory. A UI connection indicator alone is not proof of interception. If manual addressing is unavailable, obtain a host packet capture before implementing discovery replies.
 
+## Short web workflow scripts
+
+`./tools/start_printer_proxy.sh CONFIRMED_IP` wraps the proxy with loopback
+listener port9000 and default upstream8899. The IP argument is required; a
+remembered address is not independently verified. `--port`/`--target-port`
+overrides are forwarded explicitly. `./tools/start_proxy_web.sh` starts the
+separate page targeting that proxy. It enables Save only; generated-output
+saving and job controls require separate flags. See [WEB.md](WEB.md) for exact
+commands, local dummy rehearsal and physical candidate blockers. Starting the
+proxy/page does not itself contact hardware. Ordinary browser actions can.
+
 ## Local-only trial without hardware
 
 Terminal 1:

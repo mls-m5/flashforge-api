@@ -109,6 +109,56 @@ reach hardware. To deliberately configure a non-loopback target, use
 `--target-host IP --target-port PORT --allow-hardware --enable-upload` only for
 an approved supervised trial. No agent hardware trial is part of this work.
 
+## Manual web → recording proxy → printer setup
+
+The short scripts do not scan for or verify a remembered printer IP. Check the
+address on the printer/router first. The user recalled `192.168.0.39`; it is not
+a verified or hardcoded default. No agent hardware action is performed here.
+Stop the old web/dummy processes first; an occupied proxy port causes startup
+to fail, not silently reuse an existing endpoint.
+
+Terminal 1 (substitute the **confirmed** printer IP):
+
+```sh
+./tools/start_printer_proxy.sh 192.168.0.39
+```
+
+Terminal 2:
+
+```sh
+./tools/start_proxy_web.sh
+```
+
+This serves the page at 127.0.0.1:8000 and enables explicit Save to the proxy at
+127.0.0.1:9000. The proxy's default upstream port is8899. Neither startup makes
+a printer connection; explicit Save (or opt-in Start/Cancel) does. Existing
+FlashPrint GX files can be saved with no automatic start/stop. Close competing
+printer clients. The proxy records its own private capture as well as the web
+capture in the separate `web-data/proxy-test/` workspace. **The proxy forwards
+all commands unchanged; it is not a safety filter.** Verify its printed target
+and running state before any browser action.
+
+Optional explicit policy flags (not a recommendation to print the new candidate):
+
+- `./tools/start_proxy_web.sh --enable-job-controls` enables separate confirmed
+  Start/Cancel. Cancel is not emergency stop. A saved-file Start may heat/move.
+- Generated-output Save remains blocked unless you deliberately add
+  `--allow-sliced-upload`, after independent output/profile review. That switch
+  does not validate startup homing, border clearance or firmware semantics. The
+  current draft02 remains **not approved for physical printing**. The known
+  startup-impact concern is unresolved; dummy success does not resolve it.
+- `--port 8001` changes the web port. `--proxy-port 9002` changes its loopback
+  target; pair it with `./tools/start_printer_proxy.sh IP --port 9002`.
+  Upstream port override: `./tools/start_printer_proxy.sh IP --target-port 8899`.
+- `./tools/start_proxy_web.sh --check` checks local paths only, without starting
+  a listener or contacting anything. Ctrl+C stops each running service. A print
+  can continue after disconnect, and no automatic cancel is sent on shutdown.
+
+For a local-only rehearsal, start a **fresh** separate dummy on a deliberate
+port, e.g. `./tools/start_dummy.sh --port 9001`, then use
+`./tools/start_printer_proxy.sh 127.0.0.1 --target-port 9001`. Do not assume that
+an already occupied loopback port is a dummy instead of a hardware proxy.
+
 ## Optional explicit Start and Cancel
 
 To enable the separate buttons, first test with the new dummy:

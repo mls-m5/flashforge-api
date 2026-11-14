@@ -42,6 +42,22 @@ class LauncherTests(unittest.TestCase):
             self.assertNotIn(flag, command)
         self.assertIn(str(self.root / "web-data/dummy-upload-test"), command)
 
+    def test_proxy_mode_uses_loopback_and_explicit_generated_job_gates(self):
+        command = launcher.build_command(proxy_port=9002)
+        self.assertIn("--enable-upload", command)
+        self.assertEqual(command[command.index("--target-host")+1], "127.0.0.1")
+        self.assertEqual(command[command.index("--target-port")+1], "9002")
+        for flag in ("--dummy", "--allow-hardware", "--enable-job-controls", "--allow-sliced-upload"):
+            self.assertNotIn(flag, command)
+        command = launcher.build_command(proxy_port=9002, enable_job_controls=True, allow_sliced_upload=True)
+        self.assertIn("--enable-job-controls", command)
+        self.assertIn("--allow-sliced-upload", command)
+        for options in ({"proxy_port": 0}, {"proxy_port": 65536},
+                        {"proxy_port": 9000, "dummy_upload_test": True},
+                        {"enable_job_controls": True}, {"allow_sliced_upload": True}):
+            with self.subTest(options=options), self.assertRaises(ValueError):
+                launcher.build_command(**options)
+
     def test_check_does_not_launch_or_change_directory(self):
         with patch("sys.argv", ["start_offline_web.py", "--check"]), \
              patch.object(launcher.os, "execv") as execute, patch.object(launcher.os, "chdir") as chdir, \

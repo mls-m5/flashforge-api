@@ -38,6 +38,13 @@ For a one-command local slicing/upload test, stop any previous web server and ru
 
 See **[docs/WEB.md](docs/WEB.md)** for the workflow, native Orca configuration, private storage, limits and Podman commands. The default Compose now starts this standalone page, not OctoPrint. No printer is discovered and a loopback proxy can still reach real hardware.
 
+For deliberate proxy use, `./tools/start_printer_proxy.sh CONFIRMED_PRINTER_IP`
+starts a loopback recording relay, then `./tools/start_proxy_web.sh` enables
+confirmed Save to it. The recalled IP `192.168.0.39` must be verified by the
+operator; no discovery/probe occurs. Start/Cancel and generated-output saving
+require separate flags; see [docs/WEB.md](docs/WEB.md). The proxy is not a safety
+filter and the new candidate's physical startup remains unverified.
+
 ## Upload a print file with the CLI (dummy first)
 
 Terminal 1:
