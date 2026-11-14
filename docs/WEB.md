@@ -404,6 +404,18 @@ recording finalized with zero printer sessions. This verifies native option
 wiring, not physical adhesion/quality or every model placement. Host2.5 GUI
 and printed brim quality still need user validation. No hardware was contacted.
 
+## Separate dynamic-priming experiment
+
+The ordinary/proxy launchers still use draft02's previously observed startup.
+A new `./tools/start_skirt_test.sh` selects independent **draft03** for offline
+Slice/download review: native Orca skirt surrounds the arranged model/brim,
+instead of a fixed purge line across the print. Skirt remains enabled even with
+brim to retain a distinct priming phase. Start staging changes, so this is not
+a physical-print approval inherited from the cube trial. The launcher refuses
+proxy mode; optional `--dummy-upload-test` is virtual only. No existing output
+or original02 profile is rewritten. Native2.3 trials and remaining host2.5 /
+physical checks: [ORCA_FINDER_DRAFT_03.md](ORCA_FINDER_DRAFT_03.md).
+
 ## Help text versus slice result
 
 Orca's help text is a normal capability probe, not a failure by itself. Once the

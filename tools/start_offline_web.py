@@ -8,13 +8,17 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "local-profiles/finder-offline-02"
+SKIRT_PROFILE = ROOT / "local-profiles/finder-offline-03"
 ORCA = ROOT / ".local-tools/orca-2.5.0/AppRun"
 ARCHIVE_ORCA = ROOT / ".local-tools/OrcaSlicer_Linux_AppImage_Ubuntu2404_V2.5.0.AppImage"
 FALLBACK_ORCA = ROOT / ".local-tools/orca-slicer"
 
 
 def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=None,
-                  enable_job_controls=False, allow_sliced_upload=False, status_capture=None):
+                  enable_job_controls=False, allow_sliced_upload=False, status_capture=None, native_skirt_test=False):
+    if native_skirt_test and proxy_port is not None:
+        raise ValueError("Draft03 native skirt is offline/owned-dummy only in this launcher; changed startup needs separate review")
+    profile = SKIRT_PROFILE if native_skirt_test else PROFILE
     if dummy_upload_test and proxy_port is not None:
         raise ValueError("Choose owned dummy or proxy, not both")
     if proxy_port is not None and not 1 <= proxy_port <= 65535:
@@ -39,7 +43,8 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
         raise ValueError("Use an extracted Orca AppRun, not a FUSE-mounted AppImage; see docs/ORCA_INSTALL.md")
     if not selected.is_file() or not os.access(selected, os.X_OK):
         raise ValueError("Local Orca launcher missing/not executable: " + str(selected))
-    workspace = "web-data/proxy-test" if proxy_port is not None else "web-data/dummy-upload-test" if dummy_upload_test else "web-data/offline-test"
+    workspace = ("web-data/skirt-dummy-test" if dummy_upload_test else "web-data/skirt-offline-test") if native_skirt_test else (
+        "web-data/proxy-test" if proxy_port is not None else "web-data/dummy-upload-test" if dummy_upload_test else "web-data/offline-test")
     command = [sys.executable, "-m", "finderlab", "web", "--listen-host", "127.0.0.1",
                "--listen-port", str(port), "--data-dir", str(ROOT / workspace), "--orca", str(selected.resolve())]
     if proxy_port is not None:
@@ -55,9 +60,9 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
     else:
         command += ["--dummy"] if dummy_upload_test else ["--target-port", "9000"]
     for kind in ("machine", "process", "filament"):
-        path = PROFILE / (kind + ".json")
+        path = profile / (kind + ".json")
         if not path.is_file() or not 0 < path.stat().st_size <= 1024 * 1024:
-            raise ValueError("Local draft-02 profile missing/invalid: " + str(path)
+            raise ValueError("Local experimental profile missing/invalid: " + str(path)
                              + ". Private profiles are not included in a fresh Git clone; see docs/ORCA_FINDER_DRAFT_02.md")
         command += ["--" + kind, str(path)]
     # No arbitrary argument forwarding or direct hardware endpoint selection.
@@ -68,6 +73,7 @@ def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("--port", type=int, default=8000, help="loopback HTTP port (default: 8000)")
     cli.add_argument("--orca", type=Path, help="trusted native Orca executable; relative paths are project-relative")
+    cli.add_argument("--native-skirt-test", action="store_true", help="use independent offline draft03 native-skirt profiles; no proxy mode")
     cli.add_argument("--dummy-upload-test", action="store_true", help="own a fresh dummy and permit save-only to it (no hardware endpoint)")
     cli.add_argument("--status-capture", type=Path, help="proxy mode: explicit existing capture run/root; default project captures")
     cli.add_argument("--proxy-port", type=int, help="enable Save to an explicitly chosen local proxy port (may reach hardware)")
@@ -78,7 +84,8 @@ def main():
     try:
         command = build_command(args.port, args.orca, dummy_upload_test=args.dummy_upload_test,
                                 proxy_port=args.proxy_port, enable_job_controls=args.enable_job_controls,
-                                allow_sliced_upload=args.allow_sliced_upload, status_capture=args.status_capture)
+                                allow_sliced_upload=args.allow_sliced_upload, status_capture=args.status_capture,
+                                native_skirt_test=args.native_skirt_test)
     except ValueError as exc:
         cli.error(str(exc))
     if args.proxy_port is not None:
@@ -89,7 +96,7 @@ def main():
         print("DUMMY UPLOAD TEST: a new owned dummy is created; confirmed Start/Cancel are virtual only.", flush=True)
     else:
         print("OFFLINE SLICING ONLY: printer uploads, Start and Cancel are disabled.", flush=True)
-    print("Draft 02 is experimental and NOT approved for printing.", flush=True)
+    print(("Draft 03 native skirt" if args.native_skirt_test else "Draft 02") + " is experimental; changed paths are NOT a print approval.", flush=True)
     print("Orca: " + command[command.index("--orca") + 1], flush=True)
     print("Profile/output review used 2.3.0; another build requires new offline output review.", flush=True)
     print("Open http://127.0.0.1:" + str(args.port), flush=True)

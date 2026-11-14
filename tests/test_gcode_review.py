@@ -64,6 +64,11 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(len(data["unmodeled_homing_offsets"]), 3)
         self.assertIn("Homing/offset paths", data["limitations"][1])
 
+    def test_draft03_section_markers_keep_raised_start_separate_from_body(self):
+        result = review(b"; FINDER03_START_BEGIN\nG90\nM82\nG28\nG1 Z50 F420\nG1 X0 Y0\n; FINDER03_START_END\nG1 Z.27 F420\nG1 X-13 Y-13\n")
+        self.assertEqual(result["section_bounds_mm"]["start"]["Z"], [50, 50])
+        self.assertEqual(result["section_bounds_mm"]["body"]["Z"], [.27, .27])
+
     def test_unsupported_line_invalidates_subsequent_modal_inference(self):
         d = review(b"G90\nM82\nG92 E0\nG1 E99 (unmodeled syntax)\nG1 E100\n")
         self.assertTrue(d["parse_warnings"])

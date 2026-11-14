@@ -88,6 +88,12 @@ python3 -m finderlab slice upload/model.stl \
 
 For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native Orca 2.3.0 help/capability probing succeeds after approved runtime installation. A copied/edited local Finder draft now passes structural checks but native slicing is blocked by rejected Sailfish flavor; see [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md). A separate user-approved [draft 02](docs/ORCA_FINDER_DRAFT_02.md) now slices a generated cube and the supplied holder natively with 2.3.0, including an explicit slow Z layer-change step after detecting mixed-XYZ overspeed. These are offline review artifacts, **not approved for printing**; original profiles remain unchanged. Physical/motion/profile validation is still outstanding; automated orchestration tests continue using a fake CLI. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation, the probe reference and the newer 2.5.0 build's ABI blocker. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The standalone page exposes the same optional adapter with separate slice/review/save steps; GX/thumbnail creation and a validated Finder profile are not implemented.
 
+For offline review of placement-aware priming, `./tools/start_skirt_test.sh`
+selects separate draft03 with a native skirt instead of the fixed purge line.
+This changes startup paths; it is offline/owned-dummy only in the launcher and
+not physical-print approval. Ordinary/proxy startup remains draft02. See
+[docs/ORCA_FINDER_DRAFT_03.md](docs/ORCA_FINDER_DRAFT_03.md).
+
 ## Observe printer status without another printer connection
 
 With FlashPrint already polling through the recording proxy at localhost9000:

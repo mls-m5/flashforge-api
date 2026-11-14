@@ -232,7 +232,26 @@ capture was checked independently. Actual browser acceptance remains pending.
 This is not active printer polling, ETA or physical completion proof. See
 [STATUS.md](STATUS.md). Placement-aware priming/skirt is the next requested task.
 
+## Future requested default: configured-printer workflow
+
+The user would like normal startup eventually to make upload and the verified
+job controls readily available for their explicitly configured printer, rather
+than requiring repeated flags. This is a requested future UX/policy change,
+not implemented in the current priming/status work. Persisted target identity,
+hardware/proxy labeling, startup/no-connect behavior and first-use consent need
+a deliberate design; do not infer that every command/model/placement is now
+verified. Save and Start must remain separate explicit actions, never automatic
+print-start, even when controls become the normal configured workflow.
+
 ## Next requested: placement-aware priming / skirt (deferred until status view is done)
+
+An independent offline candidate03 now demonstrates native skirt placement
+around cube/holder footprints, including5mm brim, with explicit10mm/s skirt
+speed and unchanged end retract. `tools/start_skirt_test.sh` selects it only
+for offline/owned-dummy review; original02/default proxy behavior is unchanged.
+See [ORCA_FINDER_DRAFT_03.md](ORCA_FINDER_DRAFT_03.md). Host2.5/native GUI output
+and physical changed-startup acceptance are still pending. Active status polling
+is the next requested implementation, after this candidate foundation.
 
 The user reports the current fixed purge line lies inside the footprint of some
 larger prints and asks to record this for the next change, not interrupt current
@@ -248,7 +267,9 @@ Do not simply disable the existing prime when brim is selected: verify first
 extrusion order, material volume, temperature readiness, E mode/G92/retraction
 handoff and first-path continuity. Preserve originals and compare native output
 offline on small/large/edge placements before any separately approved physical
-trial. This request adds no code/profile/motion change yet.
+trial. The original request added no immediate motion/profile change; the separate
+candidate03 above now provides an opt-in offline experiment without touching02
+or connecting to hardware.
 
 ## Web quality controls: brim/layer-height foundation
 

@@ -79,11 +79,11 @@ def review(data, *, assume_absolute_e=False):
         if len(raw) > 4096 or number > 2_000_000:
             raise ValueError("Review line length/count exceeds limit")
         comment = raw.strip().lower()
-        if comment in ("; finder02_start_begin", ";start gcode"):
+        if comment in ("; finder02_start_begin", "; finder03_start_begin", ";start gcode"):
             section = "start"
-        elif comment in ("; finder02_start_end", ";raft") or comment.startswith((";layer:", ";layer_change")):
+        elif comment in ("; finder02_start_end", "; finder03_start_end", ";raft") or comment.startswith((";layer:", ";layer_change")):
             section = "body"
-        elif comment in ("; finder02_end_begin", ";end gcode"):
+        elif comment in ("; finder02_end_begin", "; finder03_end_begin", ";end gcode"):
             section = "end"
         line = raw.partition(";")[0].strip().upper()
         if not line:
