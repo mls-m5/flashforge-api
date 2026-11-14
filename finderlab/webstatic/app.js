@@ -11,6 +11,9 @@
         el("slice").disabled = busy || !config || !config.slicing_enabled || state.phase !== "model_ready";
         el("save").disabled = Boolean(busy || !config || !config.upload_enabled || !state.artifact || state.saved ||
             state.phase === "unknown" || (state.sliced && !config.sliced_upload_enabled));
+        el("start").disabled = Boolean(busy || !config || !config.job_controls_enabled || !state.saved ||
+            !state.save_id || state.start_attempted || state.phase === "unknown");
+        el("stop").disabled = Boolean(busy || !config || !config.job_controls_enabled);
         el("remote").disabled = busy;
         if (state.phase === "empty") el("incoming").value = 0;
         el("download").hidden = !state.artifact || busy;
@@ -22,13 +25,19 @@
         text("slicer-log", state.slicer_log || "No native process has run.");
         text("bytes", `${state.acknowledged || 0} / ${state.size || 0} bytes acknowledged`);
         el("outgoing").value = state.size ? 100 * (state.acknowledged || 0) / state.size : 0;
-        text("result", state.saved ? "Final save confirmed. No print start or stop was sent." :
+        text("result", state.saved ? "Final save confirmed. Saving does not start or stop a print." :
             state.phase === "unknown" ? "Remote result UNKNOWN. Inspect logs and physical state before retrying." :
             "Acknowledged bytes are not final save confirmation.");
+        text("job-result", state.job_result === "start_acknowledged" ? "Start acknowledged. The printer may heat/move; supervise it. No live job progress is inferred." :
+            state.job_result === "cancel_acknowledged" ? "Cancel command acknowledged. This does NOT prove READY, motion stopped or cooled heaters. Check the printer physically." :
+            /_unknown$/.test(state.job_result || "") ? "Job result UNKNOWN. Check physical state; no automatic retry was performed." :
+            "No job-control result in this slot. Cached acknowledgements are not live printer status.");
+        text("job-gating", config && config.job_controls_enabled ? "Explicit job controls ENABLED. Start uses only this slot's confirmed saved filename." :
+            "Job controls disabled. Restart with --enable-job-controls only for a deliberate supervised trial.");
         if (state.error) text("error", state.error);
         text("gating", !config || !config.upload_enabled ? "Printer uploads disabled: start the server with --enable-upload for an explicitly chosen endpoint." :
             state.sliced && !config.sliced_upload_enabled ? "Generated-output saving is blocked pending profile review and server --allow-sliced-upload." :
-            "Only a confirmed Save opens a printer connection.");
+            "Only explicit Save/Start/Cancel actions open printer connections.");
     }
     async function request(url, options) {
         const response = await fetch(url, {cache: "no-store", ...options});
@@ -113,6 +122,16 @@
     el("save").addEventListener("click", () => {
         if (confirm(`Save to ${config.target}? A proxy may reach real hardware and an existing remote file may be overwritten. Review the toolpaths first. No print start or stop will be sent.`)) {
             action("save", {confirm: true, remote_name: el("remote").value});
+        }
+    });
+    el("start").addEventListener("click", () => {
+        if (confirm(`Start saved file ${state.saved_name} on ${config.target}? This may HEAT AND MOVE the printer. Remote file contents were not read back; close other printer clients and supervise physically.`)) {
+            action("start", {confirm: true, save_id: state.save_id});
+        }
+    });
+    el("stop").addEventListener("click", () => {
+        if (confirm(`Request cancellation of the current job on ${config.target}? This can cancel a job started elsewhere. It is NOT an emergency stop or a guarantee of stopped motion or cooled heaters. Check the physical printer.`)) {
+            action("stop", {confirm: true});
         }
     });
     request("/api/config").then(data => {

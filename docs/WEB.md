@@ -29,16 +29,17 @@ rejected in this experimental version.
    separately configured Orca stage below; clicking Slice never connects to a
    printer. The page has no model/toolpath preview yet.
 3. Review the output and choose an unused ASCII remote basename. Confirm
-   **Save to Finder · no start**. This is the only action opening a printer
-   connection. It can overwrite an existing remote file.
+   **Save to Finder · no start**. It opens a printer connection only after
+   confirmation and can overwrite an existing remote file. Optional job controls
+   below are separate actions and never appended to Save.
 4. Wait for **Final save confirmed**, not just all block bytes acknowledged.
    On unknown result, inspect logs and physical state, not a blind retry.
 5. Discard removes current input/generated files, not the saved printer file
    or private captures. It does not cancel a print. Only one slot/job exists;
    choose another file after explicitly discarding the current one.
 
-There are no discovery, start/stop/pause, heater/motion or arbitrary-command
-endpoints. Existing GX bytes/previews remain unchanged; plain G-code is neither
+There are no discovery, pause/resume, direct heater/motion or arbitrary-command
+endpoints. Explicit Start/Cancel endpoints are disabled by default as below. Existing GX bytes/previews remain unchanged; plain G-code is neither
 wrapped in GX nor safety-validated. The fingerprint gate remains Finder
 `V1.5 20170419`. Other firmware support is not inferred.
 
@@ -46,6 +47,43 @@ wrapped in GX nor safety-validated. The fingerprint gate remains Finder
 reach hardware. To deliberately configure a non-loopback target, use
 `--target-host IP --target-port PORT --allow-hardware --enable-upload` only for
 an approved supervised trial. No agent hardware trial is part of this work.
+
+## Optional explicit Start and Cancel
+
+To enable the separate buttons, first test with the new dummy:
+
+```sh
+python3 -m finderlab web --enable-upload --enable-job-controls --target-port 9000
+```
+
+In Podman, append `--enable-job-controls` to the arguments after the image name.
+It is independent of `--enable-upload`; neither flag overrides the non-loopback
+hardware guard or experiment approval. Buttons still require their own browser
+confirmation. **Start may heat/move a physical printer behind a proxy.** No new
+agent hardware trial is authorized or performed by adding these controls.
+
+- **Start saved file** uses only the exact server-recorded basename from this
+  slot's confirmed save. A per-save ID binds confirmation to that save so another
+  tab cannot silently replace the reference. Editing the remote-name input after
+  Save cannot redirect Start. A new firmware-gated session rechecks READY before
+  M23. There is at most one Start attempt per slot; failed/uncertain attempts are
+  not retried. Discard/restart loses the reference rather than guessing it.
+- Save IDs do not lock or read back remote contents: another client can overwrite
+  a filename on the printer. Close competing clients and start only reviewed,
+  known-safe files. A successful save or slice is not a motion-safety certificate.
+- **Request cancel** sends a separately confirmed M26 to the configured target,
+  including jobs started outside this page; no local file is required. This is
+  **not an emergency stop** and an ACK does not prove READY, stopped motion or
+  cooled heaters. Check the physical printer. A deliberate new confirmation may
+  send another cancel; the server/browser never automatically retries it.
+- All operations share the single-job lock. Cancel is unavailable while another
+  local operation is active; it is not injected into an upload's binary stream.
+  Shutdown and failures never send automatic M26. Physical controls remain
+  necessary for emergencies. No live printer polling/job monitoring is added.
+- Start/cancel result and original save confirmation are separate facts. Lost
+  replies report UNKNOWN; a failed start does not erase the confirmed save.
+  Subsequent release/logging failures are shown separately. Context/loopback
+  tests validate wiring, not physical start/cancel dynamics or safety.
 
 ## Orca is optional, and Finder profile validation is still blocked
 
@@ -171,6 +209,8 @@ save or slice success; poll `/api/state` while `busy`.
 | GET `/api/artifact` | Idle-slot print file download, fixed safe attachment name |
 | POST `/api/save` | `{"confirm":true,"remote_name":"sample.gx"}`; upload only |
 | POST `/api/discard` | `{"confirm":true}`; remove idle slot files, retain logs |
+| POST `/api/start` | `{"confirm":true,"save_id":"ID from cached state"}`; gated exact saved file, fresh READY check |
+| POST `/api/stop` | `{"confirm":true}`; gated cancel request, not emergency stop |
 
 There is no general filesystem browser or raw capture download endpoint. The
 printed private capture path is for deliberate local inspection.
@@ -205,7 +245,8 @@ node tests/test_web_ui.js
 
 Tests use fresh ephemeral HTTP/TCP loopback endpoints, generated bytes and a fake
 Orca executable. They exercise browser/server transfer separately from save,
-exact payload/hash/command order, no start/stop, explicit gates, origin/token/
+exact payload/hash/command order, save without start/stop, separate confirmed
+job controls with stale-ID/repeat/unknown guards, explicit gates, origin/token/
 Host checks, truncated/oversized files, busy/quota/locking and slicing outcomes.
 Node checks use a minimal DOM model, not a rendered browser. Native successful
 Finder slicing, actual browser drag/drop and container acceptance still need

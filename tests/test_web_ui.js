@@ -6,7 +6,7 @@ const path = require("node:path");
 const elements = new Map(), posts = [], xhrs = [];
 let confirmation = true, failNextPost = false;
 const config = {token: "test-token", target: "127.0.0.1:9000", upload_enabled: true,
-    slicing_enabled: true, sliced_upload_enabled: false, model_limit: 64 * 1024 ** 2, print_limit: 8 * 1024 ** 2};
+    slicing_enabled: true, sliced_upload_enabled: false, job_controls_enabled: true, model_limit: 64 * 1024 ** 2, print_limit: 8 * 1024 ** 2};
 let state = {phase: "empty", busy: false};
 function element(id) {
     if (!elements.has(id)) elements.set(id, {value: "", textContent: "", disabled: false, hidden: false,
@@ -35,7 +35,9 @@ const context = {
             const data = JSON.parse(options.body);
             posts.push({url, data});
             if (failNextPost) { failNextPost = false; throw new Error("synthetic lost POST response"); }
-            if (url === "/api/save") state = {...state, saved: true, phase: "saved", busy: false};
+            if (url === "/api/save") state = {...state, saved: true, phase: "saved", busy: false, saved_name: data.remote_name, save_id: "saved-identity", start_attempted: false};
+            if (url === "/api/start") state = {...state, start_attempted: true, job_result: "start_acknowledged"};
+            if (url === "/api/stop") state = {...state, job_result: "cancel_acknowledged"};
             if (url === "/api/discard") state = {busy: false, phase: "empty"};
             if (url === "/api/slice") state = {...state, busy: false, phase: "review", sliced: true, artifact: true};
         }
@@ -64,6 +66,21 @@ async function main() {
     assert.equal(posts[0].data.confirm, true);
     assert.match(element("result").textContent, /Final save confirmed/);
     assert.equal(element("save").disabled, true);
+    assert.equal(posts.filter(p => p.url === "/api/start").length, 0, "save never starts automatically");
+    element("remote").value = "different.gx";
+    confirmation = false; click("start");
+    assert.equal(posts.length, 1);
+    confirmation = true; click("start"); click("start"); await flush();
+    assert.equal(posts.filter(p => p.url === "/api/start").length, 1);
+    assert.equal(posts.at(-1).data.save_id, "saved-identity");
+    assert.equal(posts.at(-1).data.remote_name, undefined, "Start does not use the editable remote input");
+    assert.equal(element("start").disabled, true);
+    assert.match(element("job-result").textContent, /may heat\/move/);
+    confirmation = false; click("stop");
+    assert.equal(posts.filter(p => p.url === "/api/stop").length, 0);
+    confirmation = true; click("stop"); await flush();
+    assert.equal(posts.at(-1).url, "/api/stop");
+    assert.match(element("job-result").textContent, /does NOT prove READY/);
     click("discard"); await flush();
     choose("model.stl", 100);
     xhrs[1].finish({phase: "model_ready", busy: false, name: "model.stl", artifact: false, size: 100});
@@ -92,6 +109,13 @@ async function main() {
     click("save"); assert.equal(posts.length, count, "lost submission is not retried");
     click("refresh"); await flush();
     assert.equal(element("save").disabled, false);
+    config.job_controls_enabled = false;
+    click("refresh"); await flush();
+    assert.equal(element("start").disabled, true);
+    assert.equal(element("stop").disabled, true);
+    const before = posts.length;
+    click("start"); click("stop");
+    assert.equal(posts.length, before);
     console.log("Standalone page selection, confirmations, slice/save separation and uncertainty tests passed.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

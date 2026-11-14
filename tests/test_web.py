@@ -11,7 +11,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from finderlab.client import ClientConfig
+from finderlab.client import ClientConfig, FinderClient
 from finderlab.simulator import MockConfig, MockPrinter
 from finderlab.slicer import SliceConfig
 from finderlab.web import MODEL_LIMIT, PRINT_LIMIT, WebConfig, WebServer
@@ -97,6 +97,7 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             client.assert_not_called()
         code, data = await self.request("GET", "/api/config")
         self.assertEqual(json.loads(data)["token"], self.server.token)
+        self.assertFalse(json.loads(data)["job_controls_enabled"])
         self.assertEqual(self.mock.files, {})
 
     async def test_host_origin_token_and_parser_boundaries(self):
@@ -187,6 +188,94 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(state["saved"])
             self.assertEqual((await self.post("/api/save", {"confirm": True, "remote_name": "p.gx"}))[0], 409)
             self.assertEqual(client.call_count, 1)
+
+    async def save_for_controls(self):
+        self.server.work.config = replace(self.config, enable_job_controls=True)
+        self.server.config = self.server.work.config
+        await self.file("source.gx")
+        await self.post("/api/save", {"confirm": True, "remote_name": "exact saved.gx"})
+        return await self.finish()
+
+    async def test_job_controls_disabled_and_confirmation_required(self):
+        with patch("finderlab.web.FinderClient") as client:
+            for path in ("/api/start", "/api/stop"):
+                self.assertEqual((await self.post(path, {"confirm": True}))[0], 409)
+            self.server.work.config = replace(self.config, enable_job_controls=True)
+            for path in ("/api/start", "/api/stop"):
+                for data in ({}, {"confirm": "true"}, {"confirm": True, "host": "192.0.2.1"}):
+                    self.assertEqual((await self.post(path, data))[0], 400)
+            self.assertEqual((await self.post("/api/start", {"confirm": True}))[0], 409)
+            client.assert_not_called()
+
+    async def test_explicit_start_exact_saved_file_then_separate_cancel(self):
+        saved = await self.save_for_controls()
+        self.assertIsNone(self.mock.active_file)
+        save_id = saved["save_id"]
+        self.assertEqual((await self.post("/api/start", {"confirm": True, "save_id": "stale"}))[0], 409)
+        self.assertEqual((await self.post("/api/start", {"confirm": True, "save_id": save_id, "remote_name": "other.gx"}))[0], 400)
+        self.assertEqual((await self.post("/api/start", {"confirm": True, "save_id": save_id}))[0], 200)
+        state = await self.finish()
+        self.assertEqual(self.mock.active_file, "exact saved.gx")
+        self.assertEqual(state["job_result"], "start_acknowledged")
+        capture = Path(state["capture"])
+        manifest = json.loads((capture / "manifest.json").read_text())
+        self.assertTrue(manifest["metadata"]["start_requested"])
+        self.assertTrue(manifest["metadata"]["start_acknowledged"])
+        commands = (capture / "sessions/s0001/client-to-server.bin").read_bytes().splitlines()
+        self.assertEqual(commands, [b"~M601 S1", b"~M115", b"~M119", b"~M23 0:/user/exact saved.gx", b"~M602"])
+        self.assertEqual((await self.post("/api/start", {"confirm": True, "save_id": save_id}))[0], 409)
+        await self.post("/api/stop", {"confirm": True})
+        state = await self.finish()
+        self.assertIsNone(self.mock.active_file)
+        self.assertEqual(state["job_result"], "cancel_acknowledged")
+        commands = (Path(state["capture"]) / "sessions/s0001/client-to-server.bin").read_bytes().splitlines()
+        self.assertEqual(commands, [b"~M601 S1", b"~M115", b"~M26", b"~M602"])
+        self.assertTrue(state["saved"], "Cancel must not erase the confirmed save fact")
+
+    async def test_start_rechecks_ready_without_cancelling_an_external_job(self):
+        saved = await self.save_for_controls()
+        async with FinderClient(self.config.client) as external:
+            await external.start("exact saved.gx", confirm=True)
+        await self.post("/api/start", {"confirm": True, "save_id": saved["save_id"]})
+        state = await self.finish()
+        self.assertEqual(state["phase"], "unknown")
+        self.assertTrue(state["saved"])
+        self.assertEqual(self.mock.active_file, "exact saved.gx")
+        commands = (Path(state["capture"]) / "sessions/s0001/client-to-server.bin").read_bytes().splitlines()
+        self.assertEqual(commands, [b"~M601 S1", b"~M115", b"~M119", b"~M602"])
+
+    async def test_unknown_start_preserves_save_and_prevents_repeat(self):
+        from finderlab.client import ResultUnknown
+        from unittest.mock import AsyncMock
+        saved = await self.save_for_controls()
+        with patch("finderlab.web.FinderClient.start", new=AsyncMock(side_effect=ResultUnknown("synthetic lost start reply"))) as start:
+            await self.post("/api/start", {"confirm": True, "save_id": saved["save_id"]})
+            state = await self.finish()
+            self.assertEqual(state["job_result"], "start_unknown")
+            self.assertTrue(state["saved"])
+            self.assertEqual((await self.post("/api/start", {"confirm": True, "save_id": saved["save_id"]}))[0], 409)
+            self.assertEqual(start.await_count, 1)
+
+    async def test_unknown_cancel_is_not_retried_by_status_reads(self):
+        from finderlab.client import ResultUnknown
+        from unittest.mock import AsyncMock
+        self.server.work.config = replace(self.config, enable_upload=False, enable_job_controls=True)
+        with patch("finderlab.web.FinderClient.stop", new=AsyncMock(side_effect=ResultUnknown("synthetic lost cancel reply"))) as stop:
+            await self.post("/api/stop", {"confirm": True})
+            state = await self.finish()
+            self.assertEqual(state["phase"], "unknown")
+            self.assertEqual(state["job_result"], "stop_unknown")
+            await self.request("GET", "/api/state")
+            await self.request("GET", "/api/state")
+            self.assertEqual(stop.await_count, 1)
+
+    async def test_cancel_available_without_local_file_and_discard_clears_start_reference(self):
+        saved = await self.save_for_controls()
+        save_id = saved["save_id"]
+        await self.post("/api/discard", {"confirm": True})
+        self.assertEqual((await self.post("/api/start", {"confirm": True, "save_id": save_id}))[0], 409)
+        self.assertEqual((await self.post("/api/stop", {"confirm": True}))[0], 200)
+        self.assertEqual((await self.finish())["job_result"], "cancel_acknowledged")
 
     async def test_recording_failure_closes_without_saving_or_retrying(self):
         await self.file("quota.gx")

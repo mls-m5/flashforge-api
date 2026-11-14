@@ -160,6 +160,14 @@ new Podman recipe target the standalone page. Independent HTTP tests, fresh
 loopback dummies and a fake Orca exercise orchestration, guards and exact upload
 bytes; no successful native Finder slicing or physical trial is claimed.
 
+The page now also offers separately confirmed Start/Cancel behind explicit
+`--enable-job-controls`. Start is tied to the exact confirmed saved basename
+and per-save identity, checks READY in a fresh session and permits one attempt
+per slot. Cancel can affect an externally started job; it is not emergency stop
+or proof of cooled/stationary hardware. Tests use only virtual jobs/fresh
+loopback endpoints. No live job monitoring or new physical control evidence is
+claimed, and save/shutdown/error never automatically start/cancel.
+
 **Remaining acceptance:** native Finder Orca profile/dialect decision (Sailfish
 rejection is unchanged), live browser file/drop/error flow, actual Podman image
 build/runtime, and separately approved hardware upload if desired. No model/

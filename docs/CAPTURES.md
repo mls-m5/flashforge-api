@@ -33,8 +33,10 @@ Tell the assistant the printed capture path when it exists in the same accessibl
 ## Standalone web recordings
 
 The standalone page creates a separate `web-data/captures/<run>/` per explicitly
-requested Slice or Save, reusing format v1 (`slice`/`client`). Metadata includes
-`interface: standalone-web`, operation and `start_requested: false`. Browser
+requested Slice, Save or optional Start/Cancel, reusing format v1 (`slice`/`client`). Metadata includes
+`interface: standalone-web`, operation and `start_requested` (true only for an
+explicit Start). Separate `start_acknowledged`/`stop_acknowledged` markers record
+parsed job-command acknowledgements, not physical motion/thermal state. Browser
 file receipt alone makes no printer session; files stay in its private single
 slot. The page displays a bounded 4000-character Orca diagnostic excerpt, not a
 replacement for raw capture output. Captures are retained after explicit slot

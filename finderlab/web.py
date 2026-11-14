@@ -54,6 +54,7 @@ class WebConfig:
     data_dir: Path = Path("web-data")
     client: ClientConfig = field(default_factory=ClientConfig)
     enable_upload: bool = False
+    enable_job_controls: bool = False
     slicing: SliceConfig | None = None
     allow_sliced_upload: bool = False
 
@@ -94,7 +95,8 @@ class Workbench:
     def empty():
         return {"busy": False, "phase": "empty", "saved": False, "acknowledged": 0,
                 "size": 0, "name": "", "error": "", "warning": "", "capture": "",
-                "sha256": "", "sliced": False, "artifact": False, "slicer_log": ""}
+                "sha256": "", "sliced": False, "artifact": False, "slicer_log": "",
+                "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested"}
 
     def capacity(self, reserve):
         total = count = 0
@@ -164,11 +166,27 @@ class Workbench:
 
     def start(self, operation, data):
         self.idle()
-        if operation not in ("slice", "save"):
-            raise WebError(400, "Only separate Slice and Save are supported")
-        allowed = {"confirm"} if operation == "slice" else {"confirm", "remote_name"}
+        if operation not in ("slice", "save", "start", "stop"):
+            raise WebError(400, "Unknown operation")
+        allowed = {"confirm", "remote_name"} if operation == "save" else {"confirm", "save_id"} if operation == "start" else {"confirm"}
         if set(data) - allowed or data.get("confirm") is not True:
             raise WebError(400, "Explicit confirmation and only documented fields are required")
+        if operation in ("start", "stop"):
+            if not self.config.enable_job_controls:
+                raise WebError(409, "Job controls require server --enable-job-controls")
+            if operation == "start":
+                if not self.state["saved"] or not self.state["saved_name"] or self.state["phase"] == "unknown":
+                    raise WebError(409, "Start requires an unambiguous confirmed save in this slot")
+                if data.get("save_id") != self.state["save_id"]:
+                    raise WebError(409, "Saved file changed; refresh before confirming Start")
+                if self.state["start_attempted"]:
+                    raise WebError(409, "Start was already attempted; do not blindly repeat it")
+            self.capacity(CAPTURE_LIMIT + 1024 * 1024)
+            if operation == "start":
+                self.state["start_attempted"] = True
+            self.state.update(busy=True, phase="connecting", error="", warning="", capture="")
+            self.task = asyncio.create_task(self._operation(operation, data))
+            return
         if self.source is None:
             raise WebError(409, "Choose a file first")
         if operation == "slice":
@@ -208,8 +226,10 @@ class Workbench:
         try:
             capture = WebCapture(self.folder / "captures", "slice" if operation == "slice" else "client", state=self.state,
                               max_bytes=CAPTURE_LIMIT, max_sessions=1,
-                              metadata={"operation": operation, "start_requested": False, "interface": "standalone-web"})
+                              metadata={"operation": operation, "start_requested": operation == "start", "interface": "standalone-web"})
             self.state["capture"] = str(capture.path)
+            if operation == "start":
+                capture.manifest["metadata"].update(saved_name=self.state["saved_name"], save_id=self.state["save_id"])
             if operation == "slice":
                 result = await slice_model(self.source, self.slot / "sliced.gcode", self.config.slicing, capture=capture)
                 self.artifact = result.path
@@ -220,16 +240,28 @@ class Workbench:
                 async with asyncio.timeout(900):
                     async with FinderClient(self.config.client, capture=capture) as client:
                         capture.manifest.update(model="Flashforge Finder", firmware="V1.5 20170419")
-                        self.state["phase"] = "uploading"
-                        def progress(count, size):
-                            self.state.update(acknowledged=count, size=size)
-                        result = await client.upload(self.artifact, remote_name=data["remote_name"], progress=progress)
-                        self.state.update(phase="saved", saved=True, sha256=result.sha256)
-                        capture.manifest["metadata"].update(upload_confirmed=True, remote_path=result.path)
+                        if operation == "save":
+                            self.state["phase"] = "uploading"
+                            def progress(count, size):
+                                self.state.update(acknowledged=count, size=size)
+                            result = await client.upload(self.artifact, remote_name=data["remote_name"], progress=progress)
+                            self.state.update(phase="saved", saved=True, sha256=result.sha256,
+                                              saved_name=result.path.removeprefix("0:/user/"), save_id=uuid.uuid4().hex)
+                            capture.manifest["metadata"].update(upload_confirmed=True, remote_path=result.path, save_id=self.state["save_id"])
+                        elif operation == "start":
+                            await client.start(self.state["saved_name"], confirm=True)
+                            self.state.update(phase="start_acknowledged", job_result="start_acknowledged")
+                            capture.manifest["metadata"]["start_acknowledged"] = True
+                        else:
+                            await client.stop(confirm=True)
+                            self.state.update(phase="cancel_acknowledged", job_result="cancel_acknowledged")
+                            capture.manifest["metadata"]["stop_acknowledged"] = True
                     if client.cleanup_error:
-                        self.state["warning"] = "Save confirmed, but release failed: " + client.cleanup_error
+                        self.state["warning"] = "Operation confirmed, but release failed: " + client.cleanup_error
         except BaseException as exc:
             self.state.update(phase="unknown" if network else "failed", error=str(exc) or type(exc).__name__)
+            if operation in ("start", "stop"):
+                self.state["job_result"] = operation + "_unknown" if network else "not_sent"
             if capture and not capture.failed:
                 try:
                     capture.event("error", phase=self.state["phase"], error_type=type(exc).__name__, message=str(exc))
@@ -343,7 +375,7 @@ class WebServer:
                         raise WebError(400, "Expected a JSON object")
                     if uri.path == "/api/discard" and set(data) == {"confirm"} and data["confirm"] is True:
                         self.work.discard()
-                    elif uri.path in ("/api/slice", "/api/save"):
+                    elif uri.path in ("/api/slice", "/api/save", "/api/start", "/api/stop"):
                         self.work.start(uri.path.removeprefix("/api/"), data)
                     else:
                         raise WebError(404, "Unknown operation")
@@ -353,7 +385,7 @@ class WebServer:
                     raise WebError(400, "Unexpected query/body")
                 if uri.path == "/api/config":
                     await self.reply(writer, 200, {"token": self.token, "target": f"{self.config.client.host}:{self.config.client.port}",
-                        "upload_enabled": self.config.enable_upload, "slicing_enabled": self.config.slicing is not None,
+                        "upload_enabled": self.config.enable_upload, "job_controls_enabled": self.config.enable_job_controls, "slicing_enabled": self.config.slicing is not None,
                         "sliced_upload_enabled": self.config.allow_sliced_upload, "print_limit": PRINT_LIMIT,
                         "model_limit": MODEL_LIMIT, "storage_limit": STORAGE_LIMIT})
                 elif uri.path == "/api/state":
@@ -426,6 +458,7 @@ def add_web_command(commands):
     cli.add_argument("--target-port", type=int, default=8899)
     cli.add_argument("--allow-hardware", action="store_true")
     cli.add_argument("--enable-upload", action="store_true")
+    cli.add_argument("--enable-job-controls", action="store_true", help="enable separately confirmed start/cancel (may heat/move)")
     cli.add_argument("--allow-sliced-upload", action="store_true")
     cli.add_argument("--orca")
     for kind in ("machine", "process", "filament"):
@@ -440,7 +473,8 @@ def web_main(cli, args):
             slicing = SliceConfig(**{k: args[k] for k in ("machine", "process", "filament", "orca")})
         config = WebConfig(host=args["listen_host"], port=args["listen_port"], data_dir=args["data_dir"],
                            client=ClientConfig(host=args["target_host"], port=args["target_port"], allow_hardware=args["allow_hardware"]),
-                           slicing=slicing, enable_upload=args["enable_upload"], allow_sliced_upload=args["allow_sliced_upload"])
+                           slicing=slicing, enable_upload=args["enable_upload"], enable_job_controls=args["enable_job_controls"],
+                           allow_sliced_upload=args["allow_sliced_upload"])
     except ValueError as exc:
         cli.error(str(exc))
 
@@ -452,7 +486,8 @@ def web_main(cli, args):
             async with WebServer(config) as server:
                 print(f"Open http://{server.authority} (exact URL required)", flush=True)
                 print("Private files/captures: " + str(server.work.folder), flush=True)
-                print("Upload only. No automatic connect, start, stop or retries. Loopback may proxy hardware.", flush=True)
+                print("No automatic connect, start, stop or retries. Loopback may proxy hardware.", flush=True)
+                print("Explicit job controls: " + ("ENABLED (may heat/move)" if config.enable_job_controls else "disabled"), flush=True)
                 print("Orca: " + ("configured; profiles/toolpaths NOT validated" if slicing else "not configured; Finder Orca profile remains blocked"), flush=True)
                 await stopped.wait()
         finally:

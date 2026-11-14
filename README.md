@@ -32,7 +32,7 @@ In terminal 2:
 python3 -m finderlab web --enable-upload --target-port 9000
 ```
 
-Open **http://127.0.0.1:8000**. Drop an existing FlashPrint `.gx` (or `.gcode`/`.g`), then explicitly confirm **Save to Finder · no start**. Selecting a file does not connect to a printer. STL requires separately configured Orca and trusted profiles; the known Sailfish draft is still rejected, so no print-ready Finder STL slicing is claimed. Generated-output saving is blocked by default pending separate profile review. Uploads are disabled without `--enable-upload`.
+Open **http://127.0.0.1:8000**. Drop an existing FlashPrint `.gx` (or `.gcode`/`.g`), then explicitly confirm **Save to Finder · no start**. Selecting a file does not connect to a printer. STL requires separately configured Orca and trusted profiles; the known Sailfish draft is still rejected, so no print-ready Finder STL slicing is claimed. Generated-output saving is blocked by default pending separate profile review. Uploads are disabled without `--enable-upload`. To deliberately enable separate **Start saved file** and **Request cancel** buttons, also add `--enable-job-controls`. Each requires its own confirmation; Start may heat/move, and Cancel is not an emergency stop. Saving still never starts a print.
 
 See **[docs/WEB.md](docs/WEB.md)** for the workflow, native Orca configuration, private storage, limits and Podman commands. The default Compose now starts this standalone page, not OctoPrint. No printer is discovered and a loopback proxy can still reach real hardware.
 

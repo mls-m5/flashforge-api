@@ -18,6 +18,7 @@ services:
     pids_limit: 128
     mem_limit: 1g
     # Uploads remain disabled unless --enable-upload is explicitly added.
+    # Start/Cancel independently require --enable-job-controls and confirmation.
     # No serial devices, Docker/Podman socket, privileged mode or host directories.
 volumes:
   web-data:
