@@ -197,6 +197,32 @@ class ScriptedClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(progress, [(9, 9)])
         await self.finished()
 
+    async def test_observed_three_space_m28_preserves_internal_filename_spaces(self):
+        name = "cube  review.gcode"
+        begin = (b"~M28 9 0:/user/cube  review.gcode\r\n",
+                 b"CMD M28 Received.\r\nWriting to file: 0:/user/cube  review.gcode   Length: 9\r\nok\r\n")
+        config = await self.serve(self.handshake() + [(b"~M119\r\n", REPLIES["~M119\r\n"]), begin,
+                                  (WIRE, b"N0 ok\r\n"), (b"~M29\r\n", UPLOAD["finish_reply"].encode()), RELEASE], fragment=True)
+        async with FinderClient(config) as client:
+            result = await client.upload(self.path, remote_name=name)
+        self.assertEqual(result.path, "0:/user/" + name)
+        await self.finished()
+
+    async def test_wrong_m28_path_or_size_never_sends_payload(self):
+        for body in (b"Writing to file: 0:/user/other.gx   Length: 9",
+                     b"Writing to file: 0:/user/test_box.gx   Length: 10",
+                     b"Writing to file: 0:/user/test_box.gx\tLength: 9",
+                     b"Writing to file: 0:/user/test_box.gx    Length: 9"):
+            with self.subTest(body=body):
+                config = await self.serve(self.handshake() + [(b"~M119\r\n", REPLIES["~M119\r\n"]),
+                                          (self.begin()[0], b"CMD M28 Received.\r\n" + body + b"\r\nok\r\n")])
+                async with FinderClient(config) as client:
+                    with self.assertRaisesRegex(ClientError, "Unexpected M28"):
+                        await client.upload(self.path)
+                await self.finished()
+                self.server.close()
+                await self.server.wait_closed()
+
     async def test_wrong_ack_never_retries_commits_or_injects_release(self):
         config = await self.serve(self.handshake() + [(b"~M119\r\n", REPLIES["~M119\r\n"]), self.begin(), (WIRE, b"N1 ok\r\n")])
         async with FinderClient(config) as client:

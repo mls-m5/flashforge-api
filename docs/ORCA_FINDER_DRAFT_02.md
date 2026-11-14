@@ -285,6 +285,20 @@ constants for other models. The Orca candidate instead lets the slicer own a
 −1.3 mm retract and has no fixed custom XYZ park. No old +363 mm step occurs
 in this supplied FlashPrint cube.
 
+The subsequent host2.5 cube slice succeeded in capture
+`web-data/proxy-test/captures/20261114T193405Z-9c2a6479c0fb` (76579 bytes).
+Its model body is centered approximately±9.8 in XY, starts at Z0.27 and ends
+at Z4.95; final E delta−1.3, resolved nominal Z at most7 mm/s, no unresolved E
+moves, with two unresolved startup Z segments. Compared with the supplied
+FlashPrint cube, the fixed purge still reaches X55 instead of the reference's
+model-dependent−5..25 rectangle. M82/G21, omitted M118 and end-position/homing
+differences remain as documented. This is now an actual same-cube host2.5
+comparison, not physical path clearance approval.
+
+A following user Save failed before any payload because of a newly observed
+three-space M28 reply separator; see CLIENT-M28-015 in PROTOCOL.md. The file
+remains available for offline review; a failed save is not startable evidence.
+
 The shared Z50/G161/Z0.2 pattern does not prove the reported impact's exact
 cause or make its physical path safe. No new upload/start/probe was performed;
 original private GX and report remain unchanged/ignored. Next compare a new

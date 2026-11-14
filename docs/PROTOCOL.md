@@ -163,6 +163,28 @@ G21/M82 are added versus the working FlashPrint command set, M118 is omitted,
 and homing/offset/clearance/material semantics remain unresolved. Source draft01
 and mounted profiles are unchanged; no generated candidate was uploaded/started.
 
+## CLIENT-M28-015 — User-run cube save refused on reply spacing
+
+User-host web slice capture
+`web-data/proxy-test/captures/20261114T193405Z-9c2a6479c0fb` successfully
+produced a 76579-byte Orca2.5 cube artifact. The following Save capture
+`20261114T193412Z-d35656992ee7`, session s0001, reports the known Finder V1.5
+fingerprint and READY. Its M28 response confirms the requested path/size but
+uses **three ASCII spaces** before `Length:`, rather than the two in earlier
+observations. Client rejected that formatting before sending any binary frame.
+Only M601/M115/M119/M28 were sent; no M29, M23, M26 or cleanup was injected
+into the pending binary phase. Partial/temporary printer state is unknown;
+no agent retry or hardware action was performed.
+
+The client now accepts exactly the observed two/three-space separators while
+still matching the entire destination and decimal size exactly. Filename
+spaces are not collapsed/split; tab, wrong path/size, extra body lines and other
+separator widths remain rejected. Independent generated loopback tests cover
+fragmented three-space replies, internal filename spaces and refusal without
+payload on mismatches. Raw captures remain unchanged/private. Framing, CRC,
+ACKs, timeouts and final-save rules are unchanged; this does not generalize
+firmware error/retry behavior. The paused plugin transport is unchanged.
+
 ## GX-PREVIEW-014 — Embedded bitmap decoded offline
 
 The supplied working `test1.gx` contains a standalone14454-byte BMP at byte58,

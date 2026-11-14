@@ -216,8 +216,12 @@ class FinderClient:
                 self._command_mode = False
                 try:
                     reply = await self._command(f"M28 {size} {destination}")
-                    expected = f"Writing to file: {destination}  Length: {size}".encode()
-                    if reply != (expected,):
+                    # Observed Finder V1.5 replies use two or three ASCII
+                    # spaces before Length (see CLIENT-M28-015). Preserve and
+                    # compare the full path; never split/normalize its spaces.
+                    expected = tuple(f"Writing to file: {destination}{' ' * gap}Length: {size}".encode()
+                                     for gap in (2, 3))
+                    if len(reply) != 1 or reply[0] not in expected:
                         raise ClientError("Unexpected M28 path/length confirmation")
                     index = 0
                     while acknowledged < size:
