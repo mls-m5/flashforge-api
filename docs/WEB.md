@@ -4,11 +4,22 @@ OctoPrint development is **paused**. The main page is now independent of
 OctoPrint: `python3 -m finderlab web`. Python 3.11+ and the standard library are
 sufficient for the page and printer transfer. No pip installation is needed.
 
-## Passive printer status
+## Printer status
 
-The page now has a status panel for nozzle/bed temperatures, machine/motion
-state and reported byte progress. It reads **existing proxy captures only**;
-no extra printer session/query or control claim is created. Samples are dated
+**Changed default:** `./tools/start_proxy_web.sh` starts active status polling
+on startup to the configured proxy. Close FlashPrint/other control clients
+first; verify the proxy target. One firmware-gated session requests serial
+M119/M105/M27 batches about one second apart. It yields its connection for
+local printer operations and stops on errors/uncertain results without retry.
+**Stop status polling** is not print cancellation; manual Start confirms a new
+connection. `--no-monitor` disables startup polling while retaining manual Start.
+The offline slicing launcher stays disconnected; owned-dummy mode polls only
+its fresh simulator. Raw web CLI stays disconnected unless `--auto-monitor`
+is given (`--enable-monitor` permits manual Start only).
+
+The panel shows nozzle/bed temperatures, machine/motion state and reported byte
+progress. In **passive mode** it reads existing proxy captures only, without
+extra printer commands. The separate observer below is always passive. Samples are dated
 individually; after10 seconds they are stale. Byte100% is not proof of finished
 motion or remaining time. See [STATUS.md](STATUS.md) for limits and source
 selection.
@@ -21,8 +32,8 @@ read-only observer without restarting that connection:
 ```
 
 Open http://127.0.0.1:8001. Uploads, job controls and slicing are disabled in
-this observer. The usual proxy web launcher enables passive status on its next
-restart, using matching proxy-listener recordings under `captures/`; it can
+this observer. Passive mode uses matching proxy-listener recordings under
+`captures/`; the proxy launcher can
 also take `--status-capture PATH` to an explicit run/root. The owned-dummy and
 offline launchers do not automatically display physical-printer logs. The
 status view cannot authorize or unlock any printer action.
@@ -104,7 +115,8 @@ python3 -m finderlab web --enable-upload --target-port 9000
 
 Open **http://127.0.0.1:8000**, using the exact URL printed by the server.
 Use `--listen-port 8001` if occupied. No printer connection or status polling
-occurs on startup or page refresh. Uploads are disabled without `--enable-upload`.
+occurs on startup or page refresh in this low-level invocation without
+`--auto-monitor`. Uploads are disabled without `--enable-upload`.
 The HTTP listener is restricted to loopback IPs; LAN binding is deliberately
 rejected in this experimental version.
 
@@ -158,8 +170,10 @@ Terminal 2:
 ```
 
 This serves the page at 127.0.0.1:8000 and enables explicit Save to the proxy at
-127.0.0.1:9000. The proxy's default upstream port is8899. Neither startup makes
-a printer connection; explicit Save (or opt-in Start/Cancel) does. Existing
+127.0.0.1:9000. The proxy's default upstream port is8899. **The web launcher now
+connects for status on startup**; close FlashPrint/other control clients first.
+To opt out, use `./tools/start_proxy_web.sh --no-monitor`. The proxy alone
+connects upstream only when a client connects; it does not initiate polling. Existing
 FlashPrint GX files can be saved with no automatic start/stop. Close competing
 printer clients. The proxy records its own private capture as well as the web
 capture in the separate `web-data/proxy-test/` workspace. **The proxy forwards
@@ -218,8 +232,9 @@ agent hardware trial is authorized or performed by adding these controls.
 - All operations share the single-job lock. Cancel is unavailable while another
   local operation is active; it is not injected into an upload's binary stream.
   Shutdown and failures never send automatic M26. Physical controls remain
-  necessary for emergencies. No active printer polling is added; the passive
-  panel only shows existing proxy observations, not guaranteed physical state.
+  necessary for emergencies. Active monitoring uses the same network lock,
+  releases its session before these operations, and stops after uncertain I/O.
+  Neither active nor passive snapshots guarantee physical state.
 - Start/cancel result and original save confirmation are separate facts. Lost
   replies report UNKNOWN; a failed start does not erase the confirmed save.
   Subsequent release/logging failures are shown separately. Context/loopback
@@ -439,7 +454,8 @@ save or slice success; poll `/api/state` while `busy`.
 | --- | --- |
 | GET `/api/config` | Per-run token, fixed endpoint, capabilities and limits |
 | GET `/api/state` | Current slot/job state and bounded private diagnostic excerpt |
-| GET `/api/printer-status` | Passive derived observations from the configured matching proxy capture; no printer query |
+| GET `/api/printer-status` | Cached active snapshots or passive derived observations; no printer query |
+| POST `/api/monitor` | `{"enabled":true,"confirm":true}` starts permitted status polling; false stops monitoring only |
 | POST `/api/file?name=NAME` | Bounded raw bytes into empty slot; no slicing/printer connection |
 | POST `/api/slice` | `{"confirm":true,"settings":{...}}`; optional typed quality settings, offline Orca only |
 | GET `/api/artifact` | Idle-slot print file download, fixed safe attachment name |
@@ -478,6 +494,7 @@ native adapter behavior, not a real browser rendering or physical compatibility.
 python3 -m unittest discover -s tests -v
 node tests/test_web_ui.js
 node tests/test_passive_status_ui.js
+node tests/test_active_status_ui.js
 ```
 
 Tests use fresh ephemeral HTTP/TCP loopback endpoints, generated bytes and a fake

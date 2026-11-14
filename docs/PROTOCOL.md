@@ -294,6 +294,23 @@ Skillnaderna kan bero på firmware, klientversion eller olika discovery-vägar. 
 - Fast paus före M29 och upload med råa byte saknar lokal verifiering.
 - Skriptet skickar inget explicit utskriftsstartkommando, men upload-only-beteendet måste ändå verifieras på aktuell firmware.
 
+## WEB-STATUS-018 — Active monitoring orchestration, dummy only
+
+The web backend now maintains a firmware-gated M601/M115 status session with
+serial M119/M105/M27 batches, waiting one second after each batch. Default
+startup connection is selected by the proxy/owned-dummy launcher at the user's
+request, not by browser GETs. This is implementation policy, **not a newly
+measured firmware timing requirement or spontaneous-event subscription**.
+The query/release shapes remain those previously observed on Finder V1.5;
+FlashPrint version remains unknown. No CRC/framing/parser termination or
+motion semantics were inferred/changed. Shared-lock tests use fresh ephemeral
+loopback dummies to verify connection release before exact Save, later status
+resumption, no automatic M23/M26 and no monitor reconnect after uncertain I/O.
+These are local orchestration checks, not independent hardware compatibility
+or proof of physical progress/completion. No agent printer/proxy connection
+was made. See STATUS.md / CAPTURES.md for recording/quota/freshness details.
+Physical persistent-session acceptance and browser rendering remain pending.
+
 ## WEB-WORKBENCH-001 — Standalone HTTP workflow, dummy only
 
 Local application evidence, not a new physical-printer protocol observation:

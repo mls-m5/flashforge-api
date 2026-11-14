@@ -31,7 +31,7 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(command[1:4], ["-m", "finderlab", "web"])
         self.assertEqual(command[command.index("--listen-host")+1], "127.0.0.1")
         self.assertEqual(command[command.index("--listen-port")+1], "8001")
-        for forbidden in ("--enable-upload", "--enable-job-controls", "--allow-sliced-upload", "--allow-hardware"):
+        for forbidden in ("--auto-monitor", "--enable-monitor", "--enable-upload", "--enable-job-controls", "--allow-sliced-upload", "--allow-hardware"):
             self.assertNotIn(forbidden, command)
         self.assertEqual(command[command.index("--machine")+1], str(self.profiles / "machine.json"))
 
@@ -74,6 +74,21 @@ class LauncherTests(unittest.TestCase):
                         {"enable_job_controls": True}, {"allow_sliced_upload": True}, {"status_capture": Path("captures")}):
             with self.subTest(options=options), self.assertRaises(ValueError):
                 launcher.build_command(**options)
+
+    def test_polling_defaults_only_for_proxy_or_owned_dummy_and_opt_out(self):
+        self.assertIn("--auto-monitor", launcher.build_command(proxy_port=9000))
+        self.assertIn("--auto-monitor", launcher.build_command(dummy_upload_test=True))
+        for mode in ({"proxy_port": 9000}, {"dummy_upload_test": True}):
+            command = launcher.build_command(**mode, monitor=False)
+            self.assertNotIn("--auto-monitor", command)
+            self.assertIn("--enable-monitor", command)
+        with self.assertRaisesRegex(ValueError, "offline means no printer connection"):
+            launcher.build_command(monitor=True)
+        with patch("sys.argv", ["start_offline_web.py", "--proxy-port", "9000", "--check"]), \
+             patch.object(launcher.os, "execv") as execute, redirect_stdout(io.StringIO()) as output:
+            launcher.main()
+        execute.assert_not_called()
+        self.assertIn("CONNECTS ON STARTUP", output.getvalue())
 
     def test_check_does_not_launch_or_change_directory(self):
         with patch("sys.argv", ["start_offline_web.py", "--check"]), \

@@ -115,7 +115,7 @@ Implemented client contract: `.gx`/`.gcode`/`.g` byte-preserving transfer (no co
 
 ### Standalone web workbench
 
-`finderlab/web.py` and `finderlab/webstatic/` implement a dependency-free loopback page. One bounded raw file receive stores an STL/print file; a separate confirmed Slice uses server-owned Orca/profiles; a third confirmed Save uses the existing client without start/stop. Generated G-code is downloadable for review and cannot be sent unless the operator explicitly enables generated-output saving. Separately opt-in job controls (`--enable-job-controls`) expose confirmed Start of the exact saved filename (per-save identity, one attempt, fresh READY check) and confirmed Cancel (not emergency stop). They share the operation lock, never run automatically and preserve save confirmation separately from uncertain job results. No HTTP request can select targets, profiles, host paths or arbitrary native flags. Startup and GET cached status never connect to a printer. Host/Origin/token checks, bounded HTTP parsing/timeouts, single-slot/process locks, capture quotas and conservative persistent storage admission bound this experimental local service. Native process limits are not a sandbox. No validated Finder Orca profile ships: the original Sailfish rejection remains; a separate Marlin-emission draft 02 now generates offline review artifacts with unresolved physical blockers. See [docs/WEB.md](docs/WEB.md). The default Compose now starts this page; Podman CLI is also documented.
+`finderlab/web.py` and `finderlab/webstatic/` implement a dependency-free loopback page. One bounded raw file receive stores an STL/print file; a separate confirmed Slice uses server-owned Orca/profiles; a third confirmed Save uses the existing client without start/stop. Generated G-code is downloadable for review and cannot be sent unless the operator explicitly enables generated-output saving. Separately opt-in job controls (`--enable-job-controls`) expose confirmed Start of the exact saved filename (per-save identity, one attempt, fresh READY check) and confirmed Cancel (not emergency stop). They share the operation lock, never run automatically and preserve save confirmation separately from uncertain job results. No HTTP request can select targets, profiles, host paths or arbitrary native flags. GET cached status never connects to a printer. Low-level startup stays disconnected unless configured with `--auto-monitor`; the proxy/owned-dummy launcher now selects that status-only startup mode by user request. Offline slicing and the passive watcher stay disconnected. Host/Origin/token checks, bounded HTTP parsing/timeouts, single-slot/process locks, capture quotas and conservative persistent storage admission bound this experimental local service. Native process limits are not a sandbox. No validated Finder Orca profile ships: the original Sailfish rejection remains; a separate Marlin-emission draft 02 now generates offline review artifacts with unresolved physical blockers. See [docs/WEB.md](docs/WEB.md). The default Compose now starts this page; Podman CLI is also documented.
 
 ### Passive status panel
 
@@ -129,6 +129,21 @@ operator need not restart a running control connection. Status changes do not
 unlock or trigger actions. Missing/stale/malformed metrics stay unknown/stale;
 byte counters are not job-completion or motion proof. No source path or command
 is accepted over HTTP. See STATUS.md for tail/source/session limitations.
+
+### Active status ownership
+
+`active_status.py` maintains a firmware-gated status-only session, requesting
+serial M119/M105/M27 batches one second after each previous batch. The backend
+owns its lifecycle independently of browser GETs/tabs. Proxy and owned-dummy
+launchers default to automatic monitoring with `--no-monitor` opt-out; this does
+not enable automatic Save/Start/Cancel. A shared network lock yields/releases
+monitor ownership before local printer operations, pauses during busy work,
+and resumes only after normal outcomes. Query/identity/recording/release errors
+or uncertain printer operations stop monitoring without automatic reconnect.
+External FlashPrint processes are not covered by this lock. Stop monitoring
+closes its session, never sends M26. Per-run bounded private captures reserve
+workspace capacity; cache timestamps reflect batch completion, not physical
+execution. See STATUS.md for limits and pending hardware/browser acceptance.
 
 ### Per-slice quality settings
 

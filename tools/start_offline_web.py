@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Start the local draft-02 slicing page with all printer actions disabled."""
+"""Start the slicing workbench: offline, owned dummy, or explicitly selected proxy."""
 
 import argparse
 import os
@@ -15,9 +15,12 @@ FALLBACK_ORCA = ROOT / ".local-tools/orca-slicer"
 
 
 def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=None,
-                  enable_job_controls=False, allow_sliced_upload=False, status_capture=None, native_skirt_test=False):
+                  enable_job_controls=False, allow_sliced_upload=False, status_capture=None, native_skirt_test=False, monitor=None):
     if native_skirt_test and proxy_port is not None:
         raise ValueError("Draft03 native skirt is offline/owned-dummy only in this launcher; changed startup needs separate review")
+    if monitor and proxy_port is None and not dummy_upload_test:
+        raise ValueError("Active monitoring requires proxy mode or an owned dummy; offline means no printer connection")
+    polling = (proxy_port is not None or dummy_upload_test) if monitor is None else monitor
     profile = SKIRT_PROFILE if native_skirt_test else PROFILE
     if dummy_upload_test and proxy_port is not None:
         raise ValueError("Choose owned dummy or proxy, not both")
@@ -59,6 +62,10 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
             command += ["--allow-sliced-upload"]
     else:
         command += ["--dummy"] if dummy_upload_test else ["--target-port", "9000"]
+    if polling:
+        command += ["--auto-monitor"]
+    elif proxy_port is not None or dummy_upload_test:
+        command += ["--enable-monitor"]  # Manual start remains available after opting out of startup polling.
     for kind in ("machine", "process", "filament"):
         path = profile / (kind + ".json")
         if not path.is_file() or not 0 < path.stat().st_size <= 1024 * 1024:
@@ -79,17 +86,20 @@ def main():
     cli.add_argument("--proxy-port", type=int, help="enable Save to an explicitly chosen local proxy port (may reach hardware)")
     cli.add_argument("--enable-job-controls", action="store_true", help="with --proxy-port: enable separately confirmed Start/Cancel")
     cli.add_argument("--allow-sliced-upload", action="store_true", help="with --proxy-port: explicitly permit generated-output Save; NOT motion-safety approval")
+    cli.add_argument("--monitor", action=argparse.BooleanOptionalAction, default=None,
+                     help="automatic status polling (default in proxy/owned-dummy modes); --no-monitor leaves it off at startup")
     cli.add_argument("--check", action="store_true", help="check local files only; do not launch anything")
     args = cli.parse_args()
     try:
         command = build_command(args.port, args.orca, dummy_upload_test=args.dummy_upload_test,
                                 proxy_port=args.proxy_port, enable_job_controls=args.enable_job_controls,
                                 allow_sliced_upload=args.allow_sliced_upload, status_capture=args.status_capture,
-                                native_skirt_test=args.native_skirt_test)
+                                native_skirt_test=args.native_skirt_test, monitor=args.monitor)
     except ValueError as exc:
         cli.error(str(exc))
     if args.proxy_port is not None:
-        print(f"PROXY MODE: Save to 127.0.0.1:{args.proxy_port} may reach REAL HARDWARE. No connection until an explicit action.", flush=True)
+        print(f"PROXY MODE: Save to 127.0.0.1:{args.proxy_port} may reach REAL HARDWARE.", flush=True)
+        print("ACTIVE STATUS CONNECTS ON STARTUP; close FlashPrint/other clients first." if "--auto-monitor" in command else "Automatic status connection disabled; manual polling remains available.", flush=True)
         print(f"Start/Cancel enabled: {args.enable_job_controls}; generated-output saving: {args.allow_sliced_upload}.", flush=True)
         print("Proxy is not a safety filter. New candidate startup/clearance remains unverified; no automatic start or stop.", flush=True)
     elif args.dummy_upload_test:

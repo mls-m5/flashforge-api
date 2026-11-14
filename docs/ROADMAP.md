@@ -232,6 +232,34 @@ capture was checked independently. Actual browser acceptance remains pending.
 This is not active printer polling, ETA or physical completion proof. See
 [STATUS.md](STATUS.md). Placement-aware priming/skirt is the next requested task.
 
+## Active status polling implemented; hardware acceptance pending
+
+The user requested roughly1s status batches and then automatic startup.
+The proxy web launcher now defaults to active firmware-gated M119/M105/M27
+polling; `--no-monitor` leaves it off at startup. Owned-dummy mode polls only
+its new simulator; offline slicing and watch_printer stay disconnected.
+UI Start/Stop affects monitoring only, not print Start/Cancel. Local network
+operations share a lock and yield the monitor session; uncertain printer I/O,
+query/release/recording errors stop it without automatic reconnect. Bounded
+private captures and reserved storage, cached ages, Origin/token gates and
+no automatic job actions are covered by fresh loopback/Node tests. Physical
+monitoring and rendered browser acceptance remain user-run checks. Close
+FlashPrint before enabling active polling. See STATUS.md for exact behavior.
+
+## Next requested: simple manual-control panel
+
+After polling, the user requests a simple GUI for light, extruder feed/retract
+and XYZ jogging. This is queued, **not implemented or hardware-authorized**.
+Use FINDER-MANUAL-017 / MANUAL_CONTROLS_CAPTURE.md as scoped evidence, not a
+replay script. The captured Continuous jog uses huge relative targets; do not
+reuse those as bounded step buttons or claim M112 is a verified emergency stop.
+Before enabling motion, establish small-step/mode/limits semantics in a
+separately approved supervised experiment, safe serialization with monitoring
+and job actions, explicit extrusion-temperature conditions and clearly bounded
+feed/step choices. No automatic heat/move/extrude, no generic command endpoint.
+Preserve physical emergency controls and no-retry/unknown-outcome behavior.
+Light command observations do not validate every color/on-off policy either.
+
 ## Future requested default: configured-printer workflow
 
 The user would like normal startup eventually to make upload and the verified
@@ -251,7 +279,7 @@ speed and unchanged end retract. `tools/start_skirt_test.sh` selects it only
 for offline/owned-dummy review; original02/default proxy behavior is unchanged.
 See [ORCA_FINDER_DRAFT_03.md](ORCA_FINDER_DRAFT_03.md). Host2.5/native GUI output
 and physical changed-startup acceptance are still pending. Active status polling
-is the next requested implementation, after this candidate foundation.
+is now implemented separately above; the next requested GUI work is manual controls.
 
 The user reports the current fixed purge line lies inside the footprint of some
 larger prints and asks to record this for the next change, not interrupt current

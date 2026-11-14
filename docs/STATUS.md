@@ -1,6 +1,48 @@
-# Passive printer status from proxy recordings
+# Printer status: active polling and passive proxy recordings
 
-## What is implemented
+## Active polling (default in the proxy web launcher)
+
+At the user's request, `./tools/start_proxy_web.sh` now **connects on startup**
+to its explicitly configured loopback proxy for status polling. Verify the
+proxy's upstream first and **close FlashPrint and other control clients before
+launching**. This is a deliberate change from the former no-connect startup.
+There is no discovery. The agent's checks use fresh loopback dummies only;
+physical acceptance of this persistent monitoring session is pending.
+
+- One firmware-gated session (M601/M115), then serial M119/M105/M27 batches,
+  **one second after each completed batch**. These are requested snapshots,
+  not spontaneous events or exact firmware synchronization. No heating, motion,
+  upload, print-start or print-cancel commands are sent by the monitor.
+- The shared network lock releases the monitor's control/session before local
+  Save/Start/Cancel and pauses polling while a local operation is busy. After a
+  successful operation it may open a fresh status session. An uncertain printer
+  operation, failed release, query/identity/protocol/recording error stops it;
+  there is **no automatic error retry/reconnect**. Other processes/FlashPrint
+  are not covered by this local lock.
+- **Stop status polling** closes only monitoring, not the print. **Start status
+  polling** explicitly confirms reconnection. Refresh only reads cached HTTP
+  data; opening/reloading a browser tab never restarts polling or retries jobs.
+  Stop is allowed during a local operation; cleanup may wait for its lock.
+- To leave polling off at startup: `./tools/start_proxy_web.sh --no-monitor`.
+  Manual Start remains available. This does not enable upload/job controls in
+  the read-only observer. `tools/watch_printer.sh` remains fully passive.
+- The offline slicing launcher still never connects. Owned-dummy upload mode
+  automatically polls **its owned fresh simulator only**, not existing proxies.
+  Low-level `python3 -m finderlab web` remains disconnected by default:
+  `--auto-monitor` explicitly enables startup connection; `--enable-monitor`
+  permits manual Start only. No Save/Start/Cancel policy flags are implied.
+- Active samples are timestamped when the complete batch was parsed/recorded,
+  not when physical motion occurred. The UI labels the source/capture/session
+  and endpoint. Stopped samples immediately become stale, even if recent.
+  No active failure silently falls back to old passive data labelled live.
+- Each monitor run records raw bytes and `status_snapshot` events privately
+  under its web workspace (64 MiB, at most256 sessions). Quota/entry admission
+  reserves space for its remaining capture budget alongside ordinary jobs;
+  limits stop monitoring rather than deleting logs/continuing unrecorded.
+  Long prints can exhaust the quota: archive logs locally and explicitly restart
+  monitoring, never infer that a stopped monitor means a stopped print.
+
+## Passive mode: what is implemented
 
 The web page now shows a **Printer status** panel: observed nozzle/bed actual
 and target temperatures, MachineStatus/MoveMode, and M27 reported file-byte
@@ -9,8 +51,8 @@ or send any printer command**. It reads the traffic FlashPrint is already
 polling through the recording proxy. Browser polling every2 seconds asks only
 our local HTTP API, not the printer.
 
-This is deliberately separate from a future active status-client implementation.
-Do not run a second control client during the print merely to populate status.
+This mode is separate from active polling. Do not start active polling while
+FlashPrint is already controlling/polling the printer.
 If nobody asks the printer status questions, a transparent proxy cannot invent
 updates. The panel never treats missing observations as stopped printing.
 
@@ -28,9 +70,9 @@ slicing disabled. It observes existing recordings for proxy listener
 a handshake. Ctrl+C stops only this observer. Optional web port:
 `./tools/watch_printer.sh 8002`.
 
-For the usual page, the **next restart** of `tools/start_proxy_web.sh` adds
-`--status-capture captures` automatically. It keeps existing action gates;
-passive status never enables actions. Do not restart an active save/slice just
+The proxy launcher retains `--status-capture captures`, but now uses active
+polling by default. Use the separate observer for passive-only viewing while
+FlashPrint is connected. Passive status never enables actions. Do not restart an active save/slice just
 to update the UI. The short offline and owned-dummy launchers do not observe
 physical-printer logs; owned-dummy mode explicitly disables this status source.
 
@@ -78,7 +120,13 @@ or forward its port externally.
 
 ## Data and parser boundaries
 
-GET `/api/printer-status` returns only derived fields, observation metadata and
+GET `/api/printer-status` returns the active monitor's cache when one was
+started, otherwise passive observations. It never initiates a printer request.
+POST `/api/monitor` with `{"enabled":true,"confirm":true}` starts monitoring
+only when the server permits it; false stops it. Exact Origin/token protection
+and typed allowlisting apply. No target/command/interval override is accepted.
+
+The status response contains only derived fields, observation metadata and
 source labels. No raw G-code, full replies, serial/name, paths supplied by HTTP,
 or capture-download endpoint is added. Configuration is trusted local startup
 input. Reading logs does not edit raw originals or generate new traffic captures.
@@ -113,9 +161,17 @@ that in the source capture (FinderV1.5; FlashPrint version unknown).
 python3 -m unittest discover -s tests -v
 node tests/test_web_ui.js
 node tests/test_passive_status_ui.js
+node tests/test_active_status_ui.js
 ```
 
-Tests use synthetic recordings, fresh local HTTP contexts and mocked browser
+Active tests additionally use fresh loopback dummies to check startup opt-in,
+manual Stop/Start/gates, persistent sessions, shared-lock Save/resume without
+start/cancel, stop-on-failure/quota, no reconnect after uncertain Save, early
+shutdown and storage failure before connection. Launcher checks verify proxy /
+owned-dummy defaults and offline no-connect. No physical monitoring trial or
+rendered browser acceptance is claimed.
+
+Passive tests use synthetic recordings, fresh local HTTP contexts and mocked browser
 requests. They cover fragmented/coalesced frames, stale/partial/error samples,
 clock skew, zero/over-total progress, source matching, no cross-session blending,
 read-only file hashes, no FinderClient invocation, duplicate poll prevention

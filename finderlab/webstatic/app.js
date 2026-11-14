@@ -3,15 +3,24 @@
     const el = id => document.getElementById(id);
     let config, state = {busy: false, phase: "empty"}, pending = false, uncertain = false;
     let timer = null, polling = false;
-    let printerTimer = null, printerPolling = false;
+    let printerTimer = null, printerPolling = false, monitorPending = false, printerReport = {};
+    function renderMonitor() {
+        el("monitor-start").disabled = Boolean(!config || !config.active_monitor_enabled || monitorPending || printerPolling ||
+            pending || polling || state.busy || uncertain || printerReport.monitor_running || printerReport.monitor_stopping);
+        // Stopping observation is independent of file/job actions; never POST /api/stop.
+        el("monitor-stop").disabled = Boolean(!config || !config.active_monitor_enabled || monitorPending || !printerReport.monitor_running);
+    }
     function renderPrinter(report) {
+        printerReport = report;
+        text("printer-status-mode", report.passive === false ? "· active status polling" : "· passive proxy observation");
+        renderMonitor();
         const samples = report.samples || {};
         const temperature = samples.M105, machine = samples.M119, progress = samples.M27;
         const temp = temperature && temperature.values;
         const status = machine && machine.values;
         const file = progress && progress.values;
-        text("printer-status-message", (report.stale ? "STALE / incomplete observation. " : "Recent proxy observation. ") + report.message);
-        text("printer-status-source", report.source ? `${report.source} / ${report.session || "no session"} · captured upstream ${report.upstream} · ${report.capture_finalized ? "recording finalized" : "recording not finalized (may be running or interrupted)"}` : "No matching proxy recording");
+        text("printer-status-message", (report.stale ? "STALE / incomplete observation. " : (report.passive === false ? "Recent status batch. " : "Recent proxy observation. ")) + report.message);
+        text("printer-status-source", report.source ? `${report.source} / ${report.session || "no session"} · ${report.passive === false ? "configured endpoint" : "captured upstream"} ${report.upstream} · ${report.capture_finalized ? "recording finalized" : "recording not finalized (may be running or interrupted)"}` : "No matching proxy recording");
         const suffix = sample => sample && sample.stale ? " (stale)" : "";
         text("printer-temperature", temp ? `${temp.nozzle} / ${temp.nozzle_target} °C${suffix(temperature)}` : "unknown");
         text("printer-bed", temp ? `${temp.bed} / ${temp.bed_target} °C${suffix(temperature)}` : "unknown");
@@ -23,8 +32,8 @@
     }
     async function refreshPrinter() {
         clearTimeout(printerTimer); printerTimer = null;
-        if (!config || !config.passive_status_enabled || printerPolling) return;
-        printerPolling = true;
+        if (!config || (!config.passive_status_enabled && !config.active_monitor_enabled) || printerPolling) return;
+        printerPolling = true; renderMonitor();
         el("printer-refresh").disabled = true;
         try {
             renderPrinter(await request("/api/printer-status"));
@@ -32,14 +41,15 @@
             // Do not keep old values looking current after an HTTP/read failure.
             renderPrinter({stale: true, samples: {}, message: "Cannot read observations: " + error.message});
         } finally {
-            printerPolling = false;
+            printerPolling = false; renderMonitor();
             el("printer-refresh").disabled = false;
             printerTimer = setTimeout(refreshPrinter, 2000);
         }
     }
     function text(id, value) { el(id).textContent = value || ""; }
     function render() {
-        const busy = pending || polling || state.busy || uncertain;
+        renderMonitor();
+        const busy = pending || polling || state.busy || uncertain || monitorPending;
         el("file").disabled = busy || state.phase !== "empty";
         el("discard").disabled = busy || state.phase === "empty";
         el("slice").disabled = busy || !config || !config.slicing_enabled || state.phase !== "model_ready";
@@ -89,7 +99,8 @@
         if (state.error) text("error", state.error);
         text("gating", !config || !config.upload_enabled ? "Printer uploads disabled: start the server with --enable-upload for an explicitly chosen endpoint." :
             state.sliced && !config.sliced_upload_enabled ? "Generated-output saving is blocked pending profile review and server --allow-sliced-upload." :
-            "Only explicit Save/Start/Cancel actions open printer connections.");
+            (config.active_monitor_enabled ? "Status polling can open a connection; Save/Start/Cancel still require separate explicit actions." :
+             "Only explicit Save/Start/Cancel actions open printer connections."));
     }
     async function request(url, options) {
         const response = await fetch(url, {cache: "no-store", ...options});
@@ -111,7 +122,7 @@
         } finally { polling = false; render(); }
     }
     async function action(operation, body) {
-        if (pending || polling || state.busy || uncertain) return;
+        if (pending || polling || monitorPending || state.busy || uncertain) return;
         pending = true; clearTimeout(timer); text("error", ""); render();
         let accepted = false;
         try {
@@ -127,7 +138,7 @@
         if (accepted) await refresh();
     }
     function receive(file) {
-        if (!config || pending || polling || state.busy || uncertain || state.phase !== "empty" || !file) return;
+        if (!config || pending || polling || monitorPending || state.busy || uncertain || state.phase !== "empty" || !file) return;
         const stl = /\.stl$/i.test(file.name);
         if (!/\.(stl|gx|gcode|g)$/i.test(file.name) || !file.size || file.size > (stl ? config.model_limit : config.print_limit)) {
             text("error", "Choose a nonempty STL (up to 64 MiB) or GX/G-code/G (up to 8 MiB)."); return;
@@ -164,6 +175,21 @@
     });
     el("refresh").addEventListener("click", refresh);
     el("printer-refresh").addEventListener("click", refreshPrinter);
+    async function toggleMonitor(enabled) {
+        if (monitorPending || !config || !config.active_monitor_enabled ||
+                (enabled && el("monitor-start").disabled)) return;
+        if (enabled && !confirm(`Start status polling of ${config.target}? Close FlashPrint and other printer clients first. A proxy may reach hardware. Only status/handshake/release commands are sent, not print start/cancel.`)) return;
+        monitorPending = true; render(); text("monitor-error", "");
+        try {
+            renderPrinter(await request("/api/monitor", {method: "POST", headers: {
+                "Content-Type": "application/json", "X-Finder-Token": config.token
+            }, body: JSON.stringify({enabled, confirm: true})}));
+        } catch (error) {
+            text("monitor-error", error.message + " Polling result unknown; refresh status, do not automatically retry.");
+        } finally { monitorPending = false; render(); await refreshPrinter(); }
+    }
+    el("monitor-start").addEventListener("click", () => toggleMonitor(true));
+    el("monitor-stop").addEventListener("click", () => toggleMonitor(false));
     el("discard").addEventListener("click", () => {
         if (confirm("Remove current input/generated files? Private captures remain. This does not undo a printer save or cancel a print.")) {
             action("discard", {confirm: true}); el("file").value = "";
@@ -212,7 +238,10 @@
             `${data.target} · printer uploads ${data.upload_enabled ? "ENABLED" : "disabled"}`);
         text("orca", data.slicing_enabled ? "Trusted server-side Orca/profiles configured. Slice offline, then download and review before a separate Save." :
             "Orca not configured. Supply --orca and trusted self-contained --machine / --process / --filament JSON on the server. Existing FlashPrint GX files work independently.");
-        if (data.passive_status_enabled) refreshPrinter();
+        text("printer-status-policy", data.active_monitor_enabled ?
+            "Active polling sends M119/M105/M27 batches about one second apart, pauses for local operations and stops on errors. Close FlashPrint/other clients. Stop status polling does not cancel printing. Percent is not remaining time or proof of completion." :
+            "Passive mode reads existing proxy logs only; FlashPrint must already be polling through the proxy. No printer commands are sent. Percent is not remaining time or proof of completion.");
+        if (data.passive_status_enabled || data.active_monitor_enabled) refreshPrinter();
         else {
             text("printer-status-message", "Passive status not configured. Use the proxy web launcher or tools/watch_printer.sh. No printer polling is performed.");
             el("printer-refresh").disabled = true;

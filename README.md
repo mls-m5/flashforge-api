@@ -44,7 +44,11 @@ For deliberate proxy use, `./tools/start_printer_proxy.sh CONFIRMED_PRINTER_IP`
 starts a loopback recording relay, then `./tools/start_proxy_web.sh` enables
 confirmed Save to it. The recalled IP `192.168.0.39` must be verified by the
 operator; no discovery/probe occurs. Start/Cancel and generated-output saving
-require separate flags; see [docs/WEB.md](docs/WEB.md). The proxy is not a safety
+require separate flags; see [docs/WEB.md](docs/WEB.md). **The proxy web launcher
+now starts status polling automatically** (about one second between batches).
+Verify the proxy target and close FlashPrint/other clients first. Use
+`--no-monitor` to leave polling off at startup. Stop status polling does not
+cancel a print; the offline launcher and passive watcher remain disconnected. The proxy is not a safety
 filter and the new candidate's physical startup remains unverified.
 
 ## Upload a print file with the CLI (dummy first)
@@ -179,6 +183,7 @@ python3 -m unittest discover -s tests -v
 # Optional Node.js 18+ UI-logic checks (no npm dependencies):
 node tests/test_web_ui.js
 node tests/test_passive_status_ui.js
+node tests/test_active_status_ui.js
 ```
 
 Tests use ephemeral loopback ports and never connect to a physical printer. Generated test files use the ignored project-local `.tmp/` directory and are cleaned up; do not use the system temporary directory for project work. No third-party dependencies are required. One integration test retains the uploader's existing three-second pause.
@@ -199,7 +204,7 @@ A real-printer connection/status capture now supplies independent regression fix
 New documentation is English; older Swedish sections will be translated incrementally.
 
 - [DESIGN.md](DESIGN.md): architecture, realism goals and safety boundaries.
-- [docs/STATUS.md](docs/STATUS.md): passive printer-status view from existing proxy logs, source identity and stale-data limits.
+- [docs/STATUS.md](docs/STATUS.md): active status polling/default proxy startup, passive observer, source identity and stale-data limits.
 - [docs/GX_PREVIEW.md](docs/GX_PREVIEW.md): observed GX/BMP thumbnail encoding and read-only extraction tool (not a GX generator).
 - [docs/WEB.md](docs/WEB.md): standalone page, Podman, optional Orca configuration and current profile blocker.
 - [docs/OCTOPRINT.md](docs/OCTOPRINT.md): paused plugin experiment and preserved container test.

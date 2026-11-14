@@ -1,4 +1,4 @@
-"""Loopback-only, single-slot web workbench. No automatic printer connection.
+"""Loopback-only, single-slot web workbench with explicitly configured monitoring.
 
 Deliberately narrow HTTP/1.1 subset (Content-Length, close after one request).
 Not a general purpose web server or an Internet-facing service.
@@ -25,6 +25,7 @@ from .client import ClientConfig, FinderClient, remote_path
 from .slicer import SliceConfig, slice_model
 from .slice_settings import normalize_settings
 from .passive_status import status_from_capture
+from .active_status import ActiveMonitor
 
 STATIC = Path(__file__).with_name("webstatic")
 PRINT_LIMIT = 8 * 1024 * 1024
@@ -79,8 +80,12 @@ class WebConfig:
     slicing: SliceConfig | None = None
     allow_sliced_upload: bool = False
     status_capture: Path | None = None
+    enable_monitor: bool = False
+    auto_monitor: bool = False
 
     def __post_init__(self):
+        if self.auto_monitor and not self.enable_monitor:
+            raise ValueError("Automatic monitoring requires enable_monitor")
         if os.name != "posix":
             raise ValueError("The experimental web workbench currently requires POSIX/Linux workspace locking")
         if not ipaddress.ip_address(self.host).is_loopback:
@@ -103,6 +108,8 @@ class Workbench:
         self.artifact = None
         self.slot = None
         self.task = None
+        self.network_lock = asyncio.Lock()
+        self.monitor = None
         self.owned_dummy = False
         self.state = self.empty()
         # Do not let two servers operate the same workspace at once.
@@ -123,6 +130,8 @@ class Workbench:
                 "effective_quality": None}
 
     def capacity(self, reserve):
+        if self.monitor and self.monitor.capture and not self.monitor.capture.closed:
+            reserve += max(0, self.monitor.max_bytes - self.monitor.capture.written) + 1024 * 1024
         total = count = 0
         for path in self.folder.rglob("*"):
             count += 1
@@ -253,6 +262,30 @@ class Workbench:
             self.state["effective_quality"] = None
         self.task = asyncio.create_task(self._operation(operation, data))
 
+    def toggle_monitor(self, data):
+        if set(data) != {"enabled", "confirm"} or type(data["enabled"]) is not bool or data["confirm"] is not True:
+            raise WebError(400, "Monitoring needs explicit confirmation and a boolean enabled flag")
+        if not self.config.enable_monitor:
+            raise WebError(409, "Active polling requires server --enable-monitor; passive observation stays read-only")
+        if data["enabled"]:
+            self.idle()
+            if self.monitor and self.monitor.task and not self.monitor.task.done():
+                raise WebError(409, "Monitor already running or stopping")
+            self.capacity(CAPTURE_LIMIT + 1024 * 1024)
+            self.monitor = ActiveMonitor(self.config.client, self.folder, self.network_lock,
+                                         lambda: self.state["busy"], emulated=self.owned_dummy)
+            self.monitor.start()
+        elif self.monitor:
+            self.monitor.request_stop()  # Stop local polling, NEVER a printer cancel.
+
+    @asynccontextmanager
+    async def printer_session(self, capture):
+        async with self.network_lock:
+            if self.monitor:
+                await self.monitor.release_client()
+            async with FinderClient(self.config.client, capture=capture) as client:
+                yield client
+
     async def _operation(self, operation, data):
         capture = None
         network = False
@@ -274,7 +307,7 @@ class Workbench:
             else:
                 network = True
                 async with asyncio.timeout(900):
-                    async with FinderClient(self.config.client, capture=capture) as client:
+                    async with self.printer_session(capture) as client:
                         capture.manifest.update(model="Flashforge Finder (emulated)" if self.owned_dummy else "Flashforge Finder", firmware="V1.5 20170419")
                         if operation == "save":
                             self.state["phase"] = "uploading"
@@ -293,8 +326,12 @@ class Workbench:
                             self.state.update(phase="cancel_acknowledged", job_result="cancel_acknowledged")
                             capture.manifest["metadata"]["stop_acknowledged"] = True
                     if client.cleanup_error:
+                        if self.monitor:
+                            self.monitor.request_stop()
                         self.state["warning"] = "Operation confirmed, but release failed: " + client.cleanup_error
         except BaseException as exc:
+            if network and self.monitor:
+                self.monitor.request_stop()  # Never reconnect automatically after uncertain printer I/O.
             self.state.update(phase="unknown" if network else "failed", error=str(exc) or type(exc).__name__)
             if operation in ("start", "stop"):
                 self.state["job_result"] = operation + "_unknown" if network else "not_sent"
@@ -312,6 +349,8 @@ class Workbench:
                     if capture.failed:
                         raise CaptureError("Recording is incomplete; do not retry blindly")
             except Exception as exc:
+                if network and self.monitor:
+                    self.monitor.request_stop()
                 self.state.update(phase="unknown" if network else "failed", error="Recording failed: " + str(exc))
             finally:
                 self.state["busy"] = False
@@ -320,24 +359,35 @@ class Workbench:
         if self.task and not self.task.done():
             self.task.cancel()
             await asyncio.gather(self.task, return_exceptions=True)
+        if self.monitor:
+            await self.monitor.close()
         self.lock.close()
 
 
 class WebServer:
-    def __init__(self, config):
+    def __init__(self, config, *, owned_dummy=None):
         self.config = config
         self.work = None
         self.token = secrets.token_urlsafe(32)
         self.server = None
         self.clients = set()
         self.address = None
-        self.owned_dummy = None
+        self.owned_dummy = owned_dummy
 
     async def __aenter__(self):
         self.work = Workbench(self.config)
+        self.work.owned_dummy = self.owned_dummy is not None
         try:
             self.server = await asyncio.start_server(self.handle, self.config.host, self.config.port, limit=16384)
             self.address = self.server.sockets[0].getsockname()[:2]
+            if self.config.auto_monitor:
+                try:
+                    self.work.toggle_monitor({"enabled": True, "confirm": True})
+                except (OSError, ValueError) as exc:
+                    # Keep UI accessible for storage/preflight failure, without retrying.
+                    self.work.monitor = ActiveMonitor(self.config.client, self.work.folder, self.work.network_lock,
+                                                       lambda: self.work.state["busy"], emulated=self.work.owned_dummy)
+                    self.work.monitor.error = str(exc)
             return self
         except BaseException:
             await self.work.close()
@@ -410,6 +460,10 @@ class WebServer:
                         data = json.loads(await reader.readexactly(length))
                     if not isinstance(data, dict):
                         raise WebError(400, "Expected a JSON object")
+                    if uri.path == "/api/monitor":
+                        self.work.toggle_monitor(data)
+                        await self.reply(writer, 200, self.work.monitor.report() if self.work.monitor else {"monitor_running": False})
+                        return
                     if uri.path == "/api/discard" and set(data) == {"confirm"} and data["confirm"] is True:
                         self.work.discard()
                     elif uri.path in ("/api/slice", "/api/save", "/api/start", "/api/stop"):
@@ -426,10 +480,11 @@ class WebServer:
                         "sliced_upload_enabled": self.config.allow_sliced_upload, "print_limit": PRINT_LIMIT,
                         "model_limit": MODEL_LIMIT, "storage_limit": STORAGE_LIMIT,
                         "passive_status_enabled": self.config.status_capture is not None,
+                        "active_monitor_enabled": self.config.enable_monitor, "auto_monitor": self.config.auto_monitor,
                         "owned_dummy": self.owned_dummy is not None})
                 elif uri.path == "/api/printer-status":
-                    await self.reply(writer, 200, status_from_capture(self.config.status_capture,
-                                                                     self.config.client.host, self.config.client.port))
+                    await self.reply(writer, 200, self.work.monitor.report() if self.work.monitor else
+                                     status_from_capture(self.config.status_capture, self.config.client.host, self.config.client.port))
                 elif uri.path == "/api/state":
                     await self.reply(writer, 200, self.work.state)
                 elif uri.path == "/api/artifact":
@@ -501,7 +556,7 @@ async def serve_workbench(config, *, dummy=False):
             printer = await stack.enter_async_context(MockPrinter(MockConfig(host="127.0.0.1", port=0)))
             config = replace(config, client=ClientConfig(host="127.0.0.1", port=printer.address[1]),
                              enable_upload=True, allow_sliced_upload=True, enable_job_controls=True, status_capture=None)
-        server = await stack.enter_async_context(WebServer(config))
+        server = await stack.enter_async_context(WebServer(config, owned_dummy=printer))
         server.owned_dummy = printer
         server.work.owned_dummy = printer is not None
         yield server
@@ -518,6 +573,8 @@ def add_web_command(commands):
     cli.add_argument("--dummy", action="store_true", help="own a fresh ephemeral dummy and enable upload-only to it; no hardware target")
     cli.add_argument("--allow-hardware", action="store_true")
     cli.add_argument("--enable-upload", action="store_true")
+    cli.add_argument("--enable-monitor", action="store_true", help="permit active status polling; requires sole client ownership")
+    cli.add_argument("--auto-monitor", action="store_true", help="start status polling on server startup; implies --enable-monitor, opens a printer connection")
     cli.add_argument("--enable-job-controls", action="store_true", help="enable separately confirmed start/cancel (may heat/move)")
     cli.add_argument("--allow-sliced-upload", action="store_true")
     cli.add_argument("--orca")
@@ -536,7 +593,7 @@ def web_main(cli, args):
         config = WebConfig(host=args["listen_host"], port=args["listen_port"], data_dir=args["data_dir"],
                            client=ClientConfig(host=args["target_host"], port=args["target_port"], allow_hardware=args["allow_hardware"]),
                            slicing=slicing, enable_upload=args["enable_upload"], enable_job_controls=args["enable_job_controls"],
-                           allow_sliced_upload=args["allow_sliced_upload"], status_capture=args["status_capture"])
+                           allow_sliced_upload=args["allow_sliced_upload"], status_capture=args["status_capture"], enable_monitor=args["enable_monitor"] or args["auto_monitor"], auto_monitor=args["auto_monitor"])
     except ValueError as exc:
         cli.error(str(exc))
 
@@ -552,7 +609,8 @@ def web_main(cli, args):
                     print(f"Owned fresh dummy: {server.owned_dummy.address}. RAM-only virtual files; no G-code execution.", flush=True)
                     print("Save and confirmed virtual Start/Cancel target only this new dummy. No existing listener/proxy is used.", flush=True)
                 else:
-                    print("No automatic connect, start, stop or retries. Loopback may proxy hardware.", flush=True)
+                    print("Automatic status connection ENABLED; close FlashPrint/other clients." if server.config.auto_monitor else "No automatic printer connection.", flush=True)
+                    print("No automatic print start/cancel or error retries. Loopback may proxy hardware.", flush=True)
                 print("Explicit job controls: " + ("VIRTUAL ONLY" if server.owned_dummy else "ENABLED (may heat/move)" if server.config.enable_job_controls else "disabled"), flush=True)
                 print("Orca: " + ("configured; profiles/toolpaths NOT validated" if slicing else "not configured; no print-approved Finder profile is provided"), flush=True)
                 await stopped.wait()

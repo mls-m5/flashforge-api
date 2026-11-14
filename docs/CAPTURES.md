@@ -61,6 +61,22 @@ claim that a loopback endpoint is virtual). The owned dummy's files are RAM-only
 web/client captures still preserve the transferred model bytes. Neither runtime
 volumes nor these raw captures belong in Git.
 
+## Active status monitoring recordings
+
+A started monitor writes a separate mode`client` capture under the web workspace,
+metadata operation`monitor`, interface`standalone-web`, target kind and fixed
+interval. Startup monitoring is default only in the deliberate proxy/owned-dummy
+launchers, not the passive watcher/offline slicer or raw web CLI. One session
+is retained across batches, released before local printer jobs, and may be
+reopened after a successful operation. Errors/uncertain I/O stop monitoring
+rather than retrying. Raw streams remain authoritative; session-associated
+`status_snapshot` events contain bounded parsed values and `batch_completed_utc`
+(completed response-batch time, not physical-event time). Active status GETs
+read the in-memory cache and add no commands/events by themselves. Captures are
+64MiB/256 sessions per run, retain prior runs and count toward web workspace
+admission; remaining monitor budget is reserved alongside foreground jobs.
+Stop polling finalizes this capture, never cancels printing. See STATUS.md.
+
 ## Slicer diagnostics and generated files
 
 Standalone slicing uses mode `slice` with no printer sessions; combined `upload --slice` keeps mode `client`. `slicer_command`, `slicer_output`, `slicer_exit` and `slicer_result` events describe capability probing, slicing argv, stdout/stderr bytes (authoritative `data_hex`, plus readable derived text), completed exit codes and candidate output hashes. The manifest retains input hashes/basenames, limits, executable path and `slicing_confirmed` when completed. Errors in phase `slicing` stop before any printer connection. `slicer_result` is not a toolpath safety assertion or proof that output publication/upload later succeeded.
@@ -103,6 +119,7 @@ Event types currently emitted:
 - `error`: phase and error type, with a message where available;
 - `connection_close`: session close reason;
 - `capture_end`: orderly recorder finalization;
+- `status_snapshot`: optional active-monitor parsed status batch with completion timestamp (raw stream still authoritative);
 - `slicer_settings`, `slicer_command`, `slicer_output`, `slicer_exit`, `slicer_result`: optional Orca stages described above.
 
 Each event includes `v`, monotonically increasing `seq`, `session_id` (or null for run-level events), UTC timestamp and `monotonic_ns` elapsed since capture start. Sequence order is logging order, not proof of causality between simultaneous directions.

@@ -7,6 +7,8 @@ import stat
 from pathlib import Path
 import re
 
+from .status_values import decode_status_body
+
 EVENT_TAIL = 256 * 1024
 STREAM_TAIL = 64 * 1024
 STALE_SECONDS = 10
@@ -111,26 +113,7 @@ def status_from_capture(source, host, port, *, now=None):
                     continue
                 body = match[2]
                 code = match[1].decode("ascii")
-                values = None
-                if code == "M105":
-                    temperature = re.search(rb"(?:^|\r\n)T0:([0-9]{1,3}(?:\.[0-9]{1,2})?) /([0-9]{1,3}(?:\.[0-9]{1,2})?) B:([0-9]{1,3}(?:\.[0-9]{1,2})?) /([0-9]{1,3}(?:\.[0-9]{1,2})?)(?:\r\n|$)", body)
-                    if temperature:
-                        values = dict(zip(("nozzle", "nozzle_target", "bed", "bed_target"), map(float, temperature.groups())))
-                elif code == "M119":
-                    machine = re.search(rb"(?:^|\r\n)MachineStatus: ([A-Z_]{1,64})(?:\r\n|$)", body)
-                    move = re.search(rb"(?:^|\r\n)MoveMode: ([A-Z_]{1,64})(?:\r\n|$)", body)
-                    if machine and move:
-                        values = {"machine": machine[1].decode(), "move": move[1].decode()}
-                elif code == "M27":
-                    progress = re.fullmatch(rb"SD printing byte ([0-9]{1,12})/([0-9]{1,12})", body)
-                    if progress:
-                        done, total = map(int, progress.groups())
-                        values = {"done": done, "total": total, "percent": None if total == 0 else min(100, 100 * done / total),
-                                  "over_total": done > total, "completion_inferred": False}
-                    elif body == b"Not SD printing":
-                        values = {"done": None, "total": None, "percent": None, "over_total": False, "completion_inferred": False}
-                if re.search(rb"(?:^|\r\n)(?:error|failed|resend)", body, re.I):
-                    values = None
+                values = decode_status_body(code, body)
                 # A malformed newer frame invalidates that metric rather than
                 # letting an older parsed value look current.
                 samples[code] = {"values": values, "observed_utc": e["utc"], "age_seconds": round(max(0, age), 1),
