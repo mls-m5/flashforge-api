@@ -45,6 +45,9 @@ class LauncherTests(unittest.TestCase):
     def test_proxy_mode_uses_loopback_and_explicit_generated_job_gates(self):
         command = launcher.build_command(proxy_port=9002)
         self.assertIn("--enable-upload", command)
+        self.assertEqual(command[command.index("--status-capture")+1], str(self.root / "captures"))
+        explicit = launcher.build_command(proxy_port=9002, status_capture=Path("captures/exact-run"))
+        self.assertEqual(explicit[explicit.index("--status-capture")+1], str(self.root / "captures/exact-run"))
         self.assertEqual(command[command.index("--target-host")+1], "127.0.0.1")
         self.assertEqual(command[command.index("--target-port")+1], "9002")
         for flag in ("--dummy", "--allow-hardware", "--enable-job-controls", "--allow-sliced-upload"):
@@ -54,7 +57,7 @@ class LauncherTests(unittest.TestCase):
         self.assertIn("--allow-sliced-upload", command)
         for options in ({"proxy_port": 0}, {"proxy_port": 65536},
                         {"proxy_port": 9000, "dummy_upload_test": True},
-                        {"enable_job_controls": True}, {"allow_sliced_upload": True}):
+                        {"enable_job_controls": True}, {"allow_sliced_upload": True}, {"status_capture": Path("captures")}):
             with self.subTest(options=options), self.assertRaises(ValueError):
                 launcher.build_command(**options)
 

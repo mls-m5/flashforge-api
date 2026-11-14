@@ -14,11 +14,13 @@ FALLBACK_ORCA = ROOT / ".local-tools/orca-slicer"
 
 
 def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=None,
-                  enable_job_controls=False, allow_sliced_upload=False):
+                  enable_job_controls=False, allow_sliced_upload=False, status_capture=None):
     if dummy_upload_test and proxy_port is not None:
         raise ValueError("Choose owned dummy or proxy, not both")
     if proxy_port is not None and not 1 <= proxy_port <= 65535:
         raise ValueError("Proxy port must be between 1 and 65535")
+    if proxy_port is None and status_capture is not None:
+        raise ValueError("This launcher needs --proxy-port for passive proxy status")
     if proxy_port is None and (enable_job_controls or allow_sliced_upload):
         raise ValueError("Hardware-capable options require explicit --proxy-port")
     if sys.version_info < (3, 11):
@@ -41,7 +43,11 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
     command = [sys.executable, "-m", "finderlab", "web", "--listen-host", "127.0.0.1",
                "--listen-port", str(port), "--data-dir", str(ROOT / workspace), "--orca", str(selected.resolve())]
     if proxy_port is not None:
-        command += ["--target-host", "127.0.0.1", "--target-port", str(proxy_port), "--enable-upload"]
+        source = Path(status_capture).expanduser() if status_capture is not None else ROOT / "captures"
+        if not source.is_absolute():
+            source = ROOT / source
+        command += ["--target-host", "127.0.0.1", "--target-port", str(proxy_port), "--enable-upload",
+                    "--status-capture", str(source)]
         if enable_job_controls:
             command += ["--enable-job-controls"]
         if allow_sliced_upload:
@@ -63,6 +69,7 @@ def main():
     cli.add_argument("--port", type=int, default=8000, help="loopback HTTP port (default: 8000)")
     cli.add_argument("--orca", type=Path, help="trusted native Orca executable; relative paths are project-relative")
     cli.add_argument("--dummy-upload-test", action="store_true", help="own a fresh dummy and permit save-only to it (no hardware endpoint)")
+    cli.add_argument("--status-capture", type=Path, help="proxy mode: explicit existing capture run/root; default project captures")
     cli.add_argument("--proxy-port", type=int, help="enable Save to an explicitly chosen local proxy port (may reach hardware)")
     cli.add_argument("--enable-job-controls", action="store_true", help="with --proxy-port: enable separately confirmed Start/Cancel")
     cli.add_argument("--allow-sliced-upload", action="store_true", help="with --proxy-port: explicitly permit generated-output Save; NOT motion-safety approval")
@@ -71,7 +78,7 @@ def main():
     try:
         command = build_command(args.port, args.orca, dummy_upload_test=args.dummy_upload_test,
                                 proxy_port=args.proxy_port, enable_job_controls=args.enable_job_controls,
-                                allow_sliced_upload=args.allow_sliced_upload)
+                                allow_sliced_upload=args.allow_sliced_upload, status_capture=args.status_capture)
     except ValueError as exc:
         cli.error(str(exc))
     if args.proxy_port is not None:

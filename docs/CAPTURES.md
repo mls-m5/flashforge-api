@@ -30,6 +30,18 @@ The initial manifest has `complete: false`. It is finalized on orderly shutdown 
 
 Tell the assistant the printed capture path when it exists in the same accessible workspace. No remote log collection or automatic external upload is implemented. Recordings on another computer must be copied into the workspace or otherwise shared deliberately.
 
+## Passive status reader
+
+`finderlab/passive_status.py` derives M105/M119/M27 metrics from existing proxy
+server streams and corresponding event offsets/timestamps, without altering
+recordings or querying hardware. The web source is startup-configured; HTTP
+cannot supply paths. Tail reads are bounded, incomplete frames/JSON are not
+rewritten, and timestamps are observation times rather than page-fetch times.
+Freshness is per metric and session, not inferred from a growing file or
+manifest completeness. The page marks unknown/stale/partial data explicitly.
+See [STATUS.md](STATUS.md) for source matching, tail limits and privacy. Status
+view refresh produces no new printer capture/session.
+
 ## Standalone web recordings
 
 The standalone page creates a separate `web-data/captures/<run>/` per explicitly

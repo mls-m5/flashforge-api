@@ -6,6 +6,15 @@
 <p>Prepare a model, review the output, then explicitly save it to Finder. Nothing starts printing automatically.</p></header>
 <aside><strong>Know your endpoint.</strong> <span id="target">Loading configuration…</span>
 <p>Loopback may be a proxy to a real printer. This page never discovers printers or automatically starts/cancels prints. Optional Start may heat/move; Cancel is not an emergency stop. Close competing printer clients.</p></aside>
+<section><h2>Printer status <span>· passive proxy observation</span></h2>
+<p id="printer-status-message" role="status">Loading status capability…</p>
+<p>Source: <span id="printer-status-source">—</span></p>
+<p>Nozzle: <strong id="printer-temperature">—</strong> · Bed: <span id="printer-bed">—</span></p>
+<p>Machine / motion: <strong id="printer-machine">—</strong></p>
+<label>Reported file progress <progress id="printer-progress" max="100" value="0"></progress></label>
+<p id="printer-progress-text">No observation yet.</p><p id="printer-observed">—</p>
+<button id="printer-refresh">Refresh observed status</button>
+<p class="muted">This reads existing proxy logs only. FlashPrint must already be polling through that proxy. No new printer connection or command is sent. A percentage is not remaining time, print-quality evidence or proof of completion.</p></section>
 <section><h2>1 <span>Choose a file</span></h2>
 <div id="drop" tabindex="0"><strong>Drop an STL or print file here</strong><p>STL up to 64 MiB · GX / G-code / G up to 8 MiB</p>
 <label for="file">or choose a file</label><input id="file" type="file" accept=".stl,.gx,.gcode,.g"></div>
@@ -35,7 +44,7 @@
 <section><h2>4 <span>Explicit job controls</span></h2>
 <p id="job-gating"></p><button id="start" disabled>Start saved file · may heat/move</button>
 <button id="stop" disabled>Request cancel · not emergency stop</button><p id="job-result"></p>
-<p>No live printer monitoring is implemented. Close other clients and supervise physically. Discard/restart clears this page's saved-file reference, not the printer's job.</p></section>
+<p>The status panel reads existing proxy observations only; it does not actively query or guarantee the printer's physical state. Close competing control clients and supervise physically. Discard/restart clears this page's saved-file reference, not the printer's job.</p></section>
 <section><h2>Result and private diagnostics</h2><p>Phase: <strong id="phase">empty</strong></p>
 <p id="error" role="alert"></p><p id="warning"></p><button id="refresh">Refresh result</button>
 <dl><dt>Source/artifact SHA-256 (not remote read-back)</dt><dd id="hash">—</dd><dt>Private capture directory</dt><dd id="capture">—</dd></dl>

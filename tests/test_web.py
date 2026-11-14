@@ -111,9 +111,29 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
         finally:
             capture.close()
 
+    async def test_passive_status_endpoint_only_reads_configured_recording(self):
+        from finderlab.capture import Capture
+        from test_passive_status import TEMP, STATUS, PROGRESS
+        folder = self.root / "status-captures"
+        capture = Capture(folder, "proxy", metadata={"config": {"host": "127.0.0.1", "port": self.config.client.port,
+                          "target_host": "192.0.2.10", "target_port": 8899}})
+        capture.session().data("server_to_client", TEMP + STATUS + PROGRESS)
+        capture.close()
+        self.server.config = replace(self.config, status_capture=folder)
+        with patch("finderlab.web.FinderClient") as client:
+            code, raw = await self.request("GET", "/api/printer-status")
+            self.assertEqual(code, 200)
+            observed = json.loads(raw)
+            self.assertTrue(observed["passive"])
+            self.assertEqual(observed["samples"]["M105"]["values"]["nozzle"], 220)
+            self.assertEqual(observed["samples"]["M27"]["values"]["percent"], 100)
+            self.assertEqual((await self.request("GET", "/api/printer-status?target=other"))[0], 400)
+            client.assert_not_called()
+        self.assertEqual(self.mock.files, {})
+
     async def test_static_config_and_state_do_not_contact_target(self):
         with patch("finderlab.web.FinderClient") as client:
-            for path in ("/", "/app.js", "/style.css", "/api/config", "/api/state"):
+            for path in ("/", "/app.js", "/style.css", "/api/config", "/api/state", "/api/printer-status"):
                 code, content = await self.request("GET", path)
                 self.assertEqual(code, 200)
                 self.assertTrue(content)
@@ -316,7 +336,7 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
     async def test_owned_dummy_overrides_target_and_supports_confirmed_virtual_job(self):
         cfg = WebConfig(port=0, data_dir=self.root / "owned-dummy",
                         client=ClientConfig(host="192.0.2.1", allow_hardware=True),
-                        enable_job_controls=True)
+                        enable_job_controls=True, status_capture=self.root / "must-not-observe-hardware")
         previous = self.server
         async with serve_workbench(cfg, dummy=True) as owned:
             self.server = owned
@@ -325,6 +345,7 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
                 code, content = await self.request("GET", "/api/config")
                 capabilities = json.loads(content)
                 self.assertTrue(capabilities["owned_dummy"])
+                self.assertFalse(capabilities["passive_status_enabled"])
                 self.assertTrue(capabilities["sliced_upload_enabled"])
                 self.assertTrue(capabilities["job_controls_enabled"])
                 self.assertEqual(owned.config.client.host, "127.0.0.1")

@@ -24,6 +24,7 @@ from .capture import Capture, CaptureError
 from .client import ClientConfig, FinderClient, remote_path
 from .slicer import SliceConfig, slice_model
 from .slice_settings import normalize_settings
+from .passive_status import status_from_capture
 
 STATIC = Path(__file__).with_name("webstatic")
 PRINT_LIMIT = 8 * 1024 * 1024
@@ -77,6 +78,7 @@ class WebConfig:
     enable_job_controls: bool = False
     slicing: SliceConfig | None = None
     allow_sliced_upload: bool = False
+    status_capture: Path | None = None
 
     def __post_init__(self):
         if os.name != "posix":
@@ -423,7 +425,11 @@ class WebServer:
                         "upload_enabled": self.config.enable_upload, "job_controls_enabled": self.config.enable_job_controls, "slicing_enabled": self.config.slicing is not None,
                         "sliced_upload_enabled": self.config.allow_sliced_upload, "print_limit": PRINT_LIMIT,
                         "model_limit": MODEL_LIMIT, "storage_limit": STORAGE_LIMIT,
+                        "passive_status_enabled": self.config.status_capture is not None,
                         "owned_dummy": self.owned_dummy is not None})
+                elif uri.path == "/api/printer-status":
+                    await self.reply(writer, 200, status_from_capture(self.config.status_capture,
+                                                                     self.config.client.host, self.config.client.port))
                 elif uri.path == "/api/state":
                     await self.reply(writer, 200, self.work.state)
                 elif uri.path == "/api/artifact":
@@ -494,7 +500,7 @@ async def serve_workbench(config, *, dummy=False):
             from .simulator import MockConfig, MockPrinter
             printer = await stack.enter_async_context(MockPrinter(MockConfig(host="127.0.0.1", port=0)))
             config = replace(config, client=ClientConfig(host="127.0.0.1", port=printer.address[1]),
-                             enable_upload=True, allow_sliced_upload=True, enable_job_controls=True)
+                             enable_upload=True, allow_sliced_upload=True, enable_job_controls=True, status_capture=None)
         server = await stack.enter_async_context(WebServer(config))
         server.owned_dummy = printer
         server.work.owned_dummy = printer is not None
@@ -506,6 +512,7 @@ def add_web_command(commands):
     cli.add_argument("--listen-host", default="127.0.0.1")
     cli.add_argument("--listen-port", type=int, default=8000)
     cli.add_argument("--data-dir", type=Path, default=Path("web-data"))
+    cli.add_argument("--status-capture", type=Path, help="read-only existing proxy run/root for passive status; never polls a printer")
     cli.add_argument("--target-host", default="127.0.0.1")
     cli.add_argument("--target-port", type=int, default=8899)
     cli.add_argument("--dummy", action="store_true", help="own a fresh ephemeral dummy and enable upload-only to it; no hardware target")
@@ -529,7 +536,7 @@ def web_main(cli, args):
         config = WebConfig(host=args["listen_host"], port=args["listen_port"], data_dir=args["data_dir"],
                            client=ClientConfig(host=args["target_host"], port=args["target_port"], allow_hardware=args["allow_hardware"]),
                            slicing=slicing, enable_upload=args["enable_upload"], enable_job_controls=args["enable_job_controls"],
-                           allow_sliced_upload=args["allow_sliced_upload"])
+                           allow_sliced_upload=args["allow_sliced_upload"], status_capture=args["status_capture"])
     except ValueError as exc:
         cli.error(str(exc))
 

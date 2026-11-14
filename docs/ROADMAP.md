@@ -219,6 +219,19 @@ live browser file/drop/error flow, actual Podman image
 build/runtime, and separately approved hardware upload if desired. No model/
 toolpath preview or GX generator is provided. See [WEB.md](WEB.md).
 
+## Passive web status foundation implemented
+
+User requested observation during an active print. The new panel reads existing
+matching proxy capture tails only (M105/M119/M27); it creates no extra printer
+session or polling/claim traffic. Individual timestamps, stale/unknown values,
+source/session/upstream and clamped-display/raw-overrun byte progress are
+explicit. `tools/watch_printer.sh` starts a separate read-only observer on
+localhost8001; the proxy web launcher adds the panel on its next restart. Tests
+use synthetic captures/HTTP/DOM mocks, and a bounded read of the user's live
+capture was checked independently. Actual browser acceptance remains pending.
+This is not active printer polling, ETA or physical completion proof. See
+[STATUS.md](STATUS.md). Placement-aware priming/skirt is the next requested task.
+
 ## Next requested: placement-aware priming / skirt (deferred until status view is done)
 
 The user reports the current fixed purge line lies inside the footprint of some

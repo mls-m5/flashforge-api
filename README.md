@@ -88,6 +88,20 @@ python3 -m finderlab slice upload/model.stl \
 
 For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native Orca 2.3.0 help/capability probing succeeds after approved runtime installation. A copied/edited local Finder draft now passes structural checks but native slicing is blocked by rejected Sailfish flavor; see [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md). A separate user-approved [draft 02](docs/ORCA_FINDER_DRAFT_02.md) now slices a generated cube and the supplied holder natively with 2.3.0, including an explicit slow Z layer-change step after detecting mixed-XYZ overspeed. These are offline review artifacts, **not approved for printing**; original profiles remain unchanged. Physical/motion/profile validation is still outstanding; automated orchestration tests continue using a fake CLI. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation, the probe reference and the newer 2.5.0 build's ABI blocker. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The standalone page exposes the same optional adapter with separate slice/review/save steps; GX/thumbnail creation and a validated Finder profile are not implemented.
 
+## Observe printer status without another printer connection
+
+With FlashPrint already polling through the recording proxy at localhost9000:
+
+```sh
+./tools/watch_printer.sh
+```
+
+Open **http://127.0.0.1:8001** for observed temperatures, machine state and file
+progress. This page only reads existing recordings; no printer requests or
+job actions are enabled. Samples show age/staleness; file progress is not time
+remaining or proof of completion. The usual proxy page also includes the panel
+on its next restart. See [docs/STATUS.md](docs/STATUS.md).
+
 ## Offline G-code diagnostics (not safety approval)
 
 ```sh
@@ -158,6 +172,7 @@ Connect FlashPrint manually to **127.0.0.1** on the proxy computer. Begin with c
 python3 -m unittest discover -s tests -v
 # Optional Node.js 18+ UI-logic checks (no npm dependencies):
 node tests/test_web_ui.js
+node tests/test_passive_status_ui.js
 ```
 
 Tests use ephemeral loopback ports and never connect to a physical printer. Generated test files use the ignored project-local `.tmp/` directory and are cleaned up; do not use the system temporary directory for project work. No third-party dependencies are required. One integration test retains the uploader's existing three-second pause.
@@ -178,6 +193,7 @@ A real-printer connection/status capture now supplies independent regression fix
 New documentation is English; older Swedish sections will be translated incrementally.
 
 - [DESIGN.md](DESIGN.md): architecture, realism goals and safety boundaries.
+- [docs/STATUS.md](docs/STATUS.md): passive printer-status view from existing proxy logs, source identity and stale-data limits.
 - [docs/GX_PREVIEW.md](docs/GX_PREVIEW.md): observed GX/BMP thumbnail encoding and read-only extraction tool (not a GX generator).
 - [docs/WEB.md](docs/WEB.md): standalone page, Podman, optional Orca configuration and current profile blocker.
 - [docs/OCTOPRINT.md](docs/OCTOPRINT.md): paused plugin experiment and preserved container test.

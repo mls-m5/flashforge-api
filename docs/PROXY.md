@@ -51,6 +51,17 @@ python3 -m finderlab proxy --target-host 127.0.0.1 --target-port 9000
 
 A client connecting to local port 8899 now reaches the mock through the proxy. This exercises transport/recording only, not physical-printer compatibility.
 
+## Passive web status while FlashPrint is polling
+
+`./tools/watch_printer.sh` serves a separate read-only page on localhost8001,
+deriving status from existing recordings for the loopback proxy on port9000.
+It does not connect to the printer, claim control or inject polling commands.
+The ordinary proxy web launcher includes the same panel on its next restart.
+Source/session/upstream and individual observation ages are visible; stale
+captures are not labelled live. See [STATUS.md](STATUS.md). Without existing
+polling traffic there are no new observations; a transparent proxy does not
+make the printer push status spontaneously.
+
 ## Logs and historical sessions
 
 Each invocation creates a new run directory under `captures/`. It contains `traffic.log`, `events.jsonl`, a manifest and exact binary streams for each session. See [CAPTURES.md](CAPTURES.md) for reading, limits and privacy. `--verbose` does not change capture fidelity; recordings are written regardless of console verbosity.

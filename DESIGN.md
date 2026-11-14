@@ -117,6 +117,19 @@ Implemented client contract: `.gx`/`.gcode`/`.g` byte-preserving transfer (no co
 
 `finderlab/web.py` and `finderlab/webstatic/` implement a dependency-free loopback page. One bounded raw file receive stores an STL/print file; a separate confirmed Slice uses server-owned Orca/profiles; a third confirmed Save uses the existing client without start/stop. Generated G-code is downloadable for review and cannot be sent unless the operator explicitly enables generated-output saving. Separately opt-in job controls (`--enable-job-controls`) expose confirmed Start of the exact saved filename (per-save identity, one attempt, fresh READY check) and confirmed Cancel (not emergency stop). They share the operation lock, never run automatically and preserve save confirmation separately from uncertain job results. No HTTP request can select targets, profiles, host paths or arbitrary native flags. Startup and GET cached status never connect to a printer. Host/Origin/token checks, bounded HTTP parsing/timeouts, single-slot/process locks, capture quotas and conservative persistent storage admission bound this experimental local service. Native process limits are not a sandbox. No validated Finder Orca profile ships: the original Sailfish rejection remains; a separate Marlin-emission draft 02 now generates offline review artifacts with unresolved physical blockers. See [docs/WEB.md](docs/WEB.md). The default Compose now starts this page; Podman CLI is also documented.
 
+### Passive status panel
+
+`passive_status.py` reads bounded tails of existing proxy event/raw-server
+streams, matches complete M105/M119/M27 replies and derives per-sample
+observation ages. It never opens a printer socket. The startup-configured
+capture source is matched to the web target's proxy listener host/port; source,
+session and captured upstream are shown, not assumed immutable identity. A
+separate `watch_printer.sh` serves read-only observation on localhost8001 so the
+operator need not restart a running control connection. Status changes do not
+unlock or trigger actions. Missing/stale/malformed metrics stay unknown/stale;
+byte counters are not job-completion or motion proof. No source path or command
+is accepted over HTTP. See STATUS.md for tail/source/session limitations.
+
 ### Per-slice quality settings
 
 `slice_settings.py` validates only layer height and brim mode/width. The web

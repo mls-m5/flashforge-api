@@ -3,6 +3,40 @@
     const el = id => document.getElementById(id);
     let config, state = {busy: false, phase: "empty"}, pending = false, uncertain = false;
     let timer = null, polling = false;
+    let printerTimer = null, printerPolling = false;
+    function renderPrinter(report) {
+        const samples = report.samples || {};
+        const temperature = samples.M105, machine = samples.M119, progress = samples.M27;
+        const temp = temperature && temperature.values;
+        const status = machine && machine.values;
+        const file = progress && progress.values;
+        text("printer-status-message", (report.stale ? "STALE / incomplete observation. " : "Recent proxy observation. ") + report.message);
+        text("printer-status-source", report.source ? `${report.source} / ${report.session || "no session"} · captured upstream ${report.upstream} · ${report.capture_finalized ? "recording finalized" : "recording not finalized (may be running or interrupted)"}` : "No matching proxy recording");
+        const suffix = sample => sample && sample.stale ? " (stale)" : "";
+        text("printer-temperature", temp ? `${temp.nozzle} / ${temp.nozzle_target} °C${suffix(temperature)}` : "unknown");
+        text("printer-bed", temp ? `${temp.bed} / ${temp.bed_target} °C${suffix(temperature)}` : "unknown");
+        text("printer-machine", status ? `${status.machine} / ${status.move}${suffix(machine)}` : "unknown");
+        el("printer-progress").value = file && file.percent !== null ? file.percent : 0;
+        text("printer-progress-text", file && file.total !== null ? `${file.done} / ${file.total} bytes · ${file.percent === null ? "unknown" : file.percent.toFixed(1) + "%"}${suffix(progress)}` +
+            (file.over_total ? " · printer reports more than total; display capped at 100%." : "") : "No known file-progress observation.");
+        text("printer-observed", Object.entries(samples).map(([code, sample]) => `${code}: ${sample.observed_utc} (${sample.age_seconds}s old)`).join(" · ") || "No timestamped sample yet.");
+    }
+    async function refreshPrinter() {
+        clearTimeout(printerTimer); printerTimer = null;
+        if (!config || !config.passive_status_enabled || printerPolling) return;
+        printerPolling = true;
+        el("printer-refresh").disabled = true;
+        try {
+            renderPrinter(await request("/api/printer-status"));
+        } catch (error) {
+            // Do not keep old values looking current after an HTTP/read failure.
+            renderPrinter({stale: true, samples: {}, message: "Cannot read observations: " + error.message});
+        } finally {
+            printerPolling = false;
+            el("printer-refresh").disabled = false;
+            printerTimer = setTimeout(refreshPrinter, 2000);
+        }
+    }
     function text(id, value) { el(id).textContent = value || ""; }
     function render() {
         const busy = pending || polling || state.busy || uncertain;
@@ -129,6 +163,7 @@
         receive(event.dataTransfer.files[0]);
     });
     el("refresh").addEventListener("click", refresh);
+    el("printer-refresh").addEventListener("click", refreshPrinter);
     el("discard").addEventListener("click", () => {
         if (confirm("Remove current input/generated files? Private captures remain. This does not undo a printer save or cancel a print.")) {
             action("discard", {confirm: true}); el("file").value = "";
@@ -177,6 +212,11 @@
             `${data.target} · printer uploads ${data.upload_enabled ? "ENABLED" : "disabled"}`);
         text("orca", data.slicing_enabled ? "Trusted server-side Orca/profiles configured. Slice offline, then download and review before a separate Save." :
             "Orca not configured. Supply --orca and trusted self-contained --machine / --process / --filament JSON on the server. Existing FlashPrint GX files work independently.");
+        if (data.passive_status_enabled) refreshPrinter();
+        else {
+            text("printer-status-message", "Passive status not configured. Use the proxy web launcher or tools/watch_printer.sh. No printer polling is performed.");
+            el("printer-refresh").disabled = true;
+        }
         refresh();
     }).catch(error => text("error", error.message + " Reload the page using the exact server URL."));
     render();
