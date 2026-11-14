@@ -90,6 +90,28 @@ class LauncherTests(unittest.TestCase):
         execute.assert_not_called()
         self.assertIn("CONNECTS ON STARTUP", output.getvalue())
 
+    def test_lan_sharing_requires_specific_private_interface_and_keeps_action_gates(self):
+        command = launcher.build_command(lan_host="192.168.1.20", lan_network="192.168.1.0/24")
+        self.assertIn("--lan", command)
+        self.assertEqual(command[command.index("--listen-host")+1], "192.168.1.20")
+        self.assertEqual(command[command.index("--lan-network")+1], "192.168.1.0/24")
+        for flag in ("--enable-upload", "--enable-job-controls", "--allow-sliced-upload", "--auto-monitor"):
+            self.assertNotIn(flag, command, "Sharing alone must not enable printer actions")
+        full = launcher.build_command(proxy_port=9000, lan_host="192.168.1.20", enable_job_controls=True, allow_sliced_upload=True)
+        for flag in ("--enable-upload", "--enable-job-controls", "--allow-sliced-upload", "--auto-monitor", "--lan"):
+            self.assertIn(flag, full)
+        for options in ({"lan_network": "192.168.1.0/24"}, {"lan_host": "0.0.0.0"}, {"lan_host": "127.0.0.1"},
+                        {"lan_host": "203.0.113.2"}, {"lan_host": "192.168.2.20", "lan_network": "192.168.1.0/24"},
+                        {"lan_host": "192.168.1.20", "lan_network": "0.0.0.0/0"}):
+            with self.subTest(options=options), self.assertRaises(ValueError):
+                launcher.build_command(**options)
+        with patch("sys.argv", ["start_offline_web.py", "--lan-host", "192.168.1.20", "--check"]), \
+             patch.object(launcher.os, "execv") as execute, redirect_stdout(io.StringIO()) as output:
+            launcher.main()
+        execute.assert_not_called()
+        self.assertIn("HTTP is unencrypted", output.getvalue())
+        self.assertIn("192.168.1.20", output.getvalue())
+
     def test_check_does_not_launch_or_change_directory(self):
         with patch("sys.argv", ["start_offline_web.py", "--check"]), \
              patch.object(launcher.os, "execv") as execute, patch.object(launcher.os, "chdir") as chdir, \

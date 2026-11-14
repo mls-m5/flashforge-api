@@ -117,6 +117,19 @@ Implemented client contract: `.gx`/`.gcode`/`.g` byte-preserving transfer (no co
 
 `finderlab/web.py` and `finderlab/webstatic/` implement a dependency-free loopback page. One bounded raw file receive stores an STL/print file; a separate confirmed Slice uses server-owned Orca/profiles; a third confirmed Save uses the existing client without start/stop. Generated G-code is downloadable for review and cannot be sent unless the operator explicitly enables generated-output saving. Separately opt-in job controls (`--enable-job-controls`) expose confirmed Start of the exact saved filename (per-save identity, one attempt, fresh READY check) and confirmed Cancel (not emergency stop). They share the operation lock, never run automatically and preserve save confirmation separately from uncertain job results. No HTTP request can select targets, profiles, host paths or arbitrary native flags. GET cached status never connects to a printer. Low-level startup stays disconnected unless configured with `--auto-monitor`; the proxy/owned-dummy launcher now selects that status-only startup mode by user request. Offline slicing and the passive watcher stay disconnected. Host/Origin/token checks, bounded HTTP parsing/timeouts, single-slot/process locks, capture quotas and conservative persistent storage admission bound this experimental local service. Native process limits are not a sandbox. No validated Finder Orca profile ships: the original Sailfish rejection remains; a separate Marlin-emission draft 02 now generates offline review artifacts with unresolved physical blockers. See [docs/WEB.md](docs/WEB.md). The default Compose now starts this page; Podman CLI is also documented.
 
+### Optional private-LAN access
+
+`web_access.py` validates explicit specific-interface LAN opt-in, restricts
+socket peers to192.168/16 or a narrower configured subnet plus local IPv4, and
+requires a random per-run Basic password for all routes/assets. Forwarded
+headers are never identity. Default startup remains loopback; wildcard/public
+binds are rejected. Host/Origin/token/capability/file/job guards remain unchanged.
+The full-workflow LAN wrapper explicitly selects existing Save/Start/generated
+output flags; sharing by itself does not grant capabilities. Users share one
+workspace/login, not per-user jobs/roles. Basic HTTP is unencrypted and suitable
+only for a deliberately trusted home network, never a public tunnel/router
+forward/reverse proxy. No TLS or production-security claim. See LAN.md.
+
 ### Passive status panel
 
 `passive_status.py` reads bounded tails of existing proxy event/raw-server
@@ -193,7 +206,11 @@ Webb-MVP:
 
 Validera filstorlek och filnamn, använd servergenererade temporärnamn och skydda mot path traversal. Tillåtna ändelser fastställs efter hårdvaruverifiering; ändelsekontroll bevisar inte säkert innehåll. Begränsa uppladdningsstorlek, lagring, kö och samtidighet. Städa temporärfiler även vid fel.
 
-Webbservern binder loopback som standard. LAN-exponering kräver separat beslut om autentisering, CSRF/Origin/Host-kontroller, brandvägg och åtkomst till uppladdade filer. Serverns mål är konfigurerat för att undvika att tjänsten blir en generell nätverksproxy (SSRF). Ingen internetexponering i MVP.
+The web server binds loopback by default. Explicit LAN sharing now uses the
+private-IPv4/password policy above, preserving CSRF/Origin/Host guards. Firewall,
+network trust and shared access to files remain operator decisions. The target
+is server-configured, never a browser-selected general network proxy (SSRF).
+Internet exposure is not supported.
 
 ### Offline G-code numerical diagnostics
 

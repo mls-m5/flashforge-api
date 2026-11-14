@@ -4,6 +4,18 @@ OctoPrint development is **paused**. The main page is now independent of
 OctoPrint: `python3 -m finderlab web`. Python 3.11+ and the standard library are
 sufficient for the page and printer transfer. No pip installation is needed.
 
+## Optional trusted-LAN sharing
+
+The default remains loopback. To share the full implemented workflow, use
+`./tools/start_lan_web.sh COMPUTER_192.168_IP` after verifying the existing proxy
+and closing FlashPrint. It explicitly enables Slice / confirmed Save / Start /
+Cancel and status, with a per-run random password for every page/API route and
+a private-IPv4 peer filter. All logged-in users share one file slot/printer;
+physical manual controls stay locked. **HTTP has no encryption**: trusted home
+network only, never router port forwarding/public tunnels. See [LAN.md](LAN.md)
+for the exact login, narrower subnet, firewall and acceptance limits. Nothing
+is opened automatically by installing this change; the operator starts it.
+
 ## Printer status
 
 **Changed default:** `./tools/start_proxy_web.sh` starts active status polling
@@ -131,8 +143,9 @@ Open **http://127.0.0.1:8000**, using the exact URL printed by the server.
 Use `--listen-port 8001` if occupied. No printer connection or status polling
 occurs on startup or page refresh in this low-level invocation without
 `--auto-monitor`. Uploads are disabled without `--enable-upload`.
-The HTTP listener is restricted to loopback IPs; LAN binding is deliberately
-rejected in this experimental version.
+Without explicit `--lan`, the HTTP listener is restricted to loopback IPs.
+LAN mode requires a specific192.168 interface, a private subnet peer filter and
+the mandatory per-run password described above; wildcard binds remain rejected.
 
 1. Drop one `.gx`, `.gcode`, `.g` or `.stl` file. This only stores it locally.
 2. A print file can be downloaded/reviewed immediately. An STL requires the
@@ -367,10 +380,13 @@ part of the standalone workflow.
   same Origin plus a per-run token fetched by the page. No CORS permission is
   emitted. CSP restricts scripts/styles/connections to this origin and rejects
   framing. No browser-supplied target paths, addresses or native options.
-- This is a small HTTP/1.1 loopback workbench, **not a production web server**.
-  It has no accounts/TLS; other local processes and browser extensions remain
-  trusted. Never forward its port, put it on a public reverse proxy, or expose
-  it to LAN/internet. No security-sandbox claim is made for native STL parsing.
+- This is a small HTTP/1.1 workbench, **not a production web server**.
+  Opt-in LAN mode has one shared Basic login but no TLS or individual accounts.
+  LAN credentials protect every asset/API response; fixed Host and Origin/token
+  checks remain. All logged-in users/local processes/extensions/native profiles
+  are trusted. Never forward its port or use a public tunnel/reverse proxy;
+  private-IP filtering does not establish trust. See LAN.md for cleartext and
+  shared-slot limitations. No security-sandbox claim is made for native STL parsing.
 
 ## Quality controls: brim and layer height
 

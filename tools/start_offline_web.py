@@ -2,6 +2,7 @@
 """Start the slicing workbench: offline, owned dummy, or explicitly selected proxy."""
 
 import argparse
+import ipaddress
 import os
 from pathlib import Path
 import sys
@@ -15,7 +16,15 @@ FALLBACK_ORCA = ROOT / ".local-tools/orca-slicer"
 
 
 def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=None,
-                  enable_job_controls=False, allow_sliced_upload=False, status_capture=None, native_skirt_test=False, monitor=None):
+                  enable_job_controls=False, allow_sliced_upload=False, status_capture=None, native_skirt_test=False, monitor=None, lan_host=None, lan_network=None):
+    if lan_network is not None and lan_host is None:
+        raise ValueError("--lan-network needs --lan-host")
+    if lan_host is not None:
+        address = ipaddress.ip_address(lan_host)
+        subnet = ipaddress.ip_network(lan_network or "192.168.0.0/16", strict=True)
+        if (address.version != 4 or subnet.version != 4 or
+                not subnet.subnet_of(ipaddress.ip_network("192.168.0.0/16")) or address not in subnet):
+            raise ValueError("LAN mode needs this COMPUTER's specific 192.168 address in the allowed private subnet")
     if native_skirt_test and proxy_port is not None:
         raise ValueError("Draft03 native skirt is offline/owned-dummy only in this launcher; changed startup needs separate review")
     if monitor and proxy_port is None and not dummy_upload_test:
@@ -48,8 +57,10 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
         raise ValueError("Local Orca launcher missing/not executable: " + str(selected))
     workspace = ("web-data/skirt-dummy-test" if dummy_upload_test else "web-data/skirt-offline-test") if native_skirt_test else (
         "web-data/proxy-test" if proxy_port is not None else "web-data/dummy-upload-test" if dummy_upload_test else "web-data/offline-test")
-    command = [sys.executable, "-m", "finderlab", "web", "--listen-host", "127.0.0.1",
+    command = [sys.executable, "-m", "finderlab", "web", "--listen-host", str(address) if lan_host is not None else "127.0.0.1",
                "--listen-port", str(port), "--data-dir", str(ROOT / workspace), "--orca", str(selected.resolve())]
+    if lan_host is not None:
+        command += ["--lan", "--lan-network", str(subnet)]
     if proxy_port is not None:
         source = Path(status_capture).expanduser() if status_capture is not None else ROOT / "captures"
         if not source.is_absolute():
@@ -78,7 +89,9 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
 
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
-    cli.add_argument("--port", type=int, default=8000, help="loopback HTTP port (default: 8000)")
+    cli.add_argument("--port", type=int, default=8000, help="HTTP port (default: 8000)")
+    cli.add_argument("--lan-host", help="explicit COMPUTER interface 192.168 IP; password-protected trusted-LAN sharing, no TLS")
+    cli.add_argument("--lan-network", help="optional narrower allowed CIDR within 192.168/16")
     cli.add_argument("--orca", type=Path, help="trusted native Orca executable; relative paths are project-relative")
     cli.add_argument("--native-skirt-test", action="store_true", help="use independent offline draft03 native-skirt profiles; no proxy mode")
     cli.add_argument("--dummy-upload-test", action="store_true", help="own a fresh dummy and permit save-only to it (no hardware endpoint)")
@@ -94,7 +107,8 @@ def main():
         command = build_command(args.port, args.orca, dummy_upload_test=args.dummy_upload_test,
                                 proxy_port=args.proxy_port, enable_job_controls=args.enable_job_controls,
                                 allow_sliced_upload=args.allow_sliced_upload, status_capture=args.status_capture,
-                                native_skirt_test=args.native_skirt_test, monitor=args.monitor)
+                                native_skirt_test=args.native_skirt_test, monitor=args.monitor,
+                                lan_host=args.lan_host, lan_network=args.lan_network)
     except ValueError as exc:
         cli.error(str(exc))
     if args.proxy_port is not None:
@@ -109,7 +123,9 @@ def main():
     print(("Draft 03 native skirt" if args.native_skirt_test else "Draft 02") + " is experimental; changed paths are NOT a print approval.", flush=True)
     print("Orca: " + command[command.index("--orca") + 1], flush=True)
     print("Profile/output review used 2.3.0; another build requires new offline output review.", flush=True)
-    print("Open http://127.0.0.1:" + str(args.port), flush=True)
+    print("Open http://" + (args.lan_host or "127.0.0.1") + ":" + str(args.port), flush=True)
+    if args.lan_host:
+        print("LAN SHARING: per-run password printed by server on launch. HTTP is unencrypted; trusted network only. All users share one printer/file slot.", flush=True)
     print("Test cube: " + str(PROFILE / "review/cube-20x20x5.stl"), flush=True)
     if args.check:
         print("Local file checks passed; native runtime libraries are not probed.", flush=True)

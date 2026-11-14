@@ -267,6 +267,19 @@ feed/step choices. No automatic heat/move/extrude, no generic command endpoint.
 Preserve physical emergency controls and no-retry/unknown-outcome behavior.
 Light command observations do not validate every color/on-off policy either.
 
+## Explicit trusted-LAN sharing implemented
+
+The user requested another trusted person to have upload/Slice/Start/status.
+`tools/start_lan_web.sh COMPUTER_192.168_IP` now selects the full existing
+workflow with mandatory per-run shared Basic login, specific private-interface
+bind and socket-peer CIDR filter. Default modes remain loopback. The fixed
+Host/Origin/token guards, single slot, exact saved identity and separate Start
+confirmation remain; no automatic print-start/cancel or physical manual control.
+Password/permission and orchestration tests use ephemeral loopback dummies and
+fake Orca only, not LAN or physical printers. Cleartext HTTP, network trust,
+shared models/current job and browser/firewall/second-device acceptance remain
+explicit limits; no Internet forwarding/tunnel/reverse proxy. See LAN.md.
+
 ## Future requested default: configured-printer workflow
 
 The user would like normal startup eventually to make upload and the verified

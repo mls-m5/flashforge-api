@@ -57,6 +57,18 @@ Verify the proxy target and close FlashPrint/other clients first. Use
 cancel a print; the offline launcher and passive watcher remain disconnected. The proxy is not a safety
 filter and the new candidate's physical startup remains unverified.
 
+## Share the full page on a trusted home network
+
+`./tools/start_lan_web.sh COMPUTER_192.168_IP` deliberately shares Slice, Save,
+confirmed Start/Cancel and status using the existing proxy/profile setup. Use
+**this computer's** interface IP, not the printer's. The browser asks for user
+`finder` and the random password printed by the server (new each restart).
+Only192.168 peers plus local IPv4 are allowed; an optional narrower CIDR can
+be selected. All users share one printer/file slot. **HTTP is unencrypted**;
+trusted network only, no router forwarding/public tunnels. Default/offline
+launchers stay loopback, and physical manual controls remain locked. See
+[docs/LAN.md](docs/LAN.md) before enabling. No agent LAN/hardware trial was run.
+
 ## Upload a print file with the CLI (dummy first)
 
 Terminal 1:
@@ -211,6 +223,7 @@ A real-printer connection/status capture now supplies independent regression fix
 New documentation is English; older Swedish sections will be translated incrementally.
 
 - [DESIGN.md](DESIGN.md): architecture, realism goals and safety boundaries.
+- [docs/LAN.md](docs/LAN.md): explicit password-protected private-LAN sharing, shared workspace and cleartext HTTP limits.
 - [docs/MANUAL_CONTROLS.md](docs/MANUAL_CONTROLS.md): virtual-only light/XYZ/extruder panel, safeguards and physical enablement blockers.
 - [docs/STATUS.md](docs/STATUS.md): active status polling/default proxy startup, passive observer, source identity and stale-data limits.
 - [docs/GX_PREVIEW.md](docs/GX_PREVIEW.md): observed GX/BMP thumbnail encoding and read-only extraction tool (not a GX generator).

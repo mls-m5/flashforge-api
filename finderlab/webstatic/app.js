@@ -234,6 +234,7 @@
     });
     request("/api/config").then(data => {
         config = data;
+        text("access-policy", data.lan_mode ? "LAN sharing: everyone with the password shares this printer and current file. HTTP is not encrypted. Review the exact saved filename before Start; coordinate with the other operator." : "Local-only web access.");
         text("target", data.owned_dummy ? `${data.target} · FRESH OWNED DUMMY · virtual Save/Start/Cancel, no G-code execution` :
             `${data.target} · printer uploads ${data.upload_enabled ? "ENABLED" : "disabled"}`);
         text("orca", data.slicing_enabled ? "Trusted server-side Orca/profiles configured. Slice offline, then download and review before a separate Save." :

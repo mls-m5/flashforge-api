@@ -159,6 +159,18 @@ On quota exhaustion or recording I/O failure, the affected connection stops rath
 
 Writes are flushed to local files without waiting for shutdown, but not `fsync`ed per event: this is not a power-loss-safe audit log. Disk writes are synchronous and can add latency; the proxy promises byte preservation, not identical packet segmentation or timing. A crash can leave incomplete final JSON/raw data; never treat such a run as complete.
 
+## LAN credentials versus printer captures
+
+Opt-in LAN sharing (LAN.md) uses a new random Basic password printed only to
+the foreground server console. It is not a CLI argument, API config value,
+profile, printer command or printer/slicer capture field. HTTP Authorization
+headers are not recorded. The console itself is sensitive: do not share a
+terminal transcript/screenshot containing the password. Basic over HTTP is
+unencrypted and network observers can still obtain credentials/model bytes;
+these capture-format choices do not provide transport encryption. All logged-in
+users can access the shared current artifact; private captures still have no
+HTTP download route.
+
 ## Privacy and sharing
 
 Recordings can contain full uploaded models, filenames, serial numbers, IP/MAC addresses and every command sent. A mock's virtual storage is RAM-only, but **its capture files persist payload bytes on disk**. The run directory is created with private permissions where supported; also secure its parent directory and backups.

@@ -1,4 +1,4 @@
-"""Loopback-only, single-slot web workbench with explicitly configured monitoring.
+"""Local single-slot workbench with opt-in authenticated private-LAN sharing.
 
 Deliberately narrow HTTP/1.1 subset (Content-Length, close after one request).
 Not a general purpose web server or an Internet-facing service.
@@ -8,7 +8,6 @@ import asyncio
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field, replace
 import hashlib
-import ipaddress
 import json
 import os
 import re
@@ -27,6 +26,7 @@ from .slice_settings import normalize_settings
 from .passive_status import status_from_capture
 from .active_status import ActiveMonitor
 from .manual_controls import VirtualControls, StaleControls
+from .web_access import WebAccess, validate_listener
 
 STATIC = Path(__file__).with_name("webstatic")
 PRINT_LIMIT = 8 * 1024 * 1024
@@ -83,14 +83,15 @@ class WebConfig:
     status_capture: Path | None = None
     enable_monitor: bool = False
     auto_monitor: bool = False
+    lan: bool = False
+    lan_network: str = "192.168.0.0/16"
 
     def __post_init__(self):
         if self.auto_monitor and not self.enable_monitor:
             raise ValueError("Automatic monitoring requires enable_monitor")
         if os.name != "posix":
             raise ValueError("The experimental web workbench currently requires POSIX/Linux workspace locking")
-        if not ipaddress.ip_address(self.host).is_loopback:
-            raise ValueError("The experimental web server must bind to loopback")
+        validate_listener(self.host, self.lan, self.lan_network)
         if not 0 <= self.port <= 65535:
             raise ValueError("Invalid web port")
         if self.client.max_file_size != PRINT_LIMIT:
@@ -410,6 +411,7 @@ class WebServer:
         self.config = config
         self.work = None
         self.token = secrets.token_urlsafe(32)
+        self.access = WebAccess(config.host, config.lan, config.lan_network)
         self.server = None
         self.clients = set()
         self.address = None
@@ -457,6 +459,9 @@ class WebServer:
             return
         self.clients.add(task)
         try:
+            # Only socket peer identity counts. Never trust Forwarded/X-Forwarded-For.
+            if not self.access.allows_peer(writer.get_extra_info("peername")):
+                raise WebError(403, "Client address is not allowed")
             async with asyncio.timeout(10):
                 raw = await reader.readuntil(b"\r\n\r\n")
             lines = raw.decode("ascii").split("\r\n")
@@ -471,7 +476,11 @@ class WebServer:
                     raise WebError(400, "Duplicate/invalid HTTP header")
                 headers[key] = value.strip()
             if headers.get("host") != self.authority:
-                raise WebError(403, "Use the exact loopback URL printed by the server")
+                raise WebError(403, "Use the exact IP URL printed by the server")
+            if not self.access.authenticated(headers.get("authorization", "")):
+                await self.reply(writer, 401, {"error": "LAN password required"},
+                                 extra='WWW-Authenticate: Basic realm="Finder workbench", charset="UTF-8"\r\n')
+                return
             if "transfer-encoding" in headers or "expect" in headers:
                 raise WebError(400, "Chunked/Expect requests are not supported")
             if method not in ("GET", "POST"):
@@ -529,7 +538,7 @@ class WebServer:
                         "passive_status_enabled": self.config.status_capture is not None,
                         "active_monitor_enabled": self.config.enable_monitor, "auto_monitor": self.config.auto_monitor,
                         "manual_virtual_enabled": self.work.manual_controls is not None,
-                        "owned_dummy": self.owned_dummy is not None})
+                        "lan_mode": self.config.lan, "owned_dummy": self.owned_dummy is not None})
                 elif uri.path == "/api/printer-status":
                     await self.reply(writer, 200, self.work.monitor.report() if self.work.monitor else
                                      status_from_capture(self.config.status_capture, self.config.client.host, self.config.client.port))
@@ -588,10 +597,10 @@ class WebServer:
                       + extra + "\r\n").encode("ascii"))
         await asyncio.wait_for(writer.drain(), 10)
 
-    async def reply(self, writer, status, data, kind="application/json"):
+    async def reply(self, writer, status, data, kind="application/json", *, extra=""):
         if not isinstance(data, bytes):
             data = json.dumps(data, ensure_ascii=True).encode()
-        await self.head(writer, status, kind, len(data))
+        await self.head(writer, status, kind, len(data), extra)
         writer.write(data)
         await asyncio.wait_for(writer.drain(), 10)
 
@@ -616,6 +625,8 @@ def add_web_command(commands):
     cli = commands.add_parser("web", help="local standalone upload page; optional offline Orca slicing")
     cli.add_argument("--listen-host", default="127.0.0.1")
     cli.add_argument("--listen-port", type=int, default=8000)
+    cli.add_argument("--lan", action="store_true", help="explicit private-LAN sharing with per-run Basic password; HTTP is NOT encrypted")
+    cli.add_argument("--lan-network", default="192.168.0.0/16", help="allowed IPv4 CIDR within 192.168/16; socket peers only")
     cli.add_argument("--data-dir", type=Path, default=Path("web-data"))
     cli.add_argument("--status-capture", type=Path, help="read-only existing proxy run/root for passive status; never polls a printer")
     cli.add_argument("--target-host", default="127.0.0.1")
@@ -641,6 +652,7 @@ def web_main(cli, args):
         if any(options) or args.get("orca"):
             slicing = SliceConfig(**{k: args[k] for k in ("machine", "process", "filament", "orca")})
         config = WebConfig(host=args["listen_host"], port=args["listen_port"], data_dir=args["data_dir"],
+                           lan=args["lan"], lan_network=args["lan_network"],
                            client=ClientConfig(host=args["target_host"], port=args["target_port"], allow_hardware=args["allow_hardware"]),
                            slicing=slicing, enable_upload=args["enable_upload"], enable_job_controls=args["enable_job_controls"],
                            allow_sliced_upload=args["allow_sliced_upload"], status_capture=args["status_capture"], enable_monitor=args["enable_monitor"] or args["auto_monitor"], auto_monitor=args["auto_monitor"])
@@ -654,6 +666,11 @@ def web_main(cli, args):
         try:
             async with serve_workbench(config, dummy=args["dummy"]) as server:
                 print(f"Open http://{server.authority} (exact URL required)", flush=True)
+                if config.lan:
+                    print(f"LAN sharing: allowed {server.access.network} plus local IPv4. HTTP IS NOT ENCRYPTED; trusted home network only.", flush=True)
+                    print("Login username: finder", flush=True)
+                    print("Login password (new each restart; share privately): " + server.access.password, flush=True)
+                    print("All logged-in users share one workspace/printer and can use enabled controls. No router port forwarding/public proxy.", flush=True)
                 print("Private files/captures: " + str(server.work.folder), flush=True)
                 if server.owned_dummy:
                     print(f"Owned fresh dummy: {server.owned_dummy.address}. RAM-only virtual files; no G-code execution.", flush=True)
