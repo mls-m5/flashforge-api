@@ -113,7 +113,11 @@ Implemented client contract: `.gx`/`.gcode`/`.g` byte-preserving transfer (no co
 
 `finderlab/slicer.py` exposes a separate async STL → plain G-code adapter. `slice` invokes it offline; upload's `--slice` invokes it before opening a printer session. Trusted self-contained JSON profiles, isolated datadir/workspace, capability probing, bounded output/logs/time/address space, process-group cleanup and a per-workspace single-job lock prevent accidental fallback to arbitrary shell options or unbounded concurrent jobs. These are resource/orchestration boundaries, not a native-code security sandbox or motion-safety check. Logs/hash provenance share the capture lifecycle; generated output is separately size-bounded. No fallback guessed Finder profile, G-code rewriting, GX wrapping, thumbnail generation or automatic start is introduced. See [docs/SLICING.md](docs/SLICING.md). Native Orca 2.3.0 help/capability probing now succeeds with approved runtimes, but actual slicing/profile validation remains outstanding. Tests use a fake CLI and dummy printers; no reviewed Finder profile is available.
 
-The following web-interface requirements remain planned:
+### Separate OctoPrint plugin experiment
+
+The research repo includes a separately packaged GPLv3 plugin in `plugins/octoprint-flashforge-finder2` (registered as a Git submodule). It uses OctoPrint admin-only Settings/Simple API/Template mixins to upload an OctoPrint local file through a bounded background worker. It does not replace OctoPrint's PrinterInterface or serial transport, and exposes no start/stop, arbitrary G-code, automatic connection or slicer. The plugin is disabled by default and is independently installable. Its Linux Compose test shares host networking only to reach a deliberately configured host-loopback dummy/proxy; OctoPrint binds its UI to loopback. Docker runtime/browser acceptance is still pending. See [docs/OCTOPRINT.md](docs/OCTOPRINT.md) and the plugin's own README/SOURCE for exact limits and evidence.
+
+The following broader web-interface requirements remain planned:
 
 Klienten ska ha konfigurerbar målport, begränsade väntetider, inkrementell svarsläsning och ett verifierat sätt att avgöra framgång. Ingen godtycklig tresekunderspaus utan evidens. Lås en aktiv operation per fysisk skrivare som konservativt grundval. Återförsök aldrig en delvis genomförd uppladdning blint; resultatet kan vara okänt och kräva återanslutning/manuell kontroll.
 

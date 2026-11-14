@@ -15,7 +15,7 @@ Implemented:
 - Automated localhost tests, including the existing uploader, recording failures, proxy transport and fake-slicer orchestration.
 - The original experimental [`upload.py`](upload.py), unchanged.
 
-Not implemented: UDP discovery, replay/standalone analysis tooling, physical job dynamics, or the web interface. **FlashPrint connection, upload and explicit virtual start/stop have now been observed against the dummy.** The new client has also uploaded the user's 3.67 MB GX to a fresh dummy with an exact byte match and no job started. A subsequent user-run host/proxy trial confirmed the new client's real-printer upload-only flow: all blocks, final save and release acknowledged, no start/stop sent. Other firmware, errors/retries and physical job-control actions remain separately bounded; mock success alone is not hardware evidence.
+Not implemented in the research CLI: UDP discovery, replay/standalone analysis tooling, or physical job dynamics. A separate experimental, upload-only OctoPrint plugin now exists as a Git submodule at `plugins/octoprint-flashforge-finder2`; it is not a native Finder printer driver and has not yet had full Docker/browser validation. **FlashPrint connection, upload and explicit virtual start/stop have now been observed against the dummy.** The new client has also uploaded the user's 3.67 MB GX to a fresh dummy with an exact byte match and no job started. A subsequent user-run host/proxy trial confirmed the new client's real-printer upload-only flow: all blocks, final save and release acknowledged, no start/stop sent. Other firmware, errors/retries and physical job-control actions remain separately bounded; mock success alone is not hardware evidence.
 
 ## Upload a print file (dummy first)
 
@@ -57,6 +57,20 @@ python3 -m finderlab slice upload/model.stl \
 ```
 
 For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native Orca 2.3.0 help/capability probing succeeds after approved runtime installation. A copied/edited local Finder draft now passes structural checks but native slicing is blocked by rejected Sailfish flavor; see [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md). Actual successful slicing/profile validation remains outstanding, and automated tests still use a fake CLI. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation, the probe reference and the newer 2.5.0 build's ABI blocker. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The web API and GX/thumbnail creation are not implemented.
+
+## Experimental OctoPrint plugin (Linux Docker)
+
+A separate GPLv3 repository is included as `plugins/octoprint-flashforge-finder2`. See its README and [docs/OCTOPRINT.md](docs/OCTOPRINT.md) for scope, safety limits and a local dummy test. Initialize the submodule before building:
+
+```sh
+git submodule update --init --recursive
+# Start a fresh local dummy separately:
+python3 -m finderlab mock --port 9000
+docker compose config
+docker compose up --build
+```
+
+The Compose setup shares the host network so OctoPrint can reach a host-loopback dummy/proxy. OctoPrint binds to `127.0.0.1:5000`; no serial device or Docker socket is passed through. On first run, finish OctoPrint setup, then configure plugin target `127.0.0.1:9000` and explicitly enable uploads. The plugin defaults disabled. **Do not point it at a hardware proxy unless you intend a real upload.** Loopback is not a safety guarantee. Docker/Compose runtime and browser testing remain pending; this example currently targets Linux host networking.
 
 ## Run the dummy printer
 
@@ -113,7 +127,7 @@ Tests use ephemeral loopback ports and never connect to a physical printer. Gene
 | Recording proxy (implemented; localhost-tested) | FlashPrint → proxy → explicit target, preserving both byte streams. |
 | Evidence-based simulator | Reproduce observed Finder 2 identity, sessions, status, transfer and discovery. |
 | Analysis and replay | Inspect captures, compare experiments and generate regression fixtures. |
-| Upload client and web UI | Use the verified protocol for local drag-and-drop transfer, without print-start. |
+| Upload client (implemented) and web UI | CLI client exists; the standalone OctoPrint upload-only tab is experimental. No research-repo web API or native printer driver. |
 
 A real-printer connection/status capture now supplies independent regression fixtures, with private identity fields anonymized. The user's subsequent mock recording confirms sustained FlashPrint idle polling. A second capture now establishes the observed upload framing and start/cancel reply formats. Dynamic job behavior, error/retry handling and discovery still need evidence. Small regression fixtures are retained; a broader systematic log corpus/replay system is future work.
 
@@ -122,6 +136,8 @@ A real-printer connection/status capture now supplies independent regression fix
 New documentation is English; older Swedish sections will be translated incrementally.
 
 - [DESIGN.md](DESIGN.md): architecture, realism goals and safety boundaries.
+- [docs/OCTOPRINT.md](docs/OCTOPRINT.md): plugin submodule and local Docker dummy test.
+- [docs/traces/](docs/traces/README.md): reviewed sanitized, non-replayable trace derivatives.
 - [AGENTS.md](AGENTS.md): contributor/agent rules, including milestone commits.
 - [docs/CLIENT.md](docs/CLIENT.md): upload program, manual printer trials and separate job controls.
 - [docs/MOCK.md](docs/MOCK.md): implemented mock behavior and usage.

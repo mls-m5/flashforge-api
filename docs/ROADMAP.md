@@ -148,6 +148,12 @@ Implement local drag-and-drop/file selection, explicit upload confirmation, conf
 - End-to-end tests use the simulator; physical-printer tests remain opt-in.
 - Loopback is the default; LAN serving is documented as a separate security configuration.
 
+## M6 implementation update: standalone OctoPrint plugin checkpoint
+
+A separate GPLv3 repository is registered as `plugins/octoprint-flashforge-finder2`. Its initial admin-only tab/API uploads existing OctoPrint local files to a configured Finder V1.5 endpoint, disabled by default, with bounded snapshots/captures and no automatic start/stop. It is deliberately not a full PrinterInterface/serial driver. SDK mixin/permission tests and independent loopback protocol tests pass; its service worker also transferred the supplied GX byte-for-byte to a fresh dummy with no virtual print started. This is not Docker/browser or physical plugin acceptance. The Linux Compose example builds from the local submodule and makes the host dummy/proxy reachable while binding the OctoPrint UI to loopback; Docker is not available in this environment, so build/run remain pending. See [OCTOPRINT.md](OCTOPRINT.md).
+
+**Next acceptance:** user-run `docker compose config` and image build/runtime on Linux, complete first-run/admin setup in a browser, verify the plugin is present and disabled, then point it to a newly started dummy at a deliberate host port and perform an upload-only test. Physical upload is a separate, explicitly approved trial; a loopback proxy can reach hardware. No production OctoPrint volume or existing proxy should be used accidentally.
+
 ## Future: systematic reviewed scenario corpus and replay
 
 Requested as future work, not part of the present protocol patch. The current small `tests/fixtures/` artifacts support regression tests; they are not a complete log archive or replay tool.
