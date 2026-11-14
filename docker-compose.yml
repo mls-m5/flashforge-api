@@ -1,0 +1,25 @@
+# Adapted from OctoPrint/octoprint-docker's Compose example (GPLv3).
+# See docs/OCTOPRINT.md for provenance, Linux host networking and safe first test.
+services:
+  octoprint:
+    build:
+      context: .
+      dockerfile: docker/octoprint.Dockerfile
+    image: finder2-octoprint-experiment:local
+    # Linux: share the host's loopback dummy/proxy, not a container-local 127.0.0.1.
+    network_mode: host
+    restart: "no"
+    init: true
+    volumes:
+      - octoprint-test-data:/octoprint
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 1g
+    # No USB/serial/camera devices, Docker socket, privileged mode or host mounts.
+    # The Dockerfile binds OctoPrint itself to 127.0.0.1:5000; no HAProxy/S6.
+
+volumes:
+  octoprint-test-data:

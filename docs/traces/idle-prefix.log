@@ -1,0 +1,60 @@
+REVIEWED SANITIZED IDLE PREFIX — not a raw capture or replay script
+No original name/serial, endpoints, timestamps or model bytes.
+Each value is an escaped byte-string representation; CRLF preserved.
+Source: 20261112T190818Z-31ded6e5f0a5, s0001; FlashPrint version unknown.
+
+Exchange 1
+C>S b'~M601 S1\r\n'
+S>C b'CMD M601 Received.\r\nControl Success.\r\nok\r\n'
+
+Exchange 2
+C>S b'~M115\r\n'
+S>C b'CMD M115 Received.\r\nMachine Type: Flashforge Finder\r\nMachine Name: Mock Find\r\nFirmware: V1.5 20170419\r\nSN: F1AB0001\r\nX: 140  Y: 140  Z: 140\r\nTool Count: 1\r\nok\r\n'
+
+Exchange 3
+C>S b'~M650\r\n'
+S>C b'CMD M650 Received.\r\nX: 34 Y: 0\r\nok\r\n'
+
+Exchange 4
+C>S b'~M115\r\n'
+S>C b'CMD M115 Received.\r\nMachine Type: Flashforge Finder\r\nMachine Name: Mock Find\r\nFirmware: V1.5 20170419\r\nSN: F1AB0001\r\nX: 140  Y: 140  Z: 140\r\nTool Count: 1\r\nok\r\n'
+
+Exchange 5
+C>S b'~M114\r\n'
+S>C b'CMD M114 Received.\r\nX:0 Y:0 Z:0 A:0 B:0\r\nok\r\n'
+
+Exchange 6
+C>S b'~M27\r\n'
+S>C b'CMD M27 Received.\r\nSD printing byte 0/0\r\nok\r\n'
+
+Exchange 7
+C>S b'~M119\r\n'
+S>C b'CMD M119 Received.\r\nEndstop: X-max: 1 Y-max: 0 Z-max: 1\r\nStatus: S:1 L:0 J:0 F:1\r\nMachineStatus: READY\r\nMoveMode: READY\r\nok\r\n'
+
+Exchange 8
+C>S b'~M105\r\n'
+S>C b'CMD M105 Received.\r\nT0:21 /0 B:0 /0\r\nok\r\n'
+
+Exchange 9
+C>S b'~M119\r\n'
+S>C b'CMD M119 Received.\r\nEndstop: X-max: 1 Y-max: 0 Z-max: 1\r\nStatus: S:1 L:0 J:0 F:1\r\nMachineStatus: READY\r\nMoveMode: READY\r\nok\r\n'
+
+Exchange 10
+C>S b'~M105\r\n'
+S>C b'CMD M105 Received.\r\nT0:21 /0 B:0 /0\r\nok\r\n'
+
+Exchange 11
+C>S b'~M27\r\n'
+S>C b'CMD M27 Received.\r\nSD printing byte 0/0\r\nok\r\n'
+
+Exchange 12
+C>S b'~M119\r\n'
+S>C b'CMD M119 Received.\r\nEndstop: X-max: 1 Y-max: 0 Z-max: 1\r\nStatus: S:1 L:0 J:0 F:1\r\nMachineStatus: READY\r\nMoveMode: READY\r\nok\r\n'
+
+Exchange 13
+C>S b'~M105\r\n'
+S>C b'CMD M105 Received.\r\nT0:21 /0 B:0 /0\r\nok\r\n'
+
+Exchange 14
+C>S b'~M27\r\n'
+S>C b'CMD M27 Received.\r\nSD printing byte 0/0\r\nok\r\n'

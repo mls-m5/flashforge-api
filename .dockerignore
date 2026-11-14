@@ -1,0 +1,17 @@
+# Allowlist: do not send private captures/models/profiles/config or Git metadata.
+**
+!docker/
+!docker/octoprint.Dockerfile
+!plugins/
+!plugins/octoprint-flashforge-finder2/
+!plugins/octoprint-flashforge-finder2/setup.py
+!plugins/octoprint-flashforge-finder2/pyproject.toml
+!plugins/octoprint-flashforge-finder2/MANIFEST.in
+!plugins/octoprint-flashforge-finder2/LICENSE
+!plugins/octoprint-flashforge-finder2/README.md
+!plugins/octoprint-flashforge-finder2/SOURCE.md
+!plugins/octoprint-flashforge-finder2/octoprint_flashforge_finder2/
+!plugins/octoprint-flashforge-finder2/octoprint_flashforge_finder2/**
+**/__pycache__
+**/*.pyc
+**/.git

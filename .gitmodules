@@ -1,0 +1,3 @@
+[submodule "plugins/octoprint-flashforge-finder2"]
+	path = plugins/octoprint-flashforge-finder2
+	url = git@github.com:mls-m5/octoprint-flashforge-finder2.git

@@ -1,0 +1,26 @@
+REVIEWED SANITIZED UPLOAD FACTS — INCOMPLETE STREAM, NOT REPLAYABLE
+Filename replaced with test_box.gx. ORIGINAL PAYLOAD OMITTED.
+Source: 20261112T191450Z-2b04f784b894, s0001; FlashPrint version unknown.
+
+Upload/save (does not require print start or cancel):
+C>S b'~M28 102989 0:/user/test_box.gx\r\n'
+S>C b'CMD M28 Received.\r\nWriting to file: 0:/user/test_box.gx  Length: 102989\r\nok\r\n'
+[OMITTED: 26 frames x 4112 bytes; 102989 logical model bytes]
+[ACK facts only; not a complete stream]
+S>C b'N0 ok\r\n'
+...
+S>C b'N25 ok\r\n'
+C>S b'~M29\r\n'
+S>C b'CMD M29 Received.\r\nDone saving file.\r\nok\r\n'
+
+SEPARATE EXPLICIT START — may heat/move hardware; NEVER an upload suffix:
+C>S b'~M23 0:/user/test_box.gx\r\n'
+S>C b'CMD M23 Received.\r\nFile opened: 0:/user/test_box.gx Size: 102989\r\nFile selected\r\nok\r\n'
+
+SEPARATE EXPLICIT CANCEL — NEVER automatically replay:
+C>S b'~M26\r\n'
+S>C b'CMD M26 Received.\r\nok\r\n'
+
+SYNTHETIC standard CRC32 vector, NOT original model bytes:
+Payload ASCII: 123456789
+Header hex: 5a5aa5a50000000000000009cbf43926

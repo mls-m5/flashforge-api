@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "not_replayable": true,
+  "source_fixture_sha256": {
+    "finder-v1.5-idle.json": "d51d2b8b3060609cdcc28f5c0dd9321c623a33e60d0296a17d207181443ffdce",
+    "finder-v1.5-upload.json": "29b546c83193aca85412c03a5e4e03b879d7fcebee9dc22def3a2c79dd77e6e4"
+  },
+  "privacy": "Only previously reviewed anonymized fixtures; no raw captures read",
+  "outputs": {
+    "idle-prefix.log": "a6e75957f6b7a1e906d71752234a008e4b6bdc730d845eaebb956c7f0f9a582c",
+    "upload-facts.log": "c189a06e6e8716194dce55fd29cff79f482171d8ef8a1c37b1d17e35514946d2"
+  }
+}
