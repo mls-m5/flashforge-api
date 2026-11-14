@@ -163,6 +163,18 @@ G21/M82 are added versus the working FlashPrint command set, M118 is omitted,
 and homing/offset/clearance/material semantics remain unresolved. Source draft01
 and mounted profiles are unchanged; no generated candidate was uploaded/started.
 
+## FINDER-MANUAL-017 — User FlashPrint control actions, static log inspection
+
+The user reports controller/servo on/off, LED, extruder forward/reverse/stop,
+and XYZ actions. Running proxy capture`20261114T194822Z-b991640f7b31`, s0001,
+contains G91/M17/M18/M116/M117/M146, decimal-comma G1 E/XYZ requests and M112
+stop requests interleaved with status polling. Manual ACKs frequently end in
+LF-only`ok\n`, unlike status/M112 CRLF. See
+[MANUAL_CONTROLS_CAPTURE.md](MANUAL_CONTROLS_CAPTURE.md) for timestamps,
+byte ranges, evidence limits and safety questions. No replay, new hardware
+connection, parser change or motion API is introduced. Large relative targets
+are not a small-step implementation or emergency-stop specification.
+
 ## FINDER-START-016 — User physical cube startup, no collision reported
 
 The user reports starting the Orca-generated cube on the physical Finder2 and
