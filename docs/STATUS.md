@@ -167,6 +167,19 @@ proof or validation of error/reconnect/control-handoff behavior. The recordings
 were ongoing/unfinalized and read without alteration; observations are dated
 snapshots, not a promise of present state. See FINDER-PROGRESS-019 for scope.
 
+## Later short-job inspection
+
+A user-requested read-only review at about22:18 UTC found a confirmed75554-byte
+Save at22:05:50 and separate confirmed Start at22:05:59. Monitor observations
+progressed through HOMING, WAIT_ON_TOOL, MOVING at219°C/target220, then terminal
+progress75555/75554/target0 at22:10:24 and READY at22:10:42. At22:18:34 nozzle
+was41°C/target0. No cancellation sequence or recorded error was found in the
+inspected interval. This is consistent with a short job already ending and
+cooling, not a never-started upload, but not proof of part quality, physical
+completion or touch safety. See FINDER-RUN-020 in PROTOCOL.md for source IDs,
+UTC times, finalized Save/Start integrity checks and ongoing-recording limits.
+The agent sent no printer requests and made no profile/compensation change.
+
 ## Evidence and checks
 
 Initial read-only inspection of the user-run active proxy capture

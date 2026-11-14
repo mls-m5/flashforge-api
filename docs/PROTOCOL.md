@@ -299,6 +299,56 @@ Skillnaderna kan bero på firmware, klientversion eller olika discovery-vägar. 
 - Fast paus före M29 och upload med råa byte saknar lokal verifiering.
 - Skriptet skickar inget explicit utskriftsstartkommando, men upload-only-beteendet måste ändå verifieras på aktuell firmware.
 
+## FINDER-RUN-020 — User-requested recent-job inspection: start, heat, return to READY
+
+At approximately 22:18 UTC the user asked whether a recently submitted STL
+had started or already finished, because the extruder was no longer hot.
+Read-only inspection covered roughly 21:58–22:18 UTC on 2026-11-14. Finder
+reports V1.5 20170419; host Orca executable is2.5.0 AppRun. FlashPrint version
+is unknown; the web client, not FlashPrint, performed the recorded actions.
+The private model/name are not published.
+
+Finalized web captures under `web-data/proxy-test/captures/`:
+
+- Slice `20261114T220540Z-16126f40e96d`: successful offline STL generation,
+  approximately22:05:40 UTC, existing draft02/profile quality (0.18mm layers,
+  0.27mm first layer, no brim). No hole-compensation override was added.
+- Save `20261114T220548Z-34ebc2be3bb4`: M28 declares75554 bytes, M29 acknowledged
+  `Done saving file.` at22:05:50.940 UTC in proxy session s0004. No auto-start.
+- Start `20261114T220558Z-5ac5a4d59e06`: same save identity/exact destination,
+  fresh READY then M23 at22:05:59.130 UTC; file size75554 and `File selected`
+  acknowledged, followed by control release. Both Save/Start raw stream lengths
+  and SHA-256 match their finalized manifests.
+
+The ongoing proxy `20261114T214419Z-91f9faa3164d` and monitor
+`20261114T215830Z-2c698c141f55` record the surrounding exchanges and derived
+snapshots (monitor session s0004 after Start). These are two recordings of the
+same user-run experiment, not two independent trials:
+
+| UTC | Observed status |
+| --- | --- |
+| 22:06:00.241 | BUILDING_FROM_SD/HOMING, nozzle29°C / target220, progress814/75554 |
+| 22:06:04.226 | BUILDING_FROM_SD/WAIT_ON_TOOL, nozzle30°C / target220 |
+| 22:07:21.906 | BUILDING_FROM_SD/MOVING, nozzle219°C / target220, progress1818/75554 |
+| 22:10:24.219 | BUILDING_FROM_SD/HOMING, nozzle220°C / target0, progress75555/75554 |
+| 22:10:42.574 | READY/READY, nozzle210°C / target0 |
+| 22:18:34.510 | READY/READY, nozzle41°C / target0, progress75555/75554 |
+
+No error event was found in the inspected time window. A bounded scan of the
+current proxy's seven client streams found no M26/M112 byte sequence; there
+is no captured cancellation explaining the return to READY. Raw proxy replies
+confirm Save/Start, not just UI acknowledgements. Ongoing monitor/proxy records
+are not finalized whole-run integrity evidence.
+
+This rules out "never started": heating and reported job motion were observed.
+EOF-shaped progress, target0 and return to READY are consistent with a short
+completed job and subsequent cooldown, but do not independently establish
+physical extrusion, part quality, end clearance, successful model completion
+or safe touch. Physical inspection is still required. The+1 raw progress
+behavior is the same shape as FINDER-PROGRESS-019; do not infer completion from
+that counter alone. No agent printer connection/command, replay, raw-recording
+edit, slicer-profile change or hole-compensation implementation occurred.
+
 ## FINDER-PROGRESS-019 — User-host monitor and one-byte terminal overrun
 
 User reported file-byte progress remaining one byte beyond the total. Read-only
