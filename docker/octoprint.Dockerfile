@@ -1,5 +1,5 @@
 # Official multi-architecture OctoPrint 1.11.8 image; observed Python 3.10.18.
-ARG OCTOPRINT_IMAGE=octoprint/octoprint:1.11.8@sha256:5ea0181e476597faa2800c991af4ce16903005f46b4c16666a4080ad606310bb
+ARG OCTOPRINT_IMAGE=docker.io/octoprint/octoprint:1.11.8@sha256:5ea0181e476597faa2800c991af4ce16903005f46b4c16666a4080ad606310bb
 FROM ${OCTOPRINT_IMAGE}
 USER root
 COPY plugins/octoprint-flashforge-finder2 /opt/finder2-plugin

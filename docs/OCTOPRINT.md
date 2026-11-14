@@ -42,6 +42,29 @@ with a non-root, explicitly loopback-bound OctoPrint command for host networking
 Docker context is allowlisted to plugin source/packaging only; no models,
 captures, local profiles, account configuration or Git metadata should enter it.
 
+## Podman on Linux
+
+The base image uses a fully qualified `docker.io/` name so Podman does not need
+short-name aliases or unqualified registry configuration. Container runtime
+acceptance remains pending; the user reported a short-name resolution failure
+with the previous unqualified name, now corrected without changing the digest.
+
+With a fresh host dummy running on port 9000:
+
+```sh
+podman build -f docker/octoprint.Dockerfile -t localhost/finder2-octoprint .
+podman volume create finder2-octoprint-data
+podman run --rm --name finder2-octoprint --network host \
+  --cap-drop=all --security-opt=no-new-privileges \
+  -v finder2-octoprint-data:/octoprint:U localhost/finder2-octoprint
+```
+
+Visit http://127.0.0.1:5000 and follow the same admin/dummy steps above.
+`:U` changes ownership inside the named test-data volume for the container user;
+do not substitute a production directory or production volume. Host networking
+also reaches a hardware proxy if one occupies the configured target port.
+Stop with `podman stop finder2-octoprint`; the named volume retains settings.
+
 ## Validation at checkpoint
 
 - Real OctoPrint 1.11.8 mixins/permissions and Flask context tests on Python 3.11;
