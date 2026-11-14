@@ -43,6 +43,22 @@ no printer sessions. Uploads and job controls were disabled; an attempted Save
 was correctly refused (409). This tests HTTP/native wiring, not rendered-browser
 interaction or physical printing.
 
+### Subsequent host Orca 2.5.0 output
+
+After resolving the host loader/FUSE launch issues, user-run web capture
+`web-data/offline-test/captures/20261114T160514Z-12e9ff692cc2` completed both
+help and slicing with exit0, producing a 402367-byte plain G-code artifact.
+Its header says OrcaSlicer2.5.0; all three input hashes match current draft02.
+The manifest finalized with slicing confirmed and zero printer sessions.
+This was the user's selected model, not a claim to rerun both original trials.
+
+Offline diagnostics on this exact host artifact found final E delta−1.3 mm,
+max positive E-only move+1.3 mm, zero unresolved E moves and max resolved
+nominal Z component7 mm/s. The same two added codes (G21/M82) and unmodeled
+startup homing/offsets remain. Numerical results do **not** clear the physical
+blockers below or prove firmware/plain-file execution support. No artifact was
+uploaded/started by the agent. The public notes omit full user geometry/hashes.
+
 ## Candidate configuration and deliberate differences
 
 The current three JSON files are **stage C**; stage A/B snapshots are retained

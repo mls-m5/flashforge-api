@@ -55,6 +55,21 @@ but the agent cannot validate native 2.5.0 on its older ABI; host retry is neede
 The UI diagnostic excerpt now falls back to the job error when no native output
 was captured, instead of incorrectly claiming no native process ran.
 
+A later host retry **succeeded**: capture
+`web-data/offline-test/captures/20261114T160514Z-12e9ff692cc2` selected the
+extracted 2.5.0 AppRun. Both help and slice exited0, a 402367-byte plain G-code
+artifact was published, and the complete manifest confirms slicing with zero
+printer sessions. Its header identifies OrcaSlicer2.5.0. This is host-log and
+artifact evidence, not execution of 2.5.0 in the agent's older environment or a
+physical motion/printability validation. All three input profile hashes match
+the existing private draft02 files.
+
+The help probe is intentional capability validation. A silent successful slice
+previously left the help text in the UI excerpt, looking like a failure. The
+web excerpt now clears at slice start (raw help remains recorded) and the page
+shows explicit slice completion/download status. Startup errors remain visible
+even when no native output was captured.
+
 The already extracted directory must keep its sibling libraries/resources.
 For a host without that directory, use the extraction procedure below in a fresh
 scratch folder before selecting AppRun. Do not overwrite a prior extraction or

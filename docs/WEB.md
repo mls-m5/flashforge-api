@@ -231,6 +231,16 @@ part of the standalone workflow.
   trusted. Never forward its port, put it on a public reverse proxy, or expose
   it to LAN/internet. No security-sandbox claim is made for native STL parsing.
 
+## Help text versus slice result
+
+Orca's help text is a normal capability probe, not a failure by itself. Once the
+actual slice command starts, the displayed excerpt is cleared so a silent
+successful slice does not leave only old help text. Raw help remains intact in
+the private capture. The Slice section now shows explicit checking/slicing/
+completed status and offers the generated artifact for download. An operation
+error is displayed even when Orca produced no stdout/stderr. Completion means
+file generation, **not physical print approval**.
+
 ## Narrow local API
 
 All POSTs require `Origin: http://<exact printed authority>` and

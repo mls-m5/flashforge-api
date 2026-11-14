@@ -14,7 +14,7 @@ from unittest.mock import patch
 from finderlab.client import ClientConfig, FinderClient
 from finderlab.simulator import MockConfig, MockPrinter
 from finderlab.slicer import SliceConfig
-from finderlab.web import MODEL_LIMIT, PRINT_LIMIT, WebConfig, WebServer
+from finderlab.web import MODEL_LIMIT, PRINT_LIMIT, WebCapture, WebConfig, WebServer, Workbench
 from helpers import workspace_tempdir
 from test_slicer import FAKE, PAYLOAD
 
@@ -87,6 +87,21 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             if process.returncode is None:
                 process.kill()
                 await process.communicate()
+
+    async def test_help_excerpt_is_cleared_for_slice_but_raw_history_is_preserved(self):
+        state = Workbench.empty()
+        capture = WebCapture(self.root / "excerpt-captures", "slice", state=state)
+        try:
+            capture.event("slicer_command", stage="help", argv=["fake-orca", "--help"])
+            capture.event("slicer_output", stage="help", stream="stdout", text="help text", data_hex=b"help text".hex())
+            self.assertEqual(state["slicer_log"], "help text")
+            capture.event("slicer_command", stage="slice", argv=["fake-orca", "--slice", "0"])
+            self.assertEqual(state["slicer_stage"], "slice")
+            self.assertEqual(state["slicer_log"], "")
+            records = [json.loads(line) for line in (capture.path / "events.jsonl").read_text().splitlines()]
+            self.assertTrue(any(e.get("text") == "help text" for e in records))
+        finally:
+            capture.close()
 
     async def test_static_config_and_state_do_not_contact_target(self):
         with patch("finderlab.web.FinderClient") as client:

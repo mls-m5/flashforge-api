@@ -89,6 +89,8 @@ async function main() {
     assert.equal(posts.at(-1).url, "/api/slice");
     assert.equal(posts.filter(p => p.url === "/api/save").length, 1, "slice does not automatically save");
     assert.equal(element("download").hidden, false);
+    assert.match(element("slice-status").textContent, /Slice completed/);
+    assert.match(element("slicer-log").textContent, /finished successfully/);
     assert.equal(element("save").disabled, true, "unreviewed generated output stays blocked");
     click("discard"); await flush();
     choose("again.gx", 20);

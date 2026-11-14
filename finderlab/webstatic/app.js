@@ -22,7 +22,14 @@
         text("hash", state.sha256);
         text("capture", state.capture);
         text("warning", state.warning);
-        text("slicer-log", state.slicer_log || state.error || "No Orca output recorded yet.");
+        text("slice-status", state.busy && state.phase === "slicing" ?
+            (state.slicer_stage === "slice" ? "Slicing STL…" : "Checking the Orca CLI…") :
+            state.sliced && state.artifact ? `Slice completed: ${state.size} bytes. Download below for offline review; this is not print approval.` :
+            state.phase === "failed" && state.slicer_stage ? "Slice failed. See the diagnostic excerpt below." :
+            state.artifact ? "Existing print file ready; no slicing needed." : "Choose an STL, then click Slice. No slicing starts automatically.");
+        const excerpt = state.slicer_log || (state.sliced && state.artifact ?
+            "Orca finished successfully without additional slice output. Download and review the generated file." : "No Orca output recorded yet.");
+        text("slicer-log", (state.error ? "Operation error: " + state.error + "\n\n" : "") + excerpt);
         text("bytes", `${state.acknowledged || 0} / ${state.size || 0} bytes acknowledged`);
         el("outgoing").value = state.size ? 100 * (state.acknowledged || 0) / state.size : 0;
         text("result", state.saved ? "Final save confirmed. Saving does not start or stop a print." :

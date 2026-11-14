@@ -42,7 +42,11 @@ class WebCapture(Capture):
 
     def event(self, kind, session_id=None, **fields):
         result = super().event(kind, session_id, **fields)
-        if kind == "slicer_output":
+        if kind == "slicer_command":
+            self.state["slicer_stage"] = fields.get("stage", "")
+            if self.state["slicer_stage"] == "slice":
+                self.state["slicer_log"] = ""  # UI excerpt only; raw help remains recorded.
+        elif kind == "slicer_output":
             self.state["slicer_log"] = (self.state["slicer_log"] + fields.get("text", ""))[-4000:]
         return result
 
@@ -96,7 +100,7 @@ class Workbench:
         return {"busy": False, "phase": "empty", "saved": False, "acknowledged": 0,
                 "size": 0, "name": "", "error": "", "warning": "", "capture": "",
                 "sha256": "", "sliced": False, "artifact": False, "slicer_log": "",
-                "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested"}
+                "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested", "slicer_stage": ""}
 
     def capacity(self, reserve):
         total = count = 0
@@ -218,6 +222,7 @@ class Workbench:
         self.state.update(busy=True, phase="slicing" if operation == "slice" else "connecting", error="", warning="", capture="")
         if operation == "slice":
             self.state["slicer_log"] = ""
+            self.state["slicer_stage"] = ""
         self.task = asyncio.create_task(self._operation(operation, data))
 
     async def _operation(self, operation, data):
