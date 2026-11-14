@@ -163,6 +163,17 @@ G21/M82 are added versus the working FlashPrint command set, M118 is omitted,
 and homing/offset/clearance/material semantics remain unresolved. Source draft01
 and mounted profiles are unchanged; no generated candidate was uploaded/started.
 
+## GX-PREVIEW-014 — Embedded bitmap decoded offline
+
+The supplied working `test1.gx` contains a standalone14454-byte BMP at byte58,
+ending exactly at the declared G-code offset14512. Actual BMP fields establish
+80×60 pixels,24-bit BI_RGB (uncompressed), BGR triplets, bottom-up rows and a
+240-byte stride. Verbatim extraction was viewed locally and depicts the supplied
+holder. No original image/model is committed. See [GX_PREVIEW.md](GX_PREVIEW.md)
+for full byte layout and `tools/extract_gx_preview.py` for bounded read-only
+extraction. This is one file's container observation, not firmware compatibility
+or complete header semantics; no GX generator or hardware trial is introduced.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.

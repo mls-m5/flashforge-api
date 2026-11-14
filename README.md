@@ -176,6 +176,7 @@ A real-printer connection/status capture now supplies independent regression fix
 New documentation is English; older Swedish sections will be translated incrementally.
 
 - [DESIGN.md](DESIGN.md): architecture, realism goals and safety boundaries.
+- [docs/GX_PREVIEW.md](docs/GX_PREVIEW.md): observed GX/BMP thumbnail encoding and read-only extraction tool (not a GX generator).
 - [docs/WEB.md](docs/WEB.md): standalone page, Podman, optional Orca configuration and current profile blocker.
 - [docs/OCTOPRINT.md](docs/OCTOPRINT.md): paused plugin experiment and preserved container test.
 - [docs/traces/](docs/traces/README.md): reviewed sanitized, non-replayable trace derivatives.
