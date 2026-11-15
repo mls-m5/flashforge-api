@@ -6,7 +6,7 @@ sandbox. Toolpath/firmware compatibility remains a separate review task.
 
 import asyncio
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import hashlib
 import json
 import math
@@ -19,6 +19,7 @@ import sys
 import tempfile
 
 from .slice_settings import normalize_settings, process_overrides
+from .model_transform import normalize_transform
 
 ROOT = Path(__file__).resolve().parents[1]
 MIB = 1024 * 1024
@@ -136,6 +137,7 @@ def _work_size(work, limit):
 
 
 async def _run(executable, arguments, work, config, capture, *, stage, timeout):
+    label = "Geometry transform" if stage == "geometry_transform" else f"Orca {stage}"
     command = [executable, *map(str, arguments)]
     capture.event("slicer_command", stage=stage, argv=command)
     wrapper = Path(__file__).with_name("_slicer_worker.py")
@@ -188,11 +190,11 @@ async def _run(executable, arguments, work, config, capture, *, stage, timeout):
                 pending -= done
         capture.event("slicer_exit", stage=stage, returncode=process.returncode)
         if process.returncode:
-            raise SliceError(f"Orca {stage} exited with code {process.returncode}; see traffic.log")
+            raise SliceError(f"{label} exited with code {process.returncode}; see traffic.log")
         _work_size(work, config.max_work_bytes)
         return bytes(help_bytes["stdout"]) + b"\n" + bytes(help_bytes["stderr"])
     except TimeoutError as exc:
-        raise SliceError(f"Orca {stage} timed out after {timeout:g}s") from exc
+        raise SliceError(f"{label} timed out after {timeout:g}s") from exc
     finally:
         # Kill the entire job group even when the launcher exits before children.
         try:
@@ -218,12 +220,13 @@ def _slice_slot(scratch):
         yield
 
 
-async def slice_model(source, output, config: SliceConfig, *, capture, settings=None) -> SliceResult:
+async def slice_model(source, output, config: SliceConfig, *, capture, settings=None, transform=None) -> SliceResult:
     """STL -> exactly one plain G-code file. Never overwrite an existing output.
 
     The caller owns the output/capture lifetime. Temporary inputs and tool data
     are removed even on failure/cancellation; failed output is never published.
     """
+    chosen_transform = normalize_transform(transform)
     chosen_settings = normalize_settings(settings)
     overrides = process_overrides(chosen_settings)
     source, output = Path(source), Path(output)
@@ -249,6 +252,7 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
         model_snapshot = work / ("source.3mf" if source.suffix.lower() == ".3mf" else "model.stl")
         inputs = {"model": _copy_bounded(source, model_snapshot, config.max_model_size)}
         capture.manifest["metadata"]["slicing_inputs"] = inputs
+        capture.manifest["metadata"]["model_transform"] = chosen_transform
         if source.suffix.lower() == ".3mf":
             from .model_3mf import geometry_to_stl
             try:
@@ -261,6 +265,23 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
             path = work / (kind + ".json")
             inputs[kind] = _copy_bounded(getattr(config, kind), path, MIB)
             _check_profile(path, kind)
+        model_path = work / "model.stl"
+        if chosen_transform is not None:
+            capture.manifest["metadata"]["geometry_transform_limits"] = {
+                "memory_mib": min(512, config.memory_mib), "timeout": min(30, config.timeout),
+                "max_source_bytes": 32 * MIB, "max_triangles": 200000}
+            (work / "transform.json").write_text(json.dumps(chosen_transform))
+            await _run(sys.executable, [Path(__file__).with_name("model_transform.py"), model_path,
+                       work / "placed.stl", work / "transform.json", work / "machine.json", work / "transform-result.json"],
+                       work, replace(config, memory_mib=min(512, config.memory_mib)), capture,
+                       stage="geometry_transform", timeout=min(30, config.timeout))
+            report_path = work / "transform-result.json"
+            if not report_path.is_file() or report_path.stat().st_size > 4096:
+                raise SliceError("Missing/oversized geometry transform report")
+            report = json.loads(report_path.read_bytes())
+            capture.manifest["metadata"]["geometry_transform"] = report
+            capture.event("geometry_transform", **report)
+            model_path = work / "placed.stl"
         # Apply only the typed quality allowlist to a private profile snapshot.
         # Never edit the server-owned originals, templates, machine or filament.
         process_path = work / "process.json"
@@ -293,10 +314,10 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
         for flag in REQUIRED_FLAGS:
             if flag.encode() not in help_data:
                 raise SliceError(f"Installed Orca CLI does not advertise required flag {flag}; check version/build")
-        await _run(executable, ["--slice", "0", "--arrange", "1", "--orient", "0", "--ensure-on-bed",
+        await _run(executable, ["--slice", "0", "--arrange", "0" if chosen_transform is not None else "1", "--orient", "0", "--ensure-on-bed",
                                "--load-settings", str(work / "machine.json") + ";" + str(work / "process.json"),
                                "--load-filaments", work / "filament.json", "--datadir", work / "data",
-                               "--outputdir", work / "output", work / "model.stl"],
+                               "--outputdir", work / "output", model_path],
                    work, config, capture, stage="slice", timeout=config.timeout)
         _work_size(work, config.max_work_bytes)  # Recheck after the entire process group is stopped.
         candidates = list((work / "output").rglob("*"))

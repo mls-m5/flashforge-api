@@ -134,6 +134,37 @@ class SlicerTests(unittest.IsolatedAsyncioTestCase):
             await self.slice()
         self.assertEqual(self.output.read_bytes(), PAYLOAD)
 
+    async def test_manual_transform_is_baked_and_disables_arrange_with_immutable_inputs(self):
+        from test_model_transform import ASCII
+        self.source.write_bytes(ASCII)
+        originals={kind:getattr(self.config,kind).read_bytes() for kind in ('machine','process','filament')}
+        script=self.fake.read_text().replace('value("--arrange") == "1"','value("--arrange") == "0"').replace('name == "model.stl"','name == "placed.stl"')
+        script += '\n'
+        # Inspect the actual native input, not just wrapper metadata.
+        check='''
+import struct
+raw = pathlib.Path(args[-1]).read_bytes()
+assert struct.unpack_from('<3f', raw, 96) == (26., -12., 0.)
+assert struct.unpack_from('<3f', raw, 108) == (34., -12., 0.)
+'''
+        self.fake.write_text(script.replace('print("READY "',check+'\nprint("READY "'))
+        await slice_model(self.source,self.output,self.config,capture=self.capture,transform={'scale':2,'rotate_x':90,'x':30,'y':-15})
+        report=self.capture.manifest['metadata']['geometry_transform']
+        self.assertEqual(report['transform']['scale'],2.)
+        self.assertEqual(report['arrange'],0)
+        self.assertEqual(self.source.read_bytes(),ASCII)
+        for kind,raw in originals.items(): self.assertEqual(getattr(self.config,kind).read_bytes(),raw)
+        self.assertTrue(any(e['type']=='geometry_transform' for e in events(self.capture)))
+
+    async def test_manual_transform_outside_bed_fails_before_native_help_or_slice(self):
+        from test_model_transform import ASCII
+        self.source.write_bytes(ASCII)
+        with self.assertRaises(SliceError):
+            await slice_model(self.source,self.output,self.config,capture=self.capture,transform={'x':70})
+        self.assertFalse(self.output.exists())
+        commands=[e for e in events(self.capture) if e['type']=='slicer_command']
+        self.assertEqual([e['stage'] for e in commands],['geometry_transform'])
+
     async def test_quality_options_only_change_private_process_snapshot(self):
         originals = {kind: getattr(self.config, kind).read_bytes() for kind in ("machine", "process", "filament")}
         check = '''

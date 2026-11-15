@@ -13,6 +13,20 @@ embedded project settings never reach Orca. See [3MF.md](3MF.md) for supported
 transforms/units, rejected assemblies/extensions, provenance and the actual
 user-tool native trial. OBJ/SDL inputs remain unsupported. STL coordinates are interpreted as millimetres: no automatic unit conversion, scaling, repair or auto-orientation. Orca is asked to arrange the object and ensure it is on the bed, using the supplied machine profile.
 
+## Optional typed manual layout
+
+The web editor/library now accepts a separate optional `transform` argument:
+uniform scale, XYZ degrees and XY centre. Explicit Slice bakes a private STL,
+then uses arrange0/orient0/ensure-on-bed to retain placement. Null/omitted keeps
+the automatic contract above; the standalone CLI exposes no new flags. Manual
+mode requires a matching nominal centred140mm machine, validates finite typed
+parameters/mesh fit and source binding at the web API, and never changes original
+profiles/model or a completed artifact. A bounded stdlib child records normalized
+transform/baked hash/bounds before native help/slice. See MODEL_TRANSFORMS.md for
+coordinate conventions, resource limits, native2.3/HTTP evidence and remaining
+host2.5/browser/physical acceptance. Startup/purge is NOT relocated; mesh fit is
+not head/clip/brim/support/compensation or firmware validation.
+
 The user's official Finder download page is now under a separate read-only
 review: [FLASHFORGE_PROFILE_REVIEW.md](FLASHFORGE_PROFILE_REVIEW.md). The exact
 Linux Orca ZIP contains an AppImage labelled V1.8.1, not loose JSON presets.
@@ -111,6 +125,10 @@ ORCA --slice 0 --arrange 1 --orient 0 --ensure-on-bed
 ```
 
 Each argument is passed directly without a shell. Model/profile files are bounded snapshots with fixed safe names inside a fresh project-local `.tmp/orca-*` workspace. Help and slicing use an isolated datadir; TMPDIR/TMP/TEMP and XDG config/cache/data paths also point inside the workspace. Semicolon-containing original filenames are safe because they are not used as settings-list elements. Repository paths containing semicolons are unsupported. Exactly **one** nonempty plain `.gcode` output is required; zero/multiple outputs, binary/NUL-containing output, oversized data, failed exit or timeout abort before printer connection.
+
+Manual-mode library/web jobs instead use `--arrange 0` and `placed.stl`, after
+the bounded `geometry_transform` helper stage. No other validity check/flag is
+disabled; no G-code coordinate rewriting or arbitrary native transforms are used.
 
 Every invocation prints its capture path. `traffic.log` and `events.jsonl` include:
 

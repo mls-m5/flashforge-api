@@ -28,5 +28,11 @@ async function main(){
  assert.equal(vertices[0],10,'display-only placement never modifies source vertices');
  v.wireframe(true);assert.equal(v.paths[0].material.wireframe,true);
  v.filter(.2,false);assert.equal(v.paths[0].visible,true);
+ v.setModelLayout({matrix:[2,0,0,-20,0,2,0,-40,0,0,2,-60,0,0,0,1],bounds:[[0,2],[0,2],[0,0]]});
+ v.scene.updateMatrixWorld(true);
+ assert.deepEqual(new T.Vector3(...vertices.slice(0,3)).applyMatrix4(v.paths[0].matrixWorld).toArray(),[0,0,0]);
+ assert.equal(v.paths[0].matrixAutoUpdate,false);assert.equal(vertices[0],10);
+ v.reset(true);assert.deepEqual(v.controls.target.toArray(),[0,0,10]);
+ v.setModelLayout(null);assert.equal(v.paths[0].visible,false,'invalid edits hide stale geometry');
  console.log('Vendored Three geometry batching, height uniforms, camera and disposal checks passed (no GPU).');
 }main().catch(e=>{console.error(e);process.exitCode=1;});

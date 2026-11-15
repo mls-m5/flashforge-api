@@ -76,11 +76,17 @@ filter and the new candidate's physical startup remains unverified.
 After selecting STL/supported3MF, the input model now appears in a separate
 3D mesh view **before Slice**. Orbit/zoom/pan the camera, inspect dimensions or
 switch wireframe. Display centering/on-bed translation is visual only; it does
-not edit the file or choose Orca's placement. The original mesh stays available
-after slicing, separately from the G-code result below. Model rotation, scale,
-face-to-bed and multi-model arrangement are still future work. See
-[docs/MODEL_PREVIEW.md](docs/MODEL_PREVIEW.md). Restart backend/reload browsers;
-new model-view rendered-browser/GPU acceptance remains pending.
+not edit the file or choose Orca's placement by itself. **Numeric controls now
+add uniform scale, XYZ rotation and XY model movement**, with +90°/Center/Reset
+buttons and automatic Z-on-bed. Editing enables manual placement; explicit
+Slice bakes a private geometry derivative and disables Orca auto-arrange.
+Original files stay unchanged. Discard/reselect to edit a completed slice;
+face-to-bed picking, mouse gizmos and multiple models remain future work.
+See [docs/MODEL_TRANSFORMS.md](docs/MODEL_TRANSFORMS.md) for coordinate/resource
+limits and actual offline native2.3 placement trials. The user accepted the
+initial mesh view; new editor/browser/host2.5 acceptance remains pending.
+Restart backend/reload browsers. Fixed start/purge paths do not follow model
+movement; inspect the G-code output before separate Save/Start.
 
 ## Inspect the current toolpath
 
@@ -249,6 +255,8 @@ node tests/test_preview_ui.js
 node tests/test_toolpath_view.js
 node tests/test_model_worker.js
 node tests/test_model_preview_ui.js
+node tests/test_model_transform.js
+node tests/test_model_editor_integration.js
 ```
 
 Tests use ephemeral loopback ports and never connect to a physical printer. Generated test files use the ignored project-local `.tmp/` directory and are cleaned up; do not use the system temporary directory for project work. No third-party dependencies are required. One integration test retains the uploader's existing three-second pause.

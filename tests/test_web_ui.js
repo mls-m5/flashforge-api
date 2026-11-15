@@ -82,7 +82,7 @@ async function main() {
     assert.match(element("job-result").textContent, /does NOT prove READY/);
     click("discard"); await flush();
     choose("model.stl", 100);
-    xhrs[1].finish({phase: "model_ready", busy: false, name: "model.stl", suggested_name: "model.gcode", artifact: false, size: 100});
+    xhrs[1].finish({phase: "model_ready", busy: false, name: "model.stl", suggested_name: "model.gcode", artifact: false, size: 100, source_sha256:'b'.repeat(64)});
     assert.equal(element("save").disabled, true);
     assert.equal(element("remote").value, "model.gcode");
     assert.equal(element("quality-settings").disabled, false);
@@ -124,8 +124,19 @@ async function main() {
     element("contour-compensation").validity = {badInput: false};
     element("contour-compensation").value = "-0.2";
     assert.equal(posts.length, beforeSlice, "quality choice alone does not slice");
+    const draft={source_sha256:'b'.repeat(64),transform:{scale:2,x:3,y:4,rotate_z:90},error:'',locked:false};
+    documentHandlers['finder-model-transform']({detail:{...draft,source_sha256:'old'}});await flush();
+    assert.equal(element('slice').disabled,true,'stale model edits cannot slice another source');
+    documentHandlers['finder-model-transform']({detail:{...draft,error:'invalid mesh layout'}});await flush();
+    assert.equal(element('slice').disabled,true);
+    documentHandlers['finder-model-transform']({detail:{...draft,locked:true}});await flush();
+    assert.equal(element('slice').disabled,true,'another tab already sliced this source');
+    documentHandlers['finder-model-transform']({detail:draft});await flush();
+    assert.equal(element('slice').disabled,false);assert.equal(posts.length,beforeSlice,'geometry edits never auto-slice');
     click("slice"); await flush();
     assert.equal(posts.at(-1).url, "/api/slice");
+    assert.deepEqual(posts.at(-1).data.transform,draft.transform);assert.equal(posts.at(-1).data.source_sha256,draft.source_sha256);
+    documentHandlers['finder-model-transform']({detail:null});await flush();
     assert.deepEqual(posts.at(-1).data.settings, {layer_height: 0.12, brim: "outer", brim_width: 5, xy_hole_compensation: 0.2, xy_contour_compensation: -0.2});
     assert.equal(element("quality-settings").disabled, true);
     assert.match(element("applied-quality").textContent, /layer 0.12 mm/);

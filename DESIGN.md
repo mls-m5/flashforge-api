@@ -144,8 +144,16 @@ capacity, blocks overlapping local operations and restores state on failure.
 STL streams unchanged. Discard removes its cache. Browser geometry parsing is
 bounded/off-thread; the shared Three scene accepts a shaded mesh/wireframe with
 visual-only centered/on-bed translation, without mutating source/slicer input.
-No model editing/arranging/face selection yet. See MODEL_PREVIEW.md for limits,
-source/artifact generation guards, lifecycle tests and browser acceptance gaps.
+The user accepted that initial preview. A typed single-model editor now adds
+uniform scale, extrinsic XYZ rotations and XY centre movement, with on-bed Z.
+Source-bound browser drafts commit only on explicit Slice; server bakes private
+STL with bounded stdlib worker, captures original/derived identities and asks
+Orca for arrange0/orient0. Automatic mode/CLI retain arrange1. Original source
+and completed artifacts remain immutable; server snapshot freezes editor fields
+at Slice. Native2.3 coordinate-preservation trials passed; new browser/host2.5
+acceptance remains pending. Gizmos/face picking/multiple models remain future.
+See MODEL_PREVIEW.md and MODEL_TRANSFORMS.md for limits, mathematical contract,
+source/artifact generation guards, tests and fixed-purge/clearance limitations.
 
 ### Optional private-LAN access
 

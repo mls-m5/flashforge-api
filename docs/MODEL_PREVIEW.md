@@ -5,21 +5,26 @@
 The page now has a separate **Model preview** between file receipt and Slice.
 Drop the current `.stl` or supported geometry-only `.3mf` and inspect its solid
 mesh **before slicing**. G-code preview remains below Slice for comparison.
-The geometry code calls no printer transport or native Orca and initiates no
-model edit or automatic Slice/Save/Start. Existing configured status polling
+The geometry viewer calls no printer transport or native Orca and initiates no
+automatic Slice/Save/Start. The user accepted this initial preview; a separate
+numeric editor now drafts scale/rotation/XY moves and commits only on explicit
+Slice. See MODEL_TRANSFORMS.md for its coordinate/resource contract and native
+placement evidence. Original geometry serving described below is unchanged. Existing configured status polling
 is independent and may yield/reclaim its own observation session while a 3MF
 preview conversion holds/releases the local slot.
 
 Restart the backend when no local job is active and reload browsers. Drag to
 orbit the camera, scroll/pinch to zoom, right-drag/two-finger drag to pan. Fit
 camera and wireframe are available. Pause releases the model geometry/worker.
-This is camera rotation only: model rotation/scale, face-to-bed, multiple-model
-editing/arrangement and image/GX export remain future work.
+Camera dragging still only rotates/pans the camera. Numeric model scale,
+rotation and XY controls now exist separately (MODEL_TRANSFORMS.md); face-to-bed
+picking, mouse gizmos, multi-model editing and image/GX export remain future work.
 
-Displayed geometry is centered in XY and lowered to the nominal plate **only
-for display**. Original bytes, units/build transforms and slicer inputs are
-not rewritten. Orca still arranges as before and may rotate/place the model
-differently. STL units are assumed mm; 3MF units/transforms follow the existing
+In automatic-arrangement mode, displayed geometry is centered in XY and lowered
+to the nominal plate **only for display**; Orca still arranges and may rotate it
+differently. In manual mode, preview uses the typed layout that explicit Slice
+bakes into a private derivative with arrange0. Original source bytes and imported
+units/build transforms are not rewritten. STL units are assumed mm; 3MF units/transforms follow the existing
 bounded importer. The nominal centered 140 mm grid is not measured clearance.
 This view shows original geometry, not hole/contour compensation, brim, support
 or material deposition. Use the separate G-code view to inspect slicing results.
@@ -27,9 +32,9 @@ A plausible mesh is not watertightness, winding, material or print-safety proof.
 
 ## Source identity and API
 
-`/api/state` now exposes `model` and `source_sha256`. The original source hash
+`/api/state` exposes `model`, `source_sha256` and a per-receipt `source_id`. The original source hash
 survives Slice while `sha256` changes to the generated print artifact. The
-model view keys only on the source identity/name, so it stays the original
+model view keys only on the source identity/receipt/name, so it stays the original
 mesh during/after slicing instead of interpreting G-code as a model.
 Discard/source changes clear geometry and invalidate in-flight work; failure
 clears old geometry and requires explicit Reload for the same failed source.
@@ -58,7 +63,8 @@ There is no browser path, command, executable or arbitrary geometry selection.
   printer outcomes; explicit Slice can still be attempted independently.
 - The cache is derived data, not a raw capture edit or new print artifact.
   It persists only with the slot and counts against web storage. No capture,
-  slicer log or printer session is created. Source directories/local writers
+  slicer log or printer session is created by model GET. Explicit manual Slice
+  separately records derivative metadata (MODEL_TRANSFORMS.md). Source directories/local writers
   are trusted; source ETags are not an OS security sandbox/integrity monitor.
 
 ## Browser geometry and rendering
@@ -82,7 +88,8 @@ additional dependency/addon, printer storage fetch or remote upload.
 
 `model-preview.js` uses only fixed config/state/model GETs, with source ETag,
 AbortController, generation tickets, worker termination and 30 s browser deadline.
-It does not modify shared model/project state from camera controls.
+It does not modify shared model/project state from camera controls. Numeric
+edits now publish only a source-bound local draft for explicit Slice.
 
 ## Checks and remaining work
 
@@ -107,6 +114,7 @@ created no captures or printer/native-slicer calls. Its temporary workspace
 was project-local and cleaned up. Private retained STL/derived fixture smoke
 parses also succeeded; zero-area facets in existing inputs are reported.
 These are not physical or rendered-browser/GPU acceptance. The user reports
-the existing G-code view is useful; new model camera/shading/worker/LAN behavior
-still needs a browser trial. Model editing/arranging can follow that acceptance.
+the existing G-code view is useful and the initial model view works. The new
+numeric editor still needs browser/host2.5 acceptance (MODEL_TRANSFORMS.md);
+the agent has not rendered either view on a GPU.
 The fixed-purge overlap remains separately queued in ROADMAP.md, not changed.

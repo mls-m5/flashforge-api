@@ -458,9 +458,50 @@ It preserves original source identity through Slice and retains the G-code view
 for comparison. Token-protected model GETs stream STL or prepare a bounded
 private geometry-only 3MF cache in an isolated/reaped Python worker; no Orca,
 printer/client, source/profile edit or new capture. Workspace/job guards remain.
-See MODEL_PREVIEW.md for tests and actual ephemeral HTTP 3MF trial. Browser/GPU
-acceptance is pending. Model editing/scale/rotation/face-to-bed/multiple models
-remain future work; the repeated fixed-purge issue is queued above, not changed.
+See MODEL_PREVIEW.md for tests and actual ephemeral HTTP 3MF trial. The
+initial view was accepted by the user. The next milestone below adds typed
+single-model edits; face picking/multiple models and the repeated fixed-purge
+issue remain separate, not silently changed.
+
+## Future requested upload option: checked-by-default start after save
+
+During model-editor work, the user explicitly requested **a note for the later
+upload-workflow change**, not implementation now: a checkbox labelled along the
+lines of “Start print when upload completes”, **checked by default**. Unchecked
+means save/upload only. “Completes” refers to the file upload, not a prior print.
+Current separate Save/Start behavior, launcher flags and no-auto-start policy
+are unchanged by this note or by model transformations.
+
+When implemented, the button/labels must clearly show the combined intent before
+the initiating click (no recurring popup), and the option must respect server
+job-control/generated-output capabilities. Compose only verified save of the
+exact resulting identity/name with a fresh READY check and one start attempt;
+failed/unknown transfer, invalidated identity or unhealthy cleanup cannot trigger
+start. No blind retry, automatic stop or start of an older saved file. Record
+requested intent, save confirmation and start outcome separately. Add negative
+orchestration/UI tests and update the documented default deliberately; this note
+does not authorize an agent printer connection or motion trial.
+
+## Typed single-model editing implemented
+
+Following the user's initial model-view acceptance, numeric uniform scale,
+XYZ rotations, XY centre movement, +90°/Center/Reset and whole-plate camera are
+implemented. Source-bound drafts update preview only; explicit Slice bakes a
+private STL and disables automatic arrange while retaining native checks.
+A stdlib worker has resource/cleanup/capture bounds; original inputs/profiles
+and completed artifacts stay immutable, and all tabs adopt the server snapshot
+at Slice. Automatic mode/CLI keep arrange1. Geometry bounds are nominal Finder
+140mm, not clearance; start/purge paths do NOT move with the model.
+
+Native2.3 shifted STL/core3MF probes confirmed arrange0 preservation. Four actual
+adapter trials covered moved/scaled/rotated generated cuboid and supplied3MF;
+a separate ephemeral HTTP/native trial verified source hash/baked output,
+immutable source GET and disabled Save, with no printer sessions. Captures,
+coordinates, tests and limits are in MODEL_TRANSFORMS.md. Original profiles
+unchanged; no agent hardware contact. New browser/WebGL controls, host2.5 and
+physical placement remain user-run acceptance. Face picker, mouse gizmos,
+nonuniform scale and multiple-model editor remain future work; fixed priming is
+still separately queued, not promoted to the offline draft03 by this work.
 
 ## Deferred work
 

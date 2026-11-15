@@ -22,6 +22,7 @@ import uuid
 from .capture import Capture, CaptureError
 from .client import ClientConfig, FinderClient, remote_path
 from .slicer import SliceConfig, slice_model
+from .model_transform import normalize_transform
 from .slice_settings import normalize_settings
 from .passive_status import status_from_capture
 from .active_status import ActiveMonitor
@@ -34,7 +35,7 @@ MODEL_LIMIT = 64 * 1024 * 1024
 CAPTURE_LIMIT = 64 * 1024 * 1024
 STORAGE_LIMIT = 256 * 1024 * 1024
 STATIC_FILES = {"/": ("index.html", "text/html; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
-for _name in ("app.js", "manual.js", "preview.js", "toolpath-view.js", "toolpath-worker.js", "model-preview.js", "model-worker.js",
+for _name in ("app.js", "manual.js", "preview.js", "toolpath-view.js", "toolpath-worker.js", "model-preview.js", "model-worker.js", "model-transform.js",
               "vendor/three/three.module.min.js", "vendor/three/OrbitControls.js"):
     STATIC_FILES["/" + _name] = (_name, "text/javascript; charset=utf-8")
 STATIC_FILES["/vendor/three/LICENSE"] = ("vendor/three/LICENSE", "text/plain; charset=utf-8")
@@ -138,7 +139,7 @@ class Workbench:
                 "size": 0, "name": "", "error": "", "warning": "", "capture": "",
                 "sha256": "", "sliced": False, "artifact": False, "slicer_log": "",
                 "suggested_name": "", "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested", "slicer_stage": "", "slice_settings": None,
-                "effective_quality": None, "model": False, "source_sha256": ""}
+                "effective_quality": None, "model": False, "source_sha256": "", "source_id": "", "model_transform": None}
 
     def capacity(self, reserve):
         if self.monitor and self.monitor.capture and not self.monitor.capture.closed:
@@ -193,7 +194,7 @@ class Workbench:
             self.artifact = path if suffix not in (".stl", ".3mf") else None
             self.state.update(phase="model_ready" if suffix in (".stl", ".3mf") else "file_ready",
                               size=length, sha256=digest.hexdigest(), source_sha256=digest.hexdigest(),
-                              model=suffix in (".stl", ".3mf"), artifact=self.artifact is not None,
+                              model=suffix in (".stl", ".3mf"), source_id=uuid.uuid4().hex, artifact=self.artifact is not None,
                               suggested_name=suggested_name(name))
         except BaseException:
             shutil.rmtree(self.slot, ignore_errors=True)
@@ -259,7 +260,7 @@ class Workbench:
         if operation not in ("slice", "save", "start", "stop"):
             raise WebError(400, "Unknown operation")
         allowed = ({"confirm", "remote_name"} if operation == "save" else {"confirm", "save_id"} if operation == "start"
-                   else {"confirm", "settings"} if operation == "slice" else {"confirm"})
+                   else {"confirm", "settings", "transform", "source_sha256", "source_id"} if operation == "slice" else {"confirm"})
         if set(data) - allowed or data.get("confirm") is not True:
             raise WebError(400, "Explicit confirmation and only documented fields are required")
         if operation in ("start", "stop"):
@@ -287,8 +288,13 @@ class Workbench:
                 raise WebError(409, "Slicing needs a new STL/3MF; discard before slicing another version")
             try:
                 settings = normalize_settings(data.get("settings"))
+                transform = normalize_transform(data.get("transform"))
             except ValueError as exc:
                 raise WebError(400, str(exc)) from exc
+            if (transform is not None or "source_sha256" in data) and data.get("source_sha256") != self.state["source_sha256"]:
+                raise WebError(409, "Source model changed; reload before applying transforms")
+            if "source_id" in data and data["source_id"] != self.state["source_id"]:
+                raise WebError(409, "Source slot changed; reload before slicing")
         else:
             if not self.config.enable_upload:
                 raise WebError(409, "Printer uploads are disabled on the server")
@@ -315,6 +321,7 @@ class Workbench:
             self.state["slicer_log"] = ""
             self.state["slicer_stage"] = ""
             self.state["slice_settings"] = settings
+            self.state["model_transform"] = transform
             self.state["effective_quality"] = None
         self.task = asyncio.create_task(self._operation(operation, data))
 
@@ -392,7 +399,7 @@ class Workbench:
                 capture.manifest["metadata"].update(saved_name=self.state["saved_name"], save_id=self.state["save_id"])
             if operation == "slice":
                 result = await slice_model(self.source, self.slot / self.state["suggested_name"], self.config.slicing,
-                                           capture=capture, settings=self.state["slice_settings"])
+                                           capture=capture, settings=self.state["slice_settings"], transform=self.state["model_transform"])
                 self.artifact = result.path
                 self.state.update(phase="review", sliced=True, artifact=True, size=result.size, sha256=result.sha256,
                                   effective_quality=capture.manifest["metadata"].get("effective_quality"))

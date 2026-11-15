@@ -79,6 +79,18 @@ export class ToolpathView {
         mesh.userData.kind = 'model'; this.paths.push(mesh); this.scene.add(mesh);
         this.bounds = geometry.boundingBox.clone().translate(mesh.position); this.reset();
     }
+    setModelLayout(layout) {
+        const mesh = this.paths.find(p => p.userData.kind === 'model');
+        if (!mesh) return;
+        mesh.visible = Boolean(layout);
+        if (!layout) this.bounds = null;
+        if (layout) {
+            mesh.matrixAutoUpdate = false; mesh.matrix.set(...layout.matrix);
+            mesh.matrixWorldNeedsUpdate = true;
+            this.bounds = new THREE.Box3(new THREE.Vector3(...layout.bounds.map(b=>b[0])),new THREE.Vector3(...layout.bounds.map(b=>b[1])));
+        }
+        this.render();
+    }
     wireframe(enabled) {
         for (const path of this.paths) if (path.userData.kind === 'model') path.material.wireframe = enabled;
         this.render();
@@ -92,9 +104,10 @@ export class ToolpathView {
         }
         this.render();
     }
-    reset() {
-        const center = this.bounds ? this.bounds.getCenter(new THREE.Vector3()) : new THREE.Vector3(0, 0, 10);
-        const size = this.bounds ? Math.max(20, this.bounds.getSize(new THREE.Vector3()).length()) : 160;
+    reset(plate = false) {
+        const bounds = plate ? null : this.bounds;
+        const center = bounds ? bounds.getCenter(new THREE.Vector3()) : new THREE.Vector3(0, 0, 10);
+        const size = bounds ? Math.max(20, bounds.getSize(new THREE.Vector3()).length()) : 160;
         this.camera.position.copy(center).add(new THREE.Vector3(size, -size, size));
         this.camera.near = Math.max(.01, size / 10000); this.camera.far = Math.max(1000, size * 20);
         this.camera.updateProjectionMatrix(); this.controls.target.copy(center); this.controls.update(); this.render();

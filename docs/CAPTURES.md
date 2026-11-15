@@ -123,6 +123,22 @@ server profile/effective-setting hashes remain independent. Private scratch
 conversion is cleaned up, not source-modified. Reports/bounds can reveal model
 geometry and must remain private. See 3MF.md for importer limits and native trial.
 
+## Manual layout provenance
+
+Explicit manual Slice records `model_transform` intent and
+`geometry_transform_limits` even if helper processing fails. On success,
+`geometry_transform` event/metadata retain normalized
+scale/XYZ rotation/XY centre, baked STL size/hash, transformed bounds, triangle
+count and arrange/orient0, with a nominal-only/non-safety note. Original raw
+source remains `slicing_inputs.model`; geometry-only3MF intermediate remains
+`geometry_import`. The bounded helper runs/logs as stage`geometry_transform`
+through the existing subprocess/capture policy before native help/slice. Scratch
+baked STL/report are cleaned; G-code and capture metadata persist. Camera/numeric
+draft edits create no capture, native call or printer session. Original source,
+profiles and raw recordings are not edited. Source/derived bounds can disclose
+private geometry; do not commit them. See MODEL_TRANSFORMS.md for native offline
+capture references and the remaining browser/host2.5/physical limits.
+
 ## Browser toolpath preview is derived in-memory only
 
 Preview GETs read cached state and the bounded current artifact, not printer
@@ -173,7 +189,8 @@ Event types currently emitted:
 - `capture_end`: orderly recorder finalization;
 - `status_snapshot`: optional active-monitor parsed status batch with completion timestamp (raw stream still authoritative);
 - `manual_virtual_intent`: synthetic owned-dummy control intent/before/candidate, no wire command and not physical-motion evidence;
-- `slicer_settings`, `slicer_command`, `slicer_output`, `slicer_exit`, `slicer_result`: optional Orca stages described above.
+- `slicer_settings`, `slicer_command`, `slicer_output`, `slicer_exit`, `slicer_result`: optional Orca/helper stages described above;
+- `geometry_import`, `geometry_transform`: optional geometry-only3MF import and manual-layout derivative metadata; no printer session or safety certification.
 
 Each event includes `v`, monotonically increasing `seq`, `session_id` (or null for run-level events), UTC timestamp and `monotonic_ns` elapsed since capture start. Sequence order is logging order, not proof of causality between simultaneous directions.
 

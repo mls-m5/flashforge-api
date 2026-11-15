@@ -232,6 +232,21 @@ for full byte layout and `tools/extract_gx_preview.py` for bounded read-only
 extraction. This is one file's container observation, not firmware compatibility
 or complete header semantics; no GX generator or hardware trial is introduced.
 
+## SLICER-LAYOUT-021 — Offline typed placement, no new wire behavior
+
+Following user acceptance of the original mesh preview, the web editor now
+supports source-bound uniform scale/XYZ rotation/XY placement. Native Orca2.3.0
+with unchanged private draft02 preserves baked STL coordinates with arrange0;
+four actual adapter runs and one ephemeral HTTP/native run verify moved/scaled/
+rotated output, with zero printer sessions and no upload/start. Capture IDs,
+owned-cuboid body bounds and resource/mathematical contracts are documented in
+MODEL_TRANSFORMS.md. Source3MF still passes through geometry-only STL, not project
+settings. Native2.5/browser/editor/physical placement remain separate acceptance.
+This is local slicer/orchestration evidence, not Finder firmware or clearance
+validation; no protocol framing/CRC/timing/start/end template changed. Fixed
+priming does not follow the model and its overlap remains unresolved. No agent
+printer/proxy connection or new hardware authorization.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.

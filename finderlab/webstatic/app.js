@@ -2,7 +2,20 @@
 (() => {
     const el = id => document.getElementById(id);
     let config, state = {busy: false, phase: "empty"}, pending = false, uncertain = false;
-    let timer = null, polling = false, modelPreparing = false;
+    let timer = null, polling = false, modelPreparing = false, modelDraft = null;
+    function adoptState(next) {
+        if (next.source_id !== state.source_id) el('remote').value = next.suggested_name || '';
+        state = next;
+    }
+    if (document.addEventListener) document.addEventListener('finder-state-observed', event => {
+        if (!config || pending || polling || uncertain || modelPreparing) { event.preventDefault(); return; }
+        adoptState(event.detail); render(); // cached GET only; never reconcile an uncertain job automatically
+    });
+    if (document.addEventListener) document.addEventListener('finder-model-transform', event => {
+        modelDraft = event.detail;
+        // No native action here. Defer to avoid renderer/controller event reentrancy.
+        Promise.resolve().then(render);
+    });
     if (document.addEventListener) document.addEventListener('finder-model-preparing', event => {
         // Defer rendering to avoid reentering a viewer's source/abort cleanup.
         Promise.resolve().then(() => {
@@ -64,7 +77,7 @@
         const busy = pending || polling || modelPreparing || state.busy || uncertain || monitorPending;
         el("file").disabled = busy || state.phase !== "empty";
         el("discard").disabled = busy || state.phase === "empty";
-        el("slice").disabled = busy || !config || !config.slicing_enabled || state.phase !== "model_ready";
+        el("slice").disabled = busy || !config || !config.slicing_enabled || state.phase !== "model_ready" || Boolean(modelDraft && (modelDraft.source_sha256 !== state.source_sha256 || modelDraft.source_id !== state.source_id || modelDraft.error || modelDraft.locked));
         el("quality-settings").disabled = el("slice").disabled;
         el("brim-width").disabled = el("slice").disabled || el("brim-mode").value !== "outer";
         el("hole-compensation").disabled = el("slice").disabled;
@@ -88,7 +101,7 @@
         text("capture", state.capture);
         text("warning", state.warning);
         text("slice-status", state.busy && state.phase === "slicing" ?
-            (state.slicer_stage === "slice" ? "Slicing model…" : "Checking the Orca CLI…") :
+            (state.slicer_stage === "geometry_transform" ? "Applying model transforms…" : state.slicer_stage === "slice" ? "Slicing model…" : "Checking the Orca CLI…") :
             state.sliced && state.artifact ? `Slice completed: ${state.size} bytes. Download below for offline review; this is not print approval.` :
             state.phase === "failed" && state.slicer_stage ? "Slice failed. See the diagnostic excerpt below." :
             state.artifact ? "Existing print file ready; no slicing needed." : "Choose an STL/3MF, then click Slice. No slicing starts automatically.");
@@ -128,7 +141,7 @@
         if (polling || pending || !config) return;
         polling = true; render();
         try {
-            state = await request("/api/state");
+            adoptState(await request("/api/state"));
             uncertain = false;
             if (!state.error) text("error", "");
             if (state.busy) timer = setTimeout(refresh, 1000);
@@ -224,7 +237,14 @@
                 (contourInput.validity && contourInput.validity.badInput)) {
             text("error", "Use layer height 0.08–0.28 mm, brim width 1–10 mm and XY hole/contour compensation −0.5 to +0.5 mm per edge."); return;
         }
-        action("slice", {confirm: true, settings});
+        const body = {confirm: true, settings};
+        if (modelDraft) {
+            if (modelDraft.source_sha256 !== state.source_sha256 || modelDraft.source_id !== state.source_id || modelDraft.error || modelDraft.locked) {
+                text('error', modelDraft.error || 'Source model changed or was already sliced; refresh result.'); return;
+            }
+            body.transform = modelDraft.transform; body.source_sha256 = modelDraft.source_sha256; body.source_id = modelDraft.source_id;
+        }
+        action("slice", body);
     });
     el("save").addEventListener("click", () => {
         action("save", {confirm: true, remote_name: el("remote").value});

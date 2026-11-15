@@ -283,7 +283,7 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
         with patch("finderlab.web.FinderClient") as connect:
             for path in ("/", "/app.js", "/manual.js", "/style.css", "/preview.js", "/toolpath-worker.js",
                          "/toolpath-view.js", "/vendor/three/three.module.min.js", "/vendor/three/OrbitControls.js",
-                         "/vendor/three/LICENSE", "/model-preview.js", "/model-worker.js", "/api/model", "/api/config", "/api/state",
+                         "/vendor/three/LICENSE", "/model-preview.js", "/model-worker.js", "/model-transform.js", "/api/model", "/api/config", "/api/state",
                          "/api/printer-status", "/api/manual-state", "/api/artifact"):
                 code, body = await self.request("GET", path, headers={"Authorization": ""})
                 self.assertEqual(code, 401, path)
@@ -748,6 +748,36 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             client.assert_not_called()
         self.assertTrue(state["sliced"])
         self.assertEqual((await self.request("GET","/api/artifact"))[1],PAYLOAD)
+
+    async def test_slice_transform_is_typed_source_bound_and_snapshot_locked(self):
+        from test_model_transform import ASCII
+        self.configure_fake_orca()
+        from test_model_transform import MACHINE
+        machine_path=self.server.work.config.slicing.machine
+        machine_path.write_text(json.dumps(json.loads(machine_path.read_bytes())|MACHINE))
+        await self.file('part.stl',ASCII)
+        digest=self.server.work.state['source_sha256'];source_id=self.server.work.state['source_id']
+        for transform in ({'scale':True},{'z':1},{'x':71},{'rotate_x':float('inf')}):
+            self.assertEqual((await self.post('/api/slice',{'confirm':True,'transform':transform,'source_sha256':digest}))[0],400)
+        self.assertEqual((await self.post('/api/slice',{'confirm':True,'transform':{'scale':2},'source_sha256':'old'}))[0],409)
+        self.assertEqual((await self.post('/api/slice',{'confirm':True,'transform':{},'source_sha256':digest,'source_id':'old-slot'}))[0],409)
+        self.assertIsNone(self.server.work.task)
+        # Fake native CLI still checks the actual arranged-disabled/baked input.
+        fake=self.server.work.config.slicing.orca
+        path=Path(fake);path.write_text(path.read_text().replace('value("--arrange") == "1"','value("--arrange") == "0"').replace('name == "model.stl"','name == "placed.stl"'))
+        with patch('finderlab.web.FinderClient') as printer:
+            self.assertEqual((await self.post('/api/slice',{'confirm':True,'transform':{'scale':2,'x':30},'source_sha256':digest,'source_id':source_id}))[0],200)
+            state=await self.finish()
+            self.assertEqual(state['phase'],'review',state.get('error'));self.assertEqual(state['model_transform']['scale'],2.)
+            self.assertEqual(state['source_sha256'],digest);self.assertEqual(state['source_id'],source_id)
+            self.assertEqual((await self.request('GET','/api/model'))[1],ASCII)
+            self.assertEqual((await self.post('/api/slice',{'confirm':True,'transform':{},'source_sha256':digest}))[0],409)
+            printer.assert_not_called()
+        await self.post('/api/discard',{'confirm':True});await self.file('part.stl',ASCII)
+        self.assertNotEqual(self.server.work.state['source_id'],source_id)
+        self.assertEqual(self.server.work.state['source_sha256'],digest)
+        self.assertIsNone(self.server.work.state['model_transform'])
+        self.assertEqual((await self.post('/api/slice',{'confirm':True,'transform':{},'source_sha256':digest,'source_id':source_id}))[0],409)
 
     async def test_stl_model_preview_before_and_after_slice_keeps_original_source(self):
         self.configure_fake_orca()

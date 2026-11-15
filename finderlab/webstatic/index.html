@@ -49,9 +49,21 @@
 <p id="model-message" role="status">Choose an STL/3MF.</p><div id="model-canvas" aria-label="3D input model view"></div>
 <p id="model-dimensions"></p>
 <label><input id="model-wireframe" type="checkbox"> Wireframe</label>
-<button id="model-fit">Fit camera</button><button id="model-reload">Reload model · no slicing</button>
-<p>Drag to orbit the camera, scroll/pinch to zoom, right-drag/two-finger drag to pan. Only the display is centered and placed on the nominal plate; source bytes and slicer placement are unchanged. STL units are assumed mm; 3MF units/build transforms are imported.</p>
-<p>This is original geometry, not the compensated/sliced result below. No model rotation, scaling, face-to-bed selection, multi-part arrangement or collision validation yet. 3MF components/extensions unsupported by our geometry importer still fail explicitly.</p>
+<button id="model-fit">Fit camera</button><button id="model-plate">Show plate</button><button id="model-reload">Reload model · no slicing</button>
+<label><input id="model-manual" type="checkbox" disabled> Use manual transforms / placement for next Slice · disables automatic arrange</label>
+<fieldset id="model-transform-fields" disabled><legend>Single-model layout · edits preview only until Slice</legend><div class="model-transform-grid">
+<label>Uniform scale (%) <input id="model-scale" type="number" min="1" max="1000" step="1" value="100"></label>
+<label>XY centre X (mm) <input id="model-x" type="number" min="-70" max="70" step="0.5" value="0"></label>
+<label>XY centre Y (mm) <input id="model-y" type="number" min="-70" max="70" step="0.5" value="0"></label>
+<label>Rotate X (°) <input id="model-rotate-x" type="number" min="-360" max="360" step="1" value="0"></label>
+<label>Rotate Y (°) <input id="model-rotate-y" type="number" min="-360" max="360" step="1" value="0"></label>
+<label>Rotate Z (°) <input id="model-rotate-z" type="number" min="-360" max="360" step="1" value="0"></label></div>
+<button id="model-turn-x">X +90°</button><button id="model-turn-y">Y +90°</button><button id="model-turn-z">Z +90°</button>
+<button id="model-center">Center XY</button><button id="model-transform-reset">Reset · automatic arrange</button>
+</fieldset><p id="model-layout-message" role="status"></p>
+<p>Drag to orbit the camera, scroll/pinch to zoom, right-drag/two-finger drag to pan. Camera drag does not move the model. Use numeric controls above for model edits; Z automatically sits on bed after rotation; this does not select a flat face or add supports. STL units are assumed mm; 3MF units/build transforms are imported.</p>
+<p>Edits affect a private geometry derivative on explicit Slice, never the original. Scale first, then rotate X → Y → Z about original bounds centre, then centre XY / sit on bed. Once sliced, discard/reselect to edit another version. No mouse gizmos, face-to-bed picker, multiple models or collision validation yet. Unsupported 3MF components/extensions still fail explicitly.</p>
+<p class="warning">Nominal mesh fit only, not physical clearance. Start/purge paths do NOT move with the model and the current fixed prime can cross it. Brim, skirt, compensation and support extend the footprint. Inspect the G-code result before Save/Start.</p>
 </section>
 <section><h2>2 <span>Slice and review</span></h2>
 <p id="orca">Orca configuration loading…</p><p id="slice-status" role="status">Choose an STL/3MF, then click Slice.</p>

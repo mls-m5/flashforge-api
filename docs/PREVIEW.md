@@ -126,6 +126,8 @@ node tests/test_preview_ui.js
 node tests/test_toolpath_view.js
 node tests/test_model_worker.js
 node tests/test_model_preview_ui.js
+node tests/test_model_transform.js
+node tests/test_model_editor_integration.js
 ```
 
 Worker tests cover modes/E resets/retraction, unknown origins, inch conversion,
