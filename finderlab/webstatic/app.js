@@ -143,6 +143,7 @@
         text("job-gating", config && config.owned_dummy ? "Confirmed virtual Start/Cancel available. This endpoint is the owned dummy, not hardware." : config && config.job_controls_enabled ? "Explicit job controls ENABLED. Start uses only this slot's confirmed saved filename." :
             "Job controls disabled. Restart with --enable-job-controls only for a deliberate supervised trial.");
         if (state.error) text("error", state.error);
+        if (el('action-error')) text('action-error', el('error').textContent);
         text("gating", !config || !config.upload_enabled ? "Printer uploads disabled: start the server with --enable-upload for an explicitly chosen endpoint." :
             state.sliced && !config.sliced_upload_enabled ? "Generated-output saving is blocked pending profile review and server --allow-sliced-upload." :
             (config.active_monitor_enabled ? "Status polling can open a connection; Save/Start/Cancel still require separate explicit actions." :
@@ -151,7 +152,13 @@
     async function request(url, options) {
         const response = await fetch(url, {cache: "no-store", ...options});
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        if (!response.ok) {
+            const error = new Error(data.error || `HTTP ${response.status}`);
+            // These server replies reject requests before launching a task.
+            // Lost/malformed responses, 408 and 5xx I/O errors remain uncertain.
+            error.notAccepted = [400,403,404,409,413,415,422,507].includes(response.status);
+            throw error;
+        }
         return data;
     }
     async function refresh() {
@@ -177,8 +184,8 @@
             }, body: JSON.stringify(body)}));
             accepted = true;
         } catch (error) {
-            uncertain = true;
-            text("error", error.message + " Refresh the result before another operation.");
+            uncertain = !error.notAccepted;
+            text("error", error.notAccepted ? 'Request rejected: '+error.message : error.message + ' Response unknown; refresh the result before another operation.');
         } finally { pending = false; render(); }
         // GET only reads cached state, never printer status.
         if (accepted) await refresh();

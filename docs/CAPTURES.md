@@ -274,6 +274,18 @@ these capture-format choices do not provide transport encryption. All logged-in
 users can access the shared current artifact; private captures still have no
 HTTP download route.
 
+## Explicitly authorized archive outside the web budget
+
+During urgent quota/UI diagnosis the user authorized archiving rather than
+rerecording/deleting. Finalized old monitor20261115T095418Z-2ea7f5062d99 moved
+intact from `web-data/proxy-test/captures/` to `captures/web-archive/`; eight raw
+session stream lengths/SHA256 verified against the unchanged manifest. No
+current recording/source/proxy or raw bytes were changed.55.35MiB moved outside
+the web quota (same filesystem, not a physical disk-space reduction). See
+STORAGE.md for exact paths, limited HTTP evidence and reservation/UI recovery.
+History still uses the original capture ID; resolve its new archive location.
+No automated pruning/retention or permission to move active logs is introduced.
+
 ## Privacy and sharing
 
 Recordings can contain full uploaded models, filenames, serial numbers, IP/MAC addresses and every command sent. A mock's virtual storage is RAM-only, but **its capture files persist payload bytes on disk**. The run directory is created with private permissions where supported; also secure its parent directory and backups.

@@ -186,6 +186,8 @@ estimates1327s/1174mm came from that actual Slice. Source bitmap was decoded and
 viewed locally; this is not physical printer-screen/browser acceptance.
 
 Run `python3 -m unittest discover -s tests -v` and `node tests/test_gx_ui.js`
-plus the existing Node checks and reviewed-trace integrity tool. Physical Finder
-image/header acceptance and host2.5 metadata remain explicit limitations; do not
+plus the existing Node checks and reviewed-trace integrity tool. The user subsequently reported that the generated GX miniature is visible on
+the server page. This supplies user browser-image acceptance, not a physical
+printer-screen/firmware result. Physical Finder
+image/header acceptance and broader host2.5 metadata remain explicit limitations; do not
 infer printability, clearance or permission for agent hardware actions.

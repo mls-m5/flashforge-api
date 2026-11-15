@@ -483,6 +483,24 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
         code, _ = await self.post("/api/save", {"confirm": True, "remote_name": "again.gx"})
         self.assertEqual(code, 409)
 
+    async def test_storage_rejection_explains_reservation_and_monitor_stop_recovers(self):
+        from types import SimpleNamespace
+        from finderlab.web import WebError
+        work=self.server.work
+        total=sum(p.stat().st_size for p in work.folder.rglob('*') if p.is_file())
+        monitor=SimpleNamespace(max_bytes=1000,capture=SimpleNamespace(closed=False,written=100))
+        try:
+            work.monitor=monitor
+            with patch('finderlab.web.STORAGE_LIMIT',total+20):
+                with self.assertRaises(WebError) as ctx:work.capacity(10)
+                self.assertEqual(ctx.exception.status,507)
+                self.assertIn('Operation was not started',str(ctx.exception))
+                self.assertIn('Stop status polling',str(ctx.exception))
+                self.assertIn('not print cancel',str(ctx.exception))
+                monitor.capture.closed=True
+                work.capacity(10)
+        finally:work.monitor=None
+
     async def test_receive_limits_early_eof_and_single_slot(self):
         for name in ("../escape.gx", "wrong.obj", "bad%00.gx"):
             code, _ = await self.file(name)

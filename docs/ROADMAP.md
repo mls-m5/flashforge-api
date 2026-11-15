@@ -555,6 +555,22 @@ miniature does not reproduce auto-arrangement/support/compensation or validate
 safety. Physical Finder image/header, host2.5 metadata variants and rendered
 browser/LAN image acceptance remain pending; no agent hardware approval.
 
+## Urgent persistent-storage admission and rejection UX recovery
+
+After a host restart the user reported a locked/no-output Slice. Current source
+receipt and finalized monitor-stop14:01:45UTC were observed; no new Slice capture
+or logged HTTP rejection. Persistent web usage~154MiB plus Slice73/monitor65MiB
+reservations exceeded256MiB while monitoring ran. The user authorized moving an
+older finalized55.35MiB monitor intact outside the web budget; raw hashes verified,
+current sources/active logs/proxy unchanged. New usage98.59MiB leaves room even
+for both reservations. Separate offline current-model native2.3/guarded03 Slice
+succeeded with no printer calls. See STORAGE.md for paths/evidence scope.
+
+Definite preflight rejections now explain budget/recovery and show at page top,
+without latching an unknown-response lock; genuinely unknown/lost/408/5xx outcomes
+still require explicit Refresh. No automatic retry/deletion, no quota increase
+or hardware action. Browser retry/host2.5 acceptance remains user-run.
+
 ## Deferred work
 
 Virtual print-progress simulation, additional firmware/client profiles, richer fault injection, exportable reports and optional separate print controls can follow. Print controls require a new safety/design decision rather than being added as a side effect of upload support.

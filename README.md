@@ -274,6 +274,15 @@ python3 -m finderlab proxy --target-host 192.0.2.10 --target-port 8899
 
 Connect FlashPrint manually to **127.0.0.1** on the proxy computer. Begin with connection/status only. The proxy forwards **all** commands unchanged, including print-start and heating; it is not a safety filter. No discovery is implemented. See [docs/PROXY.md](docs/PROXY.md) for a local-only trial, network configuration and diagnosis of the current disconnect.
 
+## Storage quota and a blocked Slice
+
+The256MiB web quota is disk-backed workspace storage, **not RAM**. Old captures
+and reserved future monitor/Slice budgets count, so model receipt may fit while
+Slice is rejected. Errors now appear at the top; a definite rejection does not
+lock controls as if a printer response were lost. No automatic retry or cleanup.
+See [docs/STORAGE.md](docs/STORAGE.md) for stop-observation/archive recovery and
+the user-authorized intact archive. Deleting `.tmp/` does not free this quota.
+
 ## Run tests
 
 ```sh
@@ -292,6 +301,7 @@ node tests/test_model_transform.js
 node tests/test_model_editor_integration.js
 node tests/test_start_after_upload_ui.js
 node tests/test_gx_ui.js
+node tests/test_web_rejection_ui.js
 ```
 
 Tests use ephemeral loopback ports and never connect to a physical printer. Generated test files use the ignored project-local `.tmp/` directory and are cleaned up; do not use the system temporary directory for project work. No third-party dependencies are required. One integration test retains the uploader's existing three-second pause.

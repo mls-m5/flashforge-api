@@ -144,8 +144,10 @@ class Workbench:
                 "save_capture": "", "start_capture": "", "gx_metadata": None, "gx_unavailable": "Slice a model first", "gx_generated": False}
 
     def capacity(self, reserve):
+        monitor_reserve = 0
         if self.monitor and self.monitor.capture and not self.monitor.capture.closed:
-            reserve += max(0, self.monitor.max_bytes - self.monitor.capture.written) + 1024 * 1024
+            monitor_reserve = max(0, self.monitor.max_bytes - self.monitor.capture.written) + 1024 * 1024
+            reserve += monitor_reserve
         total = count = 0
         for path in self.folder.rglob("*"):
             count += 1
@@ -156,7 +158,13 @@ class Workbench:
             if count > 4096:
                 raise WebError(507, "Web storage entry limit reached; archive private logs locally")
         if total + reserve > STORAGE_LIMIT:
-            raise WebError(507, "Web storage quota reached; archive private logs locally before continuing")
+            message = (f"Web storage quota: {total / 1024**2:.1f} MiB used + {reserve / 1024**2:.1f} MiB reserved "
+                       f"> {STORAGE_LIMIT / 1024**2:.0f} MiB limit. Operation was not started.")
+            if monitor_reserve:
+                message += (f" Active status recording reserves {monitor_reserve / 1024**2:.1f} MiB; "
+                            "Stop status polling (not print cancel), wait for recording to close, then try the action again.")
+            message += " Alternatively archive old private captures outside this workspace; nothing was deleted automatically."
+            raise WebError(507, message)
 
     def idle(self):
         if self.state["busy"]:
