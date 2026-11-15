@@ -272,7 +272,12 @@ Defaults:
 - `--max-sessions 1000`: server-mode maximum recorded sessions per run, bounding manifest/history metadata (a client invocation makes one session);
 - active clients and connection timeouts are limited separately by the mock/proxy configuration.
 
-The manifest and small filesystem metadata are outside the byte counter. Repeated runs accumulate: there is **no automatic deletion, rotation or total-directory quota**. Review disk space and manually archive/delete old runs as appropriate.
+The manifest and small filesystem metadata are outside the per-run byte counter.
+Standalone CLI/proxy runs still accumulate without automatic rotation/deletion
+or a global captures-directory quota. The web workbench separately has active
+admission and a bounded automatic intact archive, as described below; it never
+deletes evidence. Review physical disk space and move old archived data to other
+storage deliberately when necessary.
 
 On quota exhaustion or recording I/O failure, the affected connection stops rather than silently forwarding unrecorded data. The CLI then shuts down and reports the incomplete capture. Already forwarded bytes cannot be recalled; a partial file or uncertain operation may remain on a real printer. Recording failures prevent a `complete: true` result. If final manifest writing itself fails, the previous incomplete manifest remains.
 
@@ -290,6 +295,20 @@ these capture-format choices do not provide transport encryption. All logged-in
 users can access the shared current artifact; private captures still have no
 HTTP download route.
 
+## Automatic intact archive, explicitly requested after repeat507
+
+Completed inactive captures can now move oldest-first on admission pressure to
+`DATA_DIR/archive/captures/ID/`, on the same persistent volume. Active quota
+excludes that subtree; archive itself is capped2GiB/16384 entries. It retains
+unchanged raw bytes/manifests plus a separate append-only relative-path/size/
+time index. Active/incomplete/current save/start/selected/current-monitor paths
+and all model/plate files are protected. No deletion/overwrite/merge, no GET-
+triggered work or printer action. Full archive/no eligible records/error still
+refuses admission. Operator can disable with --no-auto-archive; default active
+limit256MiB can explicitly be set128–2048MiB via --storage-limit-mib. See
+STORAGE.md for policy/tests and later manual archive mappings/confirmed recovery.
+This supersedes the original no-automatic-archival policy, not raw immutability.
+
 ## Explicitly authorized archive outside the web budget
 
 During urgent quota/UI diagnosis the user authorized archiving rather than
@@ -300,7 +319,8 @@ current recording/source/proxy or raw bytes were changed.55.35MiB moved outside
 the web quota (same filesystem, not a physical disk-space reduction). See
 STORAGE.md for exact paths, limited HTTP evidence and reservation/UI recovery.
 History still uses the original capture ID; resolve its new archive location.
-No automated pruning/retention or permission to move active logs is introduced.
+The later automatic archive policy above preserves active logs and does not
+introduce automatic deletion/pruning. Original moved IDs remain unchanged.
 
 ## Privacy and sharing
 

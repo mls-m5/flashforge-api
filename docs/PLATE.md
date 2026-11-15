@@ -101,7 +101,12 @@ An actual fresh ephemeral HTTP two-file→native Slice→GX trial also passed:
 `20261115T173358Z-33725f97c786`, same sizes, zero printer/client calls, uploads/job
 controls disabled and temporary workspace cleaned. This is offline application
 acceptance, not independent protocol/physical printing or rendered-browser proof.
-Browser/WebGL/LAN controls and host2.5 multi-model acceptance remain user-run.
+The user subsequently confirmed multi-model Slice succeeds after resolving507
+admission. Host2.5 capture20261115T180930Z-91f12d5e57e8 contains two models /
+111004 triangles, no priming issues, complete recording and zero printer sessions.
+This adds acceptance for that host Slice, not all browser controls/other layouts
+or physical printing. See STORAGE.md. Broader browser/WebGL/LAN controls and
+host2.5 multi-model acceptance remain user-run.
 The earlier user-confirmed GX printer display does not itself validate this new
 plate workflow. No agent hardware action was authorized/performed.
 

@@ -241,6 +241,15 @@ class LauncherTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "extracted Orca AppRun"):
             launcher.build_command(orca=archive)
 
+    def test_bounded_storage_override_and_auto_archive_opt_out_are_explicit(self):
+        command=launcher.build_command(storage_limit_mib=512,auto_archive=False)
+        self.assertEqual(command[command.index('--storage-limit-mib')+1],'512')
+        self.assertIn('--no-auto-archive',command)
+        defaults=launcher.build_command()
+        self.assertNotIn('--storage-limit-mib',defaults);self.assertNotIn('--no-auto-archive',defaults)
+        for value in (0,127,2049,True,512.5):
+            with self.assertRaises(ValueError):launcher.build_command(storage_limit_mib=value)
+
     def test_missing_profile_and_invalid_port_are_refused(self):
         for port in (0, 65536):
             with self.assertRaises(ValueError): launcher.build_command(port)

@@ -56,7 +56,10 @@ def select_lan_address(subnet):
 
 
 def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=None,
-                  enable_job_controls=False, allow_sliced_upload=False, status_capture=None, native_skirt_test=False, monitor=None, lan_host=None, lan_network=None):
+                  enable_job_controls=False, allow_sliced_upload=False, status_capture=None, native_skirt_test=False, monitor=None, lan_host=None, lan_network=None, storage_limit_mib=None, auto_archive=True):
+    if type(auto_archive) is not bool:raise ValueError('auto_archive must be boolean')
+    if storage_limit_mib is not None and (type(storage_limit_mib) is not int or not 128 <= storage_limit_mib <= 2048):
+        raise ValueError('Web storage limit must be an integer128–2048MiB')
     if lan_network is not None and lan_host is None:
         raise ValueError("--lan-network needs --lan-host")
     if lan_host is not None:
@@ -100,6 +103,8 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
         "web-data/proxy-test" if proxy_port is not None else "web-data/dummy-upload-test" if dummy_upload_test else "web-data/offline-test")
     command = [sys.executable, "-m", "finderlab", "web", "--listen-host", str(address) if lan_host is not None else "127.0.0.1",
                "--listen-port", str(port), "--data-dir", str(ROOT / workspace), "--orca", str(selected.resolve())]
+    if not auto_archive:command += ['--no-auto-archive']
+    if storage_limit_mib is not None:command += ['--storage-limit-mib',str(storage_limit_mib)]
     command += ["--check-priming"]  # Required for every standard mode; never fall back to the fixed prime.
     if lan_host is not None:
         command += ["--lan", "--lan-network", str(subnet)]
@@ -132,6 +137,8 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("--port", type=int, default=8000, help="HTTP port (default: 8000)")
+    cli.add_argument('--storage-limit-mib',type=int,help='active workspace admission128–2048MiB; default256, not RAM/physical disk cleanup')
+    cli.add_argument('--auto-archive',action=argparse.BooleanOptionalAction,default=True,help='archive finalized inactive captures intact on demand; default enabled, archive capped2GiB')
     cli.add_argument("--lan-host", help="COMPUTER interface IP, or 'auto' to read local 192.168 configuration; password-protected sharing, no TLS")
     cli.add_argument("--lan-network", help="optional narrower allowed CIDR within 192.168/16")
     cli.add_argument("--orca", type=Path, help="trusted native Orca executable; relative paths are project-relative")
@@ -150,7 +157,7 @@ def main():
                                 proxy_port=args.proxy_port, enable_job_controls=args.enable_job_controls,
                                 allow_sliced_upload=args.allow_sliced_upload, status_capture=args.status_capture,
                                 native_skirt_test=args.native_skirt_test, monitor=args.monitor,
-                                lan_host=args.lan_host, lan_network=args.lan_network)
+                                lan_host=args.lan_host, lan_network=args.lan_network,storage_limit_mib=args.storage_limit_mib,auto_archive=args.auto_archive)
     except ValueError as exc:
         cli.error(str(exc))
     if args.proxy_port is not None:

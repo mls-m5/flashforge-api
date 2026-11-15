@@ -78,10 +78,18 @@ sessions. Export never relaxes nominal priming checks from the earlier Slice.
 Quota errors now report used/reserved/limit MiB and active-monitor reservation,
 with a manual Stop status polling/archive suggestion (not print cancel). It is
 persistent disk workspace admission, not RAM; `.tmp/` is outside this quota.
-Errors are mirrored at the page top. Explicit preflight4xx (except408) and507
+Errors are mirrored at the page top and directly beside Slice, so rejection is
+not hidden when viewing the plate/quality section. Explicit preflight4xx (except408) and507
 keep actions available for a deliberate corrected retry; unknown/lost/malformed
 responses and server-I/O5xx still lock until Refresh. No automatic retry,
-cleanup, print cancel or hardware query. See STORAGE.md for reservation math,
+deletion, print cancel or hardware query. The user now explicitly requested
+automatic intact archival: complete inactive recordings move oldest-first under
+`archive/captures/` in the same persistent volume when admission otherwise fails.
+That subtree has a separate2GiB/16384-entry budget; active/incomplete/current-job
+records and model/plate files remain protected. No overwrite or raw edits, and
+archive index is retained. Default active quota stays256MiB; optional bounded
+`--storage-limit-mib 512` and `--no-auto-archive` work in standard launchers/raw
+web. Restart backend/reload for the policy, not the existing proxy. See STORAGE.md for reservation math,
 the intact user-authorized archive and the distinction between observed logs /
 unrecorded browser HTTP actions. Hard-reload after updating assets.
 

@@ -144,6 +144,8 @@
             "Job controls disabled. Restart with --enable-job-controls only for a deliberate supervised trial.");
         if (state.error) text("error", state.error);
         if (el('action-error')) text('action-error', el('error').textContent);
+        if (el('slice-error')) text('slice-error',el('error').textContent);
+        if (el('storage-notice')) text('storage-notice',state.storage_notice);
         text("gating", !config || !config.upload_enabled ? "Printer uploads disabled: start the server with --enable-upload for an explicitly chosen endpoint." :
             state.sliced && !config.sliced_upload_enabled ? "Generated-output saving is blocked pending profile review and server --allow-sliced-upload." :
             (config.active_monitor_enabled ? "Status polling can open a connection; Save/Start/Cancel still require separate explicit actions." :

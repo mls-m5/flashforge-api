@@ -155,6 +155,19 @@ acceptance remains pending. Gizmos/face picking/multiple models remain future.
 See MODEL_PREVIEW.md and MODEL_TRANSFORMS.md for limits, mathematical contract,
 source/artifact generation guards, tests and fixed-purge/clearance limitations.
 
+### Explicitly requested automatic finalized-record archival
+
+Admission still reserves monitor/foreground budgets, but can now archive oldest
+complete inactive captures intact into DATA_DIR/archive/captures on the same
+persistent volume. Active quota excludes this subtree; archive is separately
+bounded2GiB/16384 entries with an append-only index. Current selected/save/start /
+monitor paths, incomplete/active logs and all model/plate files are protected.
+No deletion/overwrite/raw edit, automatic retry, GET-triggered work or printer
+operation. Lack of eligible space or full/error archive remains a visible
+rejection, now shown beside Slice. Explicit bounded active-quota override and
+archive opt-out are startup configuration, never HTTP-selected host paths.
+See STORAGE.md for exact policy, tests and confirmed host507 recovery.
+
 ### Multiple STL plate sources and immutable compound layout
 
 The web slot can now hold up to8 unsliced STL sources (64MiB aggregate), with

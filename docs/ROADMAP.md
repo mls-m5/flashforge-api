@@ -590,6 +590,24 @@ are in PLATE.md. The generated miniature was viewed locally and shows both
 parts; body remains byte-identical. Browser/WebGL/LAN editing and host2.5 plate
 acceptance remain user-run, not inferred from earlier GX printer-screen success.
 
+## Repeat507: user-requested automatic intact archival
+
+Browser evidence POST /api/slice507 confirmed recurring admission failure,
+not slicer execution. Three old complete monitors were archived intact (75.31MiB),
+without touching current source/proxy/log; user then confirmed success, and
+host2.5 two-model Slice180930Z-91f12d5e57e8 finalized with no priming issues.
+The user explicitly requested automatic archive to avoid repeated manual cleanup.
+
+Now admission can move oldest complete inactive captures under DATA_DIR/archive/
+captures, outside the default256MiB active budget but inside the persistent
+volume, capped2GiB/16384 entries with append-only index. Current/incomplete/
+active captures and all model/plate files are protected. No deletion/overwrite,
+raw edits, GET-triggered work, printer action or retry. Full/no eligible archive
+still rejects visibly. Bounded --storage-limit-mib128..2048 and --no-auto-archive
+are explicit launcher options; default active limit is not raised automatically.
+Errors stay beside Slice as well as at page top. See STORAGE.md for evidence,
+path mappings, resource/collision/identity tests and restart requirements.
+
 ## Deferred work
 
 Virtual print-progress simulation, additional firmware/client profiles, richer fault injection, exportable reports and optional separate print controls can follow. Print controls require a new safety/design decision rather than being added as a side effect of upload support.

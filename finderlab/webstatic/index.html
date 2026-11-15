@@ -97,6 +97,7 @@
 <p>Try a 5 mm outer brim for lifting corners. Extra material must be removed and can mark the bottom edge. Keep the bed clean/level and avoid drafts. Brim needs additional space around the model; Orca may reject a plate that no longer fits.</p>
 <p>First-layer height and brim separation use the server profile; temperature, start/end code and retraction are unchanged. These controls do not change an already sliced file or running print. To change a completed slice, discard/reselect and slice again.</p>
 </fieldset><p id="applied-quality"></p>
+<p id="slice-error" class="warning" role="alert"></p><p id="storage-notice" role="status"></p>
 <button id="slice" disabled>Slice model offline</button> <a id="download" href="/api/artifact" hidden>Download print file for review</a>
 <p>3MF imports core mesh geometry only. Embedded printer, filament, layer settings and start/end code are not loaded. Components/advanced extensions are rejected; export STL if unsupported. Orca arranges the imported geometry as before.</p>
 <p>Buttons act immediately without confirmation popups. Slice remains separate. Save can request start afterward; standalone Start remains available. Optional GX packaging below creates a thumbnail, not a toolpath safety validation.</p>
@@ -134,6 +135,6 @@
 <section><h2>Result and private diagnostics</h2><p>Phase: <strong id="phase">empty</strong></p>
 <p id="error" role="alert"></p><p id="warning"></p><button id="refresh">Refresh result</button>
 <dl><dt>Source/artifact SHA-256 (not remote read-back)</dt><dd id="hash">—</dd><dt>Private capture directory</dt><dd id="capture">—</dd></dl>
-<p>Captures include full model bytes. Inputs/generated files remain local; discard removes the current files, not captures. Storage is capped; archive old captures manually. Lost responses do not cancel a job. Never blindly retry an unknown save.</p></section>
+<p>Captures include full model bytes. Inputs/generated files remain local; discard removes the current files, not captures. Active storage is capped. Complete inactive captures are archived intact on demand by default, without deletion; the archive is separately capped at2GiB. Active/incomplete/current-job recordings are not moved. Lost responses do not cancel a job. Never blindly retry an unknown save.</p></section>
 <footer>Standalone workbench · OctoPrint integration is paused · No account, cloud upload or telemetry</footer>
 </main></body></html>

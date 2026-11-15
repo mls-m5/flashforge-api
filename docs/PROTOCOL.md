@@ -328,6 +328,18 @@ priming guard are not physical clearance validation. Browser/host2.5 plate behav
 remains user acceptance; earlier user GX display does not validate multi-model
 motion/material/printing. Capture/source metadata remain private.
 
+## WEB-STORAGE-028 — Confirmed507 and recovered host multi-model Slice
+
+The user supplied browser POST /api/slice507 evidence, then confirmed Slice
+succeeded after intact archival of old finalized logs. User-host finalized Slice
+20261115T180930Z-91f12d5e57e8 records two models/111004 triangles, native2.5.0
+AppRun, no priming issues and zero printer sessions. This is host slicing /
+admission evidence, not physical print or changed wire semantics. Automatic
+on-demand intact archive was then explicitly requested/implemented with bounded
+separate archive budget, current/active/incomplete/source protection and no
+raw edits/deletion/printer action. Details/mappings in STORAGE.md. No agent
+hardware/proxy connection or new CRC/framing/timing behavior inferred.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.

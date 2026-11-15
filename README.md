@@ -290,12 +290,15 @@ Connect FlashPrint manually to **127.0.0.1** on the proxy computer. Begin with c
 
 ## Storage quota and a blocked Slice
 
-The256MiB web quota is disk-backed workspace storage, **not RAM**. Old captures
-and reserved future monitor/Slice budgets count, so model receipt may fit while
-Slice is rejected. Errors now appear at the top; a definite rejection does not
-lock controls as if a printer response were lost. No automatic retry or cleanup.
-See [docs/STORAGE.md](docs/STORAGE.md) for stop-observation/archive recovery and
-the user-authorized intact archive. Deleting `.tmp/` does not free this quota.
+The default256MiB active quota is disk-backed workspace storage, **not RAM**.
+Old captures and future monitor/Slice budgets count. At the user's request,
+complete inactive captures now archive automatically on demand, intact under the
+same workspace's `archive/captures/`, outside the active budget; archive cap2GiB.
+No deletion, active-log/model moves or automatic retry. Errors stay visible next
+to Slice. Optional `--storage-limit-mib 512` (bounded128–2048) changes the active
+limit; `--no-auto-archive` opts out. Restart backend/reload for the new policy;
+the proxy need not restart. See [docs/STORAGE.md](docs/STORAGE.md) for protection,
+index/retention limits and confirmed507 recovery. Deleting `.tmp/` is unrelated.
 
 ## Run tests
 

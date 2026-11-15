@@ -1,8 +1,8 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const elements=new Map(),posts=[];let status=507;
+const elements=new Map(),posts=[],listeners={};let status=507;
 let state={phase:'model_ready',busy:false,model:true,name:'part.stl',artifact:false,source_id:'slot',source_sha256:'a'.repeat(64)};
 function el(id){if(!elements.has(id))elements.set(id,{value:id==='brim-mode'?'profile':id==='brim-width'?'5':['hole-compensation','contour-compensation'].includes(id)?'0':'',checked:false,disabled:false,textContent:'',handlers:{},classList:{add(){},remove(){}},addEventListener(k,f){this.handlers[k]=f;}});return elements.get(id);}
-const ctx={document:{getElementById:el},XMLHttpRequest:class{},setTimeout(){return 1;},clearTimeout(){},
+const ctx={document:{getElementById:el,addEventListener(k,f){listeners[k]=f;} },XMLHttpRequest:class{},setTimeout(){return 1;},clearTimeout(){},
  async fetch(url,opts={}){
   if(opts.method==='POST'){
    posts.push(url);
@@ -17,6 +17,9 @@ async function main(){
  assert.equal(el('slice').disabled,false);el('slice').handlers.click();await flush();
  assert.equal(posts.length,1);assert.equal(el('slice').disabled,false,'definite preflight507 must not latch unknown-operation lock');
  assert.match(el('action-error').textContent,/Request rejected.*storage quota/);assert.match(el('action-error').textContent,/Stop status polling/);
+ assert.equal(el('slice-error').textContent,el('action-error').textContent,'error visible beside Slice, not only at top/bottom');
+ listeners['finder-state-observed']({detail:{...state}});await flush();
+ assert.match(el('slice-error').textContent,/storage quota/,'cached status refresh must not make the rejection blink away');
  await flush();assert.equal(posts.length,1,'rejection never causes automatic retry');
  status=200;el('slice').handlers.click();await flush();assert.equal(posts.length,2);assert.equal(el('slice').disabled,true);
  state={...state,phase:'model_ready',artifact:false,sliced:false};el('refresh').handlers.click();await flush();status=500;

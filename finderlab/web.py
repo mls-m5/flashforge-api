@@ -4,6 +4,7 @@ Deliberately narrow HTTP/1.1 subset (Content-Length, close after one request).
 Not a general purpose web server or an Internet-facing service.
 """
 
+import argparse
 import asyncio
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field, replace
@@ -24,6 +25,7 @@ from .client import ClientConfig, FinderClient, remote_path
 from .slicer import SliceConfig, slice_model
 from .model_transform import normalize_transform
 from .plate import normalize_plate, MAX_MODELS
+from .web_storage import admit, StorageError
 from .slice_settings import normalize_settings
 from .passive_status import status_from_capture
 from .active_status import ActiveMonitor
@@ -93,8 +95,17 @@ class WebConfig:
     auto_monitor: bool = False
     lan: bool = False
     lan_network: str = "192.168.0.0/16"
+    storage_limit_mib: int | None = None
+    auto_archive: bool = True
+
+    @property
+    def storage_limit(self):
+        return STORAGE_LIMIT if self.storage_limit_mib is None else self.storage_limit_mib * 1024**2
 
     def __post_init__(self):
+        if type(self.auto_archive) is not bool:raise ValueError('auto_archive must be boolean')
+        if self.storage_limit_mib is not None and (type(self.storage_limit_mib) is not int or not 128 <= self.storage_limit_mib <= 2048):
+            raise ValueError('Web storage limit must be an integer128–2048MiB')
         if self.auto_monitor and not self.enable_monitor:
             raise ValueError("Automatic monitoring requires enable_monitor")
         if os.name != "posix":
@@ -144,25 +155,25 @@ class Workbench:
                 "sha256": "", "sliced": False, "artifact": False, "slicer_log": "",
                 "suggested_name": "", "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested", "slicer_stage": "", "slice_settings": None,
                 "effective_quality": None, "model": False, "source_sha256": "", "source_id": "", "model_transform": None, "start_after_upload": False,
-                "models": [], "plate": None, "save_capture": "", "start_capture": "", "gx_metadata": None, "gx_unavailable": "Slice a model first", "gx_generated": False}
+                "storage_notice": "", "models": [], "plate": None, "save_capture": "", "start_capture": "", "gx_metadata": None, "gx_unavailable": "Slice a model first", "gx_generated": False}
 
-    def capacity(self, reserve):
+    def capacity(self, reserve, *, archive=True):
         monitor_reserve = 0
         if self.monitor and self.monitor.capture and not self.monitor.capture.closed:
             monitor_reserve = max(0, self.monitor.max_bytes - self.monitor.capture.written) + 1024 * 1024
             reserve += monitor_reserve
-        total = count = 0
-        for path in self.folder.rglob("*"):
-            count += 1
-            if path.is_symlink() or not (path.is_file() or path.is_dir()):
-                raise WebError(507, "Unexpected symlink/special file in web storage")
-            if path.is_file():
-                total += path.stat().st_size
-            if count > 4096:
-                raise WebError(507, "Web storage entry limit reached; archive private logs locally")
-        if total + reserve > STORAGE_LIMIT:
+        protected=[self.state.get(key) for key in ('capture','save_capture','start_capture')]
+        if self.monitor and self.monitor.capture:protected.append(getattr(self.monitor.capture,'path',None))
+        try:
+            total,count,moved=admit(self.folder,reserve,self.config.storage_limit,auto_archive=self.config.auto_archive and archive,protected=protected)
+        except (StorageError,OSError) as exc:raise WebError(507,str(exc)) from exc
+        if moved:
+            size=sum(item['bytes'] for item in moved)/1024**2
+            self.state['storage_notice']=f'Automatically archived {len(moved)} completed recordings ({size:.1f} MiB) intact under archive/captures/. No files deleted.'
+        if count>4096:raise WebError(507,'Active web storage entry limit reached; no more complete inactive records can be archived')
+        if total + reserve > self.config.storage_limit:
             message = (f"Web storage quota: {total / 1024**2:.1f} MiB used + {reserve / 1024**2:.1f} MiB reserved "
-                       f"> {STORAGE_LIMIT / 1024**2:.0f} MiB limit. Operation was not started.")
+                       f"> {self.config.storage_limit / 1024**2:.0f} MiB limit. Operation was not started.")
             if monitor_reserve:
                 message += (f" Active status recording reserves {monitor_reserve / 1024**2:.1f} MiB; "
                             "Stop status polling (not print cancel), wait for recording to close, then try the action again.")
@@ -284,7 +295,7 @@ class Workbench:
         self.model_cache = None
         from .model_3mf import MAX_TRIANGLES
         max_derived = min(MODEL_LIMIT, 84 + MAX_TRIANGLES * 50)
-        self.capacity(max_derived + 4096)
+        self.capacity(max_derived + 4096,archive=False)  # Preview GET must not relocate recording history.
         previous = self.state["phase"]
         self.state.update(busy=True, phase="model_preview")
         destination = self.slot / "model-preview.stl"
@@ -724,7 +735,7 @@ class WebServer:
                         "upload_enabled": self.config.enable_upload, "job_controls_enabled": self.config.enable_job_controls, "slicing_enabled": self.config.slicing is not None,
                         "priming_review_enabled": bool(self.config.slicing and self.config.slicing.check_priming),
                         "sliced_upload_enabled": self.config.allow_sliced_upload, "print_limit": PRINT_LIMIT,
-                        "model_limit": MODEL_LIMIT, "storage_limit": STORAGE_LIMIT,
+                        "model_limit": MODEL_LIMIT, "storage_limit": self.config.storage_limit, "auto_archive": self.config.auto_archive,
                         "passive_status_enabled": self.config.status_capture is not None,
                         "active_monitor_enabled": self.config.enable_monitor, "auto_monitor": self.config.auto_monitor,
                         "manual_virtual_enabled": self.work.manual_controls is not None,
@@ -854,6 +865,8 @@ def add_web_command(commands):
     cli.add_argument("--lan", action="store_true", help="explicit private-LAN sharing with per-run Basic password; HTTP is NOT encrypted")
     cli.add_argument("--lan-network", default="192.168.0.0/16", help="allowed IPv4 CIDR within 192.168/16; socket peers only")
     cli.add_argument("--data-dir", type=Path, default=Path("web-data"))
+    cli.add_argument('--storage-limit-mib',type=int,help='bounded active workspace admission limit128–2048MiB (default256); not RAM or an OS disk quota')
+    cli.add_argument('--auto-archive',action=argparse.BooleanOptionalAction,default=True,help='archive complete inactive recordings intact when needed for admission (default enabled; archive capped2GiB)')
     cli.add_argument("--status-capture", type=Path, help="read-only existing proxy run/root for passive status; never polls a printer")
     cli.add_argument("--target-host", default="127.0.0.1")
     cli.add_argument("--target-port", type=int, default=8899)
@@ -880,7 +893,7 @@ def web_main(cli, args):
             slicing = SliceConfig(**{k: args[k] for k in ("machine", "process", "filament", "orca")},
                                   check_priming=args.get("check_priming", False))
         config = WebConfig(host=args["listen_host"], port=args["listen_port"], data_dir=args["data_dir"],
-                           lan=args["lan"], lan_network=args["lan_network"],
+                           lan=args["lan"], lan_network=args["lan_network"],storage_limit_mib=args.get('storage_limit_mib'),auto_archive=args.get('auto_archive',True),
                            client=ClientConfig(host=args["target_host"], port=args["target_port"], allow_hardware=args["allow_hardware"]),
                            slicing=slicing, enable_upload=args["enable_upload"], enable_job_controls=args["enable_job_controls"],
                            allow_sliced_upload=args["allow_sliced_upload"], status_capture=args["status_capture"], enable_monitor=args["enable_monitor"] or args["auto_monitor"], auto_monitor=args["auto_monitor"])
