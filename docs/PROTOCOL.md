@@ -302,6 +302,19 @@ external citations, resource limits and native2.3 HTTP trial
 No CRC/framing/start/end/firmware or hardware command was changed/tested. A new
 web export is an explicit offline action, not Save/start or print-safety evidence.
 
+## GX-DISPLAY-026 — User confirms generated miniature on the physical printer
+
+The user explicitly reports that the generated GX miniature displays on the
+printer, after confirming it on the server page. Model: Finder2 per established
+user context. Exact generated artifact/capture and current firmware/FlashPrint
+version were not supplied with this confirmation (prior sessions identified
+V1.5 20170419). This is a scoped user-observed successful image-display trial,
+not an agent hardware test, independent read-back/hash comparison or universal
+header/firmware compatibility proof. It supersedes pending physical miniature
+acceptance for this reported trial only; print completion, motion/material /
+clearance safety and other firmware remain unverified. No new connection,
+command, raw capture edit or runtime guard/default change. See GX_GENERATION.md.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.

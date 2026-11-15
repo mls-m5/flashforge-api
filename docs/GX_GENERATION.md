@@ -17,11 +17,15 @@ a print. GX packaging does not enable server upload/job permissions or bypass
 G-code to GX remains refused. Only a successfully generated container permits
 the GX extension. Existing uploaded GX is streamed unchanged, not repackaged.
 
-**Experimental container, not physical firmware/display validation.** A pretty
-image cannot make G-code safe or fix unsupported firmware commands. No printer,
-proxy, hardware upload/start or remote read-back was used in development. The
-actual Finder display, host2.5 metadata variants and browser/LAN image loading
-still need user acceptance. The current source models/profiles remain private.
+**The user now confirms the generated miniature displays on the physical
+Finder2**, after also confirming it on the server page. This is user-reported
+acceptance for that trial, not an agent hardware test, universal GX compatibility
+or print-safety validation. No exact artifact/capture was supplied with this
+confirmation; current firmware/FlashPrint version are unknown (prior sessions
+reported V1.5 20170419). A pretty image cannot make G-code safe or fix unsupported
+firmware commands. No printer/proxy/hardware upload/start or remote read-back
+was performed by the agent. Broader host2.5 metadata variants and other-device
+acceptance remain pending. Current source models/profiles remain private.
 
 ## Rendering, camera and image layout
 
@@ -186,8 +190,10 @@ estimates1327s/1174mm came from that actual Slice. Source bitmap was decoded and
 viewed locally; this is not physical printer-screen/browser acceptance.
 
 Run `python3 -m unittest discover -s tests -v` and `node tests/test_gx_ui.js`
-plus the existing Node checks and reviewed-trace integrity tool. The user subsequently reported that the generated GX miniature is visible on
-the server page. This supplies user browser-image acceptance, not a physical
-printer-screen/firmware result. Physical Finder
-image/header acceptance and broader host2.5 metadata remain explicit limitations; do not
-infer printability, clearance or permission for agent hardware actions.
+plus the existing Node checks and reviewed-trace integrity tool. The user
+subsequently confirmed the generated miniature is visible both on the server
+page and on the physical Finder2. That scoped user observation supersedes the
+previously pending printer-display acceptance for this trial only. No exact
+artifact/capture or current firmware was supplied with the report; no new agent
+hardware action. Broader metadata/header/other-firmware compatibility, actual
+print completion and toolpath/clearance safety do not follow from image display.
