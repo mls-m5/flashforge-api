@@ -85,8 +85,9 @@ margin. Unsupported/ambiguous/large data fails without an artifact. This is
 experimental nominal-path review, **not** a physical or whole-job safety gate.
 No generated G-code rewriting, disabled validity checks or printer query. See
 PRIMING_REVIEW.md for limits/metadata, exact-tool trials and the native exit0
-edge counterexample. Draft03's offline/owned-dummy launcher enables it; normal
-02/raw CLI defaults are unchanged. The flag requires slicing, cannot be toggled
+edge counterexample. The user now explicitly selected03 with this guard for every standard web
+launcher (offline/owned-dummy/proxy/LAN); missing03 does not fall back to02.
+Raw CLI/library callers still choose their own profiles/flag explicitly. The flag requires slicing, cannot be toggled
 by HTTP, and does not approve the changed startup for hardware.
 
 ## Offline first

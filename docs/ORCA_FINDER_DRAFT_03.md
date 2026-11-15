@@ -1,5 +1,17 @@
 # Native skirt candidate 03 — offline review, not the tested startup
 
+## Current default selection (user-requested)
+
+After the offline comparisons/guard implementation, the user explicitly asked
+to replace the fixed prime with native skirt all the time. All standard offline,
+owned-dummy, proxy and LAN web launchers now select this03 profile and always
+pass `--check-priming`; missing03 fails rather than falling back to02. The
+isolated `start_skirt_test.sh` retains a separate workspace/target restriction,
+not a different profile. Original profile sets and raw captures are unchanged.
+Restart/re-slice; existing G-code/printer files keep their original contents.
+No physical trial/agent hardware action or general print-safety approval follows
+from this software-default decision. Historical evidence/limitations below remain.
+
 ## Why a separate profile
 
 The user observed that draft02's fixed holder-derived purge line can cross
@@ -84,8 +96,8 @@ is not a universal edge guarantee. The test launcher now automatically adds
 `--check-priming`: a bounded diagnostic helper rejects missing/overlapping skirt
 or first-layer extrusion beyond a conservative nominal±69mm margin before
 artifact publication. Native-generated G-code is not rewritten to fit. This
-check is not physical/swept-volume/firmware safety approval; normal/proxy presets
-remain02 pending a separate informed changed-startup decision.
+check is not physical/swept-volume/firmware safety approval; the user later
+explicitly selected03 for normal/proxy presets, with this guard always enabled.
 
 ## Short offline test script
 
@@ -102,8 +114,8 @@ printer upload/job controls remain disabled. Optional
 `./tools/start_skirt_test.sh --dummy-upload-test` enables virtual Save/Start/
 Cancel **only to an owned fresh dummy**, not hardware. The launcher refuses
 `--proxy-port` with this new startup experiment. Existing normal/proxy launchers
-continue selecting draft02; the fixed-purge complaint is not hidden by silently
-replacing a known test profile. Existing sliced files are not changed—reslice
+now select the same guarded03 at the user's explicit request; this is no
+longer an opt-in-only profile choice, but not new physical startup evidence. Existing sliced files are not changed—reslice
 before comparing.
 
 There is no claim of physical approval, perfect priming volume, nozzle/head
@@ -111,5 +123,5 @@ swept-volume simulation or firmware safety. If the first line is underextruded,
 minimum skirt length/material calibration may need a separately measured
 adjustment. Brim-only priming remains a future option after validating first
 extrusion order/volume and E transitions. Do not blindly delete both prime and
-skirt. Next: review host2.5 output, resolve any fit/transition differences, then
-plan a separately approved small empty-bed trial if the user chooses.
+skirt. Next: review host2.5 output and resolve any fit/transition differences; physical
+startup acceptance still requires user supervision, not an agent hardware action.

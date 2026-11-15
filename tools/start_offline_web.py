@@ -10,8 +10,8 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-PROFILE = ROOT / "local-profiles/finder-offline-02"
-SKIRT_PROFILE = ROOT / "local-profiles/finder-offline-03"
+DEFAULT_PROFILE_NAME = "finder-offline-03"
+PROFILE = ROOT / "local-profiles" / DEFAULT_PROFILE_NAME
 ORCA = ROOT / ".local-tools/orca-2.5.0/AppRun"
 ARCHIVE_ORCA = ROOT / ".local-tools/OrcaSlicer_Linux_AppImage_Ubuntu2404_V2.5.0.AppImage"
 FALLBACK_ORCA = ROOT / ".local-tools/orca-slicer"
@@ -67,11 +67,11 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
         if address.version != 4 or address not in subnet:
             raise ValueError("LAN mode needs this COMPUTER's specific 192.168 address in the allowed private subnet")
     if native_skirt_test and proxy_port is not None:
-        raise ValueError("Draft03 native skirt is offline/owned-dummy only in this launcher; changed startup needs separate review")
+        raise ValueError("The isolated skirt test is offline/owned-dummy only; ordinary proxy mode already uses the same guarded skirt profile")
     if monitor and proxy_port is None and not dummy_upload_test:
         raise ValueError("Active monitoring requires proxy mode or an owned dummy; offline means no printer connection")
     polling = (proxy_port is not None or dummy_upload_test) if monitor is None else monitor
-    profile = SKIRT_PROFILE if native_skirt_test else PROFILE
+    profile = PROFILE
     if dummy_upload_test and proxy_port is not None:
         raise ValueError("Choose owned dummy or proxy, not both")
     if proxy_port is not None and not 1 <= proxy_port <= 65535:
@@ -100,8 +100,7 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
         "web-data/proxy-test" if proxy_port is not None else "web-data/dummy-upload-test" if dummy_upload_test else "web-data/offline-test")
     command = [sys.executable, "-m", "finderlab", "web", "--listen-host", str(address) if lan_host is not None else "127.0.0.1",
                "--listen-port", str(port), "--data-dir", str(ROOT / workspace), "--orca", str(selected.resolve())]
-    if native_skirt_test:
-        command += ["--check-priming"]
+    command += ["--check-priming"]  # Required for every standard mode; never fall back to the fixed prime.
     if lan_host is not None:
         command += ["--lan", "--lan-network", str(subnet)]
     if proxy_port is not None:
@@ -124,7 +123,7 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
         path = profile / (kind + ".json")
         if not path.is_file() or not 0 < path.stat().st_size <= 1024 * 1024:
             raise ValueError("Local experimental profile missing/invalid: " + str(path)
-                             + ". Private profiles are not included in a fresh Git clone; see docs/ORCA_FINDER_DRAFT_02.md")
+                             + ". Private profiles are not included in a fresh Git clone; see docs/ORCA_FINDER_DRAFT_03.md and docs/PRIMING_REVIEW.md")
         command += ["--" + kind, str(path)]
     # No arbitrary argument forwarding or direct hardware endpoint selection.
     return command
@@ -136,7 +135,7 @@ def main():
     cli.add_argument("--lan-host", help="COMPUTER interface IP, or 'auto' to read local 192.168 configuration; password-protected sharing, no TLS")
     cli.add_argument("--lan-network", help="optional narrower allowed CIDR within 192.168/16")
     cli.add_argument("--orca", type=Path, help="trusted native Orca executable; relative paths are project-relative")
-    cli.add_argument("--native-skirt-test", action="store_true", help="use independent offline draft03 native-skirt profiles; no proxy mode")
+    cli.add_argument("--native-skirt-test", action="store_true", help="isolated offline/owned-dummy workspace using the standard guarded skirt profile; no proxy mode")
     cli.add_argument("--dummy-upload-test", action="store_true", help="own a fresh dummy and permit save-only to it (no hardware endpoint)")
     cli.add_argument("--status-capture", type=Path, help="proxy mode: explicit existing capture run/root; default project captures")
     cli.add_argument("--proxy-port", type=int, help="enable Save to an explicitly chosen local proxy port (may reach hardware)")
@@ -158,18 +157,18 @@ def main():
         print(f"PROXY MODE: Save to 127.0.0.1:{args.proxy_port} may reach REAL HARDWARE.", flush=True)
         print("ACTIVE STATUS CONNECTS ON STARTUP; close FlashPrint/other clients first." if "--auto-monitor" in command else "Automatic status connection disabled; manual polling remains available.", flush=True)
         print(f"Start/Cancel enabled: {args.enable_job_controls}; generated-output saving: {args.allow_sliced_upload}.", flush=True)
-        print("Proxy is not a safety filter. New candidate startup/clearance remains unverified; no automatic start or stop.", flush=True)
+        print("Proxy is not a safety filter. Save + start may heat/move when selected; no automatic cancel. Startup/physical clearance remains unverified.", flush=True)
     elif args.dummy_upload_test:
         print("DUMMY UPLOAD TEST: a new owned dummy is created; confirmed Start/Cancel are virtual only.", flush=True)
     else:
         print("OFFLINE SLICING ONLY: printer uploads, Start and Cancel are disabled.", flush=True)
-    print(("Draft 03 native skirt" if args.native_skirt_test else "Draft 02") + " is experimental; changed paths are NOT a print approval.", flush=True)
+    print("Default: draft03 native skirt (fixed purge removed), priming guard ON in all modes. Changed paths are NOT a physical safety approval.", flush=True)
     print("Orca: " + command[command.index("--orca") + 1], flush=True)
     print("Profile/output review used 2.3.0; another build requires new offline output review.", flush=True)
     print("Open http://" + command[command.index("--listen-host") + 1] + ":" + str(args.port), flush=True)
     if args.lan_host:
         print("LAN SHARING: per-run password printed by server on launch. HTTP is unencrypted; trusted network only. All users share one printer/file slot.", flush=True)
-    print("Test cube: " + str(PROFILE / "review/cube-20x20x5.stl"), flush=True)
+    print("Re-slice models for the native skirt; existing G-code/printer files are not changed.", flush=True)
     if args.check:
         print("Local file checks passed; native runtime libraries are not probed.", flush=True)
         return

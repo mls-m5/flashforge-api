@@ -71,6 +71,17 @@ Verify the proxy target and close FlashPrint/other clients first. Use
 cancel a print; the offline launcher and passive watcher remain disconnected. The proxy is not a safety
 filter and the new candidate's physical startup remains unverified.
 
+## Standard priming: native skirt, not the fixed line
+
+At the user's explicit request, all standard web launchers (offline, owned dummy,
+proxy and LAN) now use the private03 native-skirt profiles with mandatory
+`--check-priming`. Skirt follows the first-layer footprint, including manual
+placement and brim. The fixed02 prime is no longer selected by these launchers;
+missing03 fails without falling back. Existing G-code/printer files are not
+rewritten: restart the backend and **re-slice**. Upload/start permissions and
+checkbox behavior are unchanged. Nominal guards remain; this default change is
+not new physical/host2.5 validation. See [docs/PRIMING_REVIEW.md](docs/PRIMING_REVIEW.md).
+
 ## Inspect the model before slicing
 
 After selecting STL/supported3MF, the input model now appears in a separate
@@ -85,8 +96,8 @@ face-to-bed picking, mouse gizmos and multiple models remain future work.
 See [docs/MODEL_TRANSFORMS.md](docs/MODEL_TRANSFORMS.md) for coordinate/resource
 limits and actual offline native2.3 placement trials. The user accepted the
 initial mesh view; new editor/browser/host2.5 acceptance remains pending.
-Restart backend/reload browsers. Fixed start/purge paths do not follow model
-movement; inspect the G-code output before separate Save/Start.
+Restart backend/reload browsers. Standard launchers now use native skirt that follows the first-layer footprint;
+custom startup/homing still needs review. Inspect G-code before Save/Start.
 
 ## Inspect the current toolpath
 
@@ -162,8 +173,9 @@ selects separate draft03 with a native skirt instead of the fixed purge line.
 This changes startup paths; it is offline/owned-dummy only in the launcher and
 not physical-print approval. It now enables `--check-priming`, rejecting
 unsupported/overlapping/out-of-nominal-margin first-layer candidates before they
-become artifacts. Ordinary/proxy startup remains draft02 pending the changed
-physical-startup decision. See [docs/PRIMING_REVIEW.md](docs/PRIMING_REVIEW.md) for
+become artifacts. The user has now selected the same guarded03 profile for
+ordinary/proxy/LAN startup as well. The isolated script only separates workspace
+and restricts target mode; physical validation is not inferred. See [docs/PRIMING_REVIEW.md](docs/PRIMING_REVIEW.md) for
 the exact tool/manual-placement comparisons and newly found edge failure; see
 [docs/ORCA_FINDER_DRAFT_03.md](docs/ORCA_FINDER_DRAFT_03.md).
 

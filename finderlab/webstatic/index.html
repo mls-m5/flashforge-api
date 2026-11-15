@@ -63,7 +63,7 @@
 </fieldset><p id="model-layout-message" role="status"></p>
 <p>Drag to orbit the camera, scroll/pinch to zoom, right-drag/two-finger drag to pan. Camera drag does not move the model. Use numeric controls above for model edits; Z automatically sits on bed after rotation; this does not select a flat face or add supports. STL units are assumed mm; 3MF units/build transforms are imported.</p>
 <p>Edits affect a private geometry derivative on explicit Slice, never the original. Scale first, then rotate X → Y → Z about original bounds centre, then centre XY / sit on bed. Once sliced, discard/reselect to edit another version. No mouse gizmos, face-to-bed picker, multiple models or collision validation yet. Unsupported 3MF components/extensions still fail explicitly.</p>
-<p id="priming-notice" class="warning">Nominal mesh fit only, not physical clearance. Start/purge paths do NOT move with the model and the current fixed prime can cross it. Brim, skirt, compensation and support extend the footprint. Inspect the G-code result before Save/Start.</p>
+<p id="priming-notice" class="warning">Nominal mesh fit only, not physical clearance. Standard launchers use guarded native skirt instead of the old fixed prime. Custom startup paths do not necessarily follow model placement. Brim, skirt, compensation and support extend the footprint. Inspect the G-code result before Save/Start.</p>
 </section>
 <section><h2>2 <span>Slice and review</span></h2>
 <p id="orca">Orca configuration loading…</p><p id="slice-status" role="status">Choose an STL/3MF, then click Slice.</p>

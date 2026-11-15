@@ -235,9 +235,12 @@ startup extrusion, centreline intersections/gaps and conservative nominal±69mm
 bounds. A native exit0 edge counterexample motivated the guard; failure leaves
 no artifact for Save + start. No rewriting, physical/swept-volume simulation or
 new protocol behavior. Source/report SHA, helper resource limits, private
-capture metadata and full raw outputs remain separate. Normal02 selection is
-unchanged; the03 offline/owned-dummy launcher enables the guard and still refuses
-proxy mode pending changed-startup acceptance. See PRIMING_REVIEW.md.
+capture metadata and full raw outputs remain separate. The user subsequently
+explicitly selected03 for all standard web launchers: offline, owned dummy,
+proxy and LAN now always enable the guard and never fall back to02. The isolated
+03 test workspace still restricts target mode. This software-default decision
+is not physical startup/host2.5 validation; existing files need re-slicing.
+See PRIMING_REVIEW.md.
 
 ### Per-slice quality settings
 

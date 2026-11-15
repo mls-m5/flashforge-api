@@ -47,20 +47,33 @@ class LauncherTests(unittest.TestCase):
             self.assertNotIn(flag, command)
         self.assertIn(str(self.root / "web-data/dummy-upload-test"), command)
 
-    def test_native_skirt_selects_separate_profiles_without_hardware_mode(self):
-        separate = self.root / "draft03"
-        separate.mkdir()
-        for kind in ("machine", "process", "filament"):
-            (separate / (kind + ".json")).write_text('{}')
-        with patch.object(launcher, "SKIRT_PROFILE", separate):
-            command = launcher.build_command(native_skirt_test=True)
-            self.assertIn('--check-priming',command)
-            self.assertEqual(command[command.index("--machine")+1], str(separate / "machine.json"))
-            for flag in ("--enable-upload", "--enable-job-controls", "--allow-sliced-upload"):
-                self.assertNotIn(flag, command)
-            self.assertIn("--dummy", launcher.build_command(native_skirt_test=True, dummy_upload_test=True))
-            with self.assertRaisesRegex(ValueError, "offline/owned-dummy"):
-                launcher.build_command(native_skirt_test=True, proxy_port=9000)
+    def test_isolated_skirt_test_uses_same_default_but_restricts_target_mode(self):
+        command = launcher.build_command(native_skirt_test=True)
+        self.assertIn('--check-priming',command)
+        self.assertEqual(command[command.index('--machine')+1],str(self.profiles/'machine.json'))
+        for flag in ('--enable-upload','--enable-job-controls','--allow-sliced-upload'):
+            self.assertNotIn(flag,command)
+        self.assertIn('--dummy',launcher.build_command(native_skirt_test=True,dummy_upload_test=True))
+        with self.assertRaisesRegex(ValueError,'offline/owned-dummy'):
+            launcher.build_command(native_skirt_test=True,proxy_port=9000)
+
+    def test_all_standard_modes_use_skirt_and_mandatory_priming_guard(self):
+        self.assertEqual(launcher.DEFAULT_PROFILE_NAME,'finder-offline-03')
+        for options in ({},{'dummy_upload_test':True},{'proxy_port':9000},
+                        {'proxy_port':9000,'enable_job_controls':True,'allow_sliced_upload':True},
+                        {'proxy_port':9000,'lan_host':'192.168.1.20','enable_job_controls':True,'allow_sliced_upload':True}):
+            with self.subTest(options=options):
+                command=launcher.build_command(**options)
+                self.assertEqual(command.count('--check-priming'),1)
+                for kind in ('machine','process','filament'):
+                    self.assertEqual(command[command.index('--'+kind)+1],str(self.profiles/(kind+'.json')))
+
+    def test_missing_skirt_never_falls_back_to_old_fixed_prime_profile(self):
+        old=self.root/'local-profiles/finder-offline-02';old.mkdir(parents=True)
+        for kind in ('machine','process','filament'):(old/(kind+'.json')).write_text('{}')
+        with patch.object(launcher,'PROFILE',self.root/'local-profiles/finder-offline-03'):
+            with self.assertRaisesRegex(ValueError,'profile missing/invalid'):
+                launcher.build_command(proxy_port=9000)
 
     def test_proxy_mode_uses_loopback_and_explicit_generated_job_gates(self):
         command = launcher.build_command(proxy_port=9002)

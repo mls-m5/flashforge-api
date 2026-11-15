@@ -52,9 +52,11 @@ The user must still inspect the actual G-code result before printer actions.
   This is not nozzle/head/frame/clip clearance or an all-toolpaths bound. Layer
   quantization, compensation, brim/skirt/support can extend beyond mesh bounds.
 
-**Start/purge paths do not move with the model.** The current draft02 fixed prime
-is known to cross some footprints; this milestone does not modify it or promote
-the separate offline draft03 skirt. Inspect both startup and actual toolpaths.
+**Custom startup paths do not necessarily move with the model.** The user later
+explicitly selected guarded03 native skirt for all standard launchers, replacing
+the fixed02 prime that crossed some footprints. Native skirt follows the first-
+layer footprint; other startup staging/homing is not a geometric clearance model.
+See PRIMING_REVIEW.md; existing files require re-slicing. Inspect both startup and actual toolpaths.
 No collision-safe placement or hardware approval follows from this editor.
 
 ## API and implementation

@@ -71,8 +71,11 @@ and out-of-nominal-margin deposition before exposing a downloadable/saveable
 artifact. Native exit0 alone was observed allowing an out-of-bounds skirt; see
 PRIMING_REVIEW.md for proof and limits. This is not whole-job/physical clearance
 validation.03 still changes startup, stays offline/owned-dummy in this launcher
-and refuses proxy mode; normal/proxy/LAN remains02 pending an informed changed-
-startup decision and host/physical acceptance. HTTP cannot disable the guard.
+and refuses proxy mode in that isolated test workspace. The user has now
+explicitly requested03 as the standard profile everywhere: ordinary offline,
+owned-dummy, proxy and LAN launchers all select03 with the guard mandatory.
+There is no fallback to02. Restart/re-slice; existing files are not rewritten.
+Host/physical acceptance is not implied. HTTP cannot disable the guard.
 
 ## Printer status
 
@@ -132,7 +135,7 @@ From the project root, two short executable Bash wrappers are available:
 ```
 
 Run them in separate terminals. The web wrapper starts the existing **read-only
-native draft-02 slicing test** on 127.0.0.1:8000 (uploads and job controls remain
+native draft03 skirt slicing workflow** on 127.0.0.1:8000 (uploads and job controls remain
 disabled); it requires the local Orca/profiles. It now prefers the extracted
 `.local-tools/orca-2.5.0/AppRun` from the user's host-working 2.5.0 build,
 otherwise the old `.local-tools/orca-slicer` when no 2.5.0 archive is present.
@@ -531,7 +534,9 @@ and printed brim quality still need user validation. No hardware was contacted.
 
 ## Separate dynamic-priming experiment
 
-The ordinary/proxy launchers still use draft02's previously observed startup.
+The user subsequently explicitly selected this same guarded03 skirt profile
+for all ordinary/proxy/LAN launchers; the earlier draft02 startup evidence does
+not physically validate the changed03 path. Re-slice after restarting the backend.
 A new `./tools/start_skirt_test.sh` selects independent **draft03** for offline
 Slice/download review: native Orca skirt surrounds the arranged model/brim,
 instead of a fixed purge line across the print. Skirt remains enabled even with

@@ -274,6 +274,18 @@ PRIMING_REVIEW.md. No CRC/framing/firmware/parser timing inferred or changed,
 no physical connection/print or profile-default promotion.03 changes startup and
 still needs a separate informed host/physical acceptance decision.
 
+## SLICER-SKIRT-024 — User explicitly selects guarded03 as standard
+
+After reviewing the fixed-prime/skirt explanation, the user explicitly requested
+using the new skirt implementation always. Standard offline, owned-dummy, proxy
+and LAN launchers now select private03 and always enable the nominal priming
+guard, with no fallback to fixed02. Original profiles/old captures/generated and
+printer files are not rewritten; re-slicing is required. This software-default
+selection does not alter wire framing, job consent/capabilities or authorize
+agent hardware actions. No new physical/host2.5 evidence is inferred. Earlier
+native03 observations remain the scoped evidence; current tests inspect launcher
+argv without native/printer execution. See PRIMING_REVIEW.md.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.

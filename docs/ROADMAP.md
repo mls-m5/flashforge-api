@@ -351,6 +351,19 @@ The03 offline/owned-dummy launcher enables it, still refuses proxy mode; normal
 and separately supervised physical acceptance. See PRIMING_REVIEW.md for exact
 capture IDs, limits and non-safety scope; no whole-job/firmware clearance claim.
 
+### User explicitly adopts native skirt for all standard launches
+
+The user then instructed replacing the fixed prime with the new skirt always,
+not leaving it as an isolated opt-in. Standard offline, owned-dummy, proxy and
+LAN web launches now select private03 and unconditionally enable `--check-priming`.
+Missing03 fails instead of falling back to fixed02. The isolated skirt-test
+flag now only selects an isolated workspace/restricted target, not a different
+profile. Existing original profiles, captures, G-code/printer files and upload/
+job capabilities are unchanged; restart and re-slice to generate the new paths.
+This is explicitly authorized software-default selection, not new physical or
+host2.5 evidence or permission for agent hardware actions. Tests verify all
+launcher modes and no fallback; prior native03 evidence/guards remain applicable.
+
 ## Web quality controls: brim/layer-height foundation
 
 User-requested GUI controls now allow profile/default, Off/Outer brim (bounded

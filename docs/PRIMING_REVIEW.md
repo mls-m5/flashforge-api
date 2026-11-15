@@ -12,8 +12,15 @@ The existing separate draft03 removes that fixed extrusion/Z0.2 descent and
 uses native Orca skirt before optional brim/model. Its startup stages XY0/0 at
 raised Z instead: this is a changed **physical start path**, not validated by
 the user's earlier draft02 startup trial. Original02/03 profiles were not edited
-in this milestone. Normal/proxy/LAN launchers still use02; no silent promotion.
-No printer/proxy connection, uploaded candidate or hardware action occurred.
+during the investigation. The user subsequently explicitly requested replacing
+the fixed prime with the new skirt **all the time**. Standard offline, owned-dummy,
+proxy and LAN launchers now select03 and always enable `--check-priming`; missing
+03 fails instead of falling back to02.02 originals remain for historical research.
+This is an explicitly requested software-default change, not new physical
+validation or agent hardware authorization. No printer/proxy connection,
+uploaded candidate or hardware action occurred. Restart the web backend when
+no local operation is active and re-slice models; existing G-code/printer files
+are not changed.
 
 The exact supplied tool was sliced offline with native Orca2.3.0, manual centre
 (to preserve the troublesome orientation), with both profiles. First-layer
@@ -40,7 +47,8 @@ a downloadable/saveable artifact. `./tools/start_skirt_test.sh` automatically
 selects it with03 (`--check-priming`). Offline stays no-upload; optional
 `--dummy-upload-test` still owns a fresh virtual dummy, never a proxy. This
 launcher continues refusing proxy mode. Raw web/library/CLI flag is server/trusted
-configuration, not an HTTP toggle. Ordinary02 behavior remains unchanged.
+configuration, not an HTTP toggle. All standard launcher modes now enable it
+with03; raw CLI/library users still explicitly choose their own profiles/flag.
 
 The guard requires:
 
@@ -113,12 +121,14 @@ hashes and zero printer sessions:
 The earlier unguarded positive comparison runs are retained alongside the
 edge failure as private historical evidence. Positive outputs retained final E delta−1.3mm
 and resolved nominal Z components≤7mm/s; those diagnostics do not model homing.
-No normal-profile swap or physical approval follows from these numeric trials.
+Physical approval does not follow from these numeric trials. The later
+normal-default switch is the user's explicit software decision, not inferred
+from native exit status.
 
 Automated tests cover geometry comparisons/retract debt, malformed/unsupported
 input and bounds, guarded fake-native publication/refusal, CLI/launcher wiring
 and HTTP artifact/combined-save refusal. Host2.5 and rendered web/new-startup
-acceptance remain user-run. Next decision: review the03 output on the host, then
-explicitly choose whether/how to adopt the changed startup in the normal printer
-workflow and plan a separately approved supervised empty-bed trial. Do not
-silently switch a profile in response to a checkbox change.
+acceptance remain user-run. The user has now explicitly chosen03 for all standard
+launchers, independently of the upload/start checkbox. Review the host-generated
+output and supervise any user-run first changed-startup trial; this code change
+does not authorize agent hardware actions or disable any nominal guard.
