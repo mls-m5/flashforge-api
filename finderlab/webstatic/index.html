@@ -3,9 +3,9 @@
 <title>Finder · local workbench</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/manual.js" defer></script><script type="module" src="/preview.js"></script><script type="module" src="/model-preview.js"></script></head>
 <body><main>
 <header><p class="eyebrow">LOCAL · EXPERIMENTAL · FINDER V1.5</p><h1>Prepare. Save. You decide.</h1>
-<p>Prepare a model, review the output, then explicitly save it to Finder. Nothing starts printing automatically.</p></header>
+<p>Prepare a model, review the output, then explicitly save it to Finder. When selected, that same click also requests print start after confirmed upload.</p></header>
 <aside><strong>Know your endpoint.</strong> <span id="target">Loading configuration…</span><p id="access-policy"></p>
-<p>Loopback may be a proxy to a real printer. This page never discovers printers or automatically starts/cancels prints. Optional Start may heat/move; Cancel is not an emergency stop. Close competing printer clients.</p></aside>
+<p>Loopback may be a proxy to a real printer. This page never discovers printers or starts/cancels without an initiating action. The checked start-after-upload option makes Save a combined save/start action. Optional Start may heat/move; Cancel is not an emergency stop. Close competing printer clients.</p></aside>
 <section><h2>Printer status <span id="printer-status-mode">· observation</span></h2>
 <p id="printer-status-message" role="status">Loading status capability…</p>
 <p>Source: <span id="printer-status-source">—</span></p>
@@ -85,7 +85,7 @@
 </fieldset><p id="applied-quality"></p>
 <button id="slice" disabled>Slice model offline</button> <a id="download" href="/api/artifact" hidden>Download print file for review</a>
 <p>3MF imports core mesh geometry only. Embedded printer, filament, layer settings and start/end code are not loaded. Components/advanced extensions are rejected; export STL if unsupported. Orca arranges the imported geometry as before.</p>
-<p>Buttons act immediately without confirmation popups. Slice, Save and Start remain separate. No GX generation or toolpath safety validator is implemented.</p>
+<p>Buttons act immediately without confirmation popups. Slice remains separate. Save can request start afterward; standalone Start remains available. No GX generation or toolpath safety validator is implemented.</p>
 <details><summary>Latest Orca diagnostic excerpt (private)</summary><pre id="slicer-log">No Orca output recorded yet.</pre></details></section>
 <section><h2>Toolpath preview <span>· current server artifact</span></h2>
 <label><input id="preview-enabled" type="checkbox" checked> Load preview automatically after slicing / selecting a print file</label>
@@ -100,8 +100,10 @@
 <pre id="preview-warnings"></pre>
 <p class="warning">Linear command-coordinate lines only, not solid printed material or physical simulation. Homing/offset paths, unsupported commands and unknown origins are omitted; warnings matter. Grid is a nominal centered 140 mm reference, not measured clearance. Preview does not authorize printing or prove collision safety.</p>
 </section>
-<section><h2>3 <span>Save, without starting</span></h2>
+<section><h2>3 <span>Save · optionally start after upload</span></h2>
 <label for="remote">Remote ASCII basename (may overwrite an existing file)</label><input id="remote" type="text" maxlength="128" placeholder="sample.gx" autocomplete="off">
+<label><input id="start-after-upload" type="checkbox" checked disabled> Start print when upload completes · may heat/move</label>
+<p>Checked by default when server job controls are enabled. Uncheck for save only. Start requires confirmed save, healthy release/recording and a fresh READY check. A lost browser response does not cancel the accepted workflow; refresh, never repeat blindly.</p>
 <button id="save" disabled>Save to Finder · no start</button>
 <p id="gating"></p>
 <label>Printer block acknowledgements <progress id="outgoing" max="100" value="0"></progress></label>

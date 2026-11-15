@@ -6,6 +6,13 @@ Implemented as `python3 -m finderlab upload`, with reusable async `FinderClient`
 
 The actual CLI has uploaded the user's `upload/test1.gx` to a fresh ephemeral loopback dummy: 3668165 bytes, 896 blocks, exact received/source content and SHA-256 match, no virtual job started. Independent scripted-server tests check wire bytes against reference replies and a known CRC vector. The user subsequently ran the same client on the host through the proxy to the real Finder: all 896 blocks were acknowledged, final save and control release were confirmed, and client/proxy byte streams matched exactly. No start/stop was sent. See CLIENT-UPLOAD-009 in [PROTOCOL.md](PROTOCOL.md). This validates that upload-only workflow on the observed firmware, not every device/error case or the new client's physical start/stop actions.
 
+The standalone **web** workflow now has a user-requested checked-by-default
+start-after-upload option when server job controls are enabled. Its labelled
+Save + start click composes two separately recorded sessions after healthy
+save/release/finalization; unchecked/legacy API stays save-only. This does not
+change CLI defaults or add an implicit client-library start. See
+[START_AFTER_UPLOAD.md](START_AFTER_UPLOAD.md).
+
 ## Dummy first
 
 Terminal 1 (stop any proxy using the same port first):

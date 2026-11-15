@@ -61,6 +61,21 @@ claim that a loopback endpoint is virtual). The owned dummy's files are RAM-only
 web/client captures still preserve the transferred model bytes. Neither runtime
 volumes nor these raw captures belong in Git.
 
+## Explicit web save + start composition
+
+The user-requested checked-by-default web option now combines explicit Save
+intent with subsequent Start. Omitted/false API stays save-only; no file receipt,
+slice or GET starts printing. Save and start still have separate finalized
+captures. Save metadata records requested `start_after_upload`/`start_requested`
+and confirmed save_id; only after healthy release, hash/identity match and a
+complete save record can a fresh-session READY/start capture begin. Its metadata
+links save_capture, saved_name and save_id. Failed/unknown save, release or
+recording cannot trigger start; save confirmation survives later failure.
+State exposes both capture paths and stage outcome. Job-only Start/Cancel logs
+are bounded1MiB, upload/slice64MiB; combined admission reserves both budgets.
+No finalized raw record is amended to link a later stage. See START_AFTER_UPLOAD.md
+for changed web default, explicit intent/identity and negative/dummy tests.
+
 ## Virtual manual-control intents (no network sessions)
 
 Owned-dummy manual rehearsal creates mode`manual-virtual`, operation

@@ -1,6 +1,6 @@
 # FlashForge Finder 2 protocol lab
 
-Reverse-engineer the Finder 2 network protocol, build a realistic offline simulator, and provide a standalone local drag-and-drop upload workbench with optional offline Orca slicing. **Uploading must not automatically start a print.**
+Reverse-engineer the Finder 2 network protocol, build a realistic offline simulator, and provide a standalone local drag-and-drop upload workbench with optional offline Orca slicing. **File receipt/slicing must not start a print; explicit save/start intent is required.**
 
 ## Current status
 
@@ -13,7 +13,7 @@ Implemented:
 - A **print-file upload CLI and reusable async client** for `.gx`, `.gcode` and `.g`, with exact block ACKs/CRC32, upload-only defaults, explicit upload `--start`, and separate confirmed start/stop actions.
 - An **optional Orca CLI adapter**: offline `slice MODEL.stl`, or `upload MODEL.stl --slice` before any printer connection, using explicit trusted JSON profiles and bounded child processes. Native Orca/profile compatibility still needs a host trial.
 - Automated localhost tests, including the existing uploader, recording failures, proxy transport and fake-slicer orchestration.
-- A **standalone local page**: `python3 -m finderlab web`, with drag-and-drop, explicit offline slicing/review and a separate confirmed upload-only action. No accounts or OctoPrint setup. Orca/profile compatibility remains a blocker for native Finder slicing; existing FlashPrint GX files work independently.
+- A **standalone local page**: `python3 -m finderlab web`, with drag-and-drop, explicit offline slicing/review and explicit save-only or combined save/start intent. No accounts or OctoPrint setup. Orca/profile compatibility remains a blocker for native Finder slicing; existing FlashPrint GX files work independently.
 - The original experimental [`upload.py`](upload.py), unchanged.
 
 Not implemented in the research CLI: UDP discovery, replay/standalone analysis tooling, or physical job dynamics. The experimental OctoPrint plugin at `plugins/octoprint-flashforge-finder2` is **paused**, not a native Finder printer driver. The standalone page is now the primary UI; browser/container acceptance remains pending. **FlashPrint connection, upload and explicit virtual start/stop have now been observed against the dummy.** The new client has also uploaded the user's 3.67 MB GX to a fresh dummy with an exact byte match and no job started. A subsequent user-run host/proxy trial confirmed the new client's real-printer upload-only flow: all blocks, final save and release acknowledged, no start/stop sent. Other firmware, errors/retries and physical job-control actions remain separately bounded; mock success alone is not hardware evidence.
@@ -32,7 +32,7 @@ In terminal 2:
 python3 -m finderlab web --enable-upload --target-port 9000
 ```
 
-Open **http://127.0.0.1:8000**. Drop an existing FlashPrint `.gx` (or `.gcode`/`.g`), then click **Save to Finder · no start**. Selecting a file does not connect to a printer. STL requires separately configured Orca and trusted profiles. The old Sailfish draft is still rejected; a separately authorized **offline Marlin-emission draft 02 now slices natively**, but is not a print-ready or physically validated Finder profile. Generated-output saving is blocked by default pending separate profile review. Uploads are disabled without `--enable-upload`. To deliberately enable separate **Start saved file** and **Request cancel** buttons, also add `--enable-job-controls`. Each requires its own button click (no popup); Start may heat/move, and Cancel is not an emergency stop. Saving still never starts a print.
+Open **http://127.0.0.1:8000**. Drop an existing FlashPrint `.gx` (or `.gcode`/`.g`), then click **Save to Finder · no start**. Selecting a file does not connect to a printer. STL requires separately configured Orca and trusted profiles. The old Sailfish draft is still rejected; a separately authorized **offline Marlin-emission draft 02 now slices natively**, but is not a print-ready or physically validated Finder profile. Generated-output saving is blocked by default pending separate profile review. Uploads are disabled without `--enable-upload`. To deliberately enable separate **Start saved file** and **Request cancel** buttons, also add `--enable-job-controls`. Each requires its own button click (no popup); Start may heat/move, and Cancel is not an emergency stop. With job controls enabled, the new **Start print when upload completes** checkbox is checked by default: the clearly labelled Save + start click composes confirmed save and one fresh-READY start. Uncheck for save only. No start on failed/unknown save, release or recording failure. See [docs/START_AFTER_UPLOAD.md](docs/START_AFTER_UPLOAD.md). CLI defaults remain upload-only.
 
 For a one-command local slicing/upload test, stop any previous web server and run `./tools/start_dummy_upload_test.sh`. It owns a fresh ephemeral dummy (not an existing hardware proxy), enables virtual Save and separately confirmed virtual Start/Cancel (no G-code execution). No separate dummy process is needed. This requires the local Orca/draft profiles and does not authorize physical printing.
 
@@ -257,6 +257,7 @@ node tests/test_model_worker.js
 node tests/test_model_preview_ui.js
 node tests/test_model_transform.js
 node tests/test_model_editor_integration.js
+node tests/test_start_after_upload_ui.js
 ```
 
 Tests use ephemeral loopback ports and never connect to a physical printer. Generated test files use the ignored project-local `.tmp/` directory and are cleaned up; do not use the system temporary directory for project work. No third-party dependencies are required. One integration test retains the uploader's existing three-second pause.

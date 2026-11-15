@@ -2,7 +2,7 @@
 
 ## Projektets mål
 
-Reverse-engineera FlashForge Finder 2:s nätverksprotokoll med en inspelningsproxy, en realistisk simulator och reproducerbara experiment. Bygg därefter ett lokalt webbgränssnitt för filuppladdning **utan automatisk utskriftsstart**.
+Reverse-engineer the FlashForge Finder 2 network protocol using a recording proxy, realistic simulator and reproducible experiments. Build a local file workflow: file receipt/slicing never starts prints; explicit save/start intent is required. The user-requested web checkbox now defaults checked when job controls are enabled, making its labelled Save + start click combined intent. Unchecked/legacy API/ordinary CLI remain save-only. No unattended start from page load or GETs.
 
 Läs `README.md`, `DESIGN.md`, `docs/PROTOCOL.md` och aktuell etapp i `docs/ROADMAP.md` före implementation. Läs även `docs/CAPTURES.md` när loggning eller fixtures ändras.
 
@@ -32,9 +32,9 @@ A separate input mesh view now handles original STL/core3MF before Slice and rem
 
 User accepted initial model preview and requested scale/move/rotate. Numeric uniform1–1000%, extrinsic X→Y→Z degrees, XY bounding-box centre±70 and auto Z-on-bed now draft in browser; explicit Slice alone bakes private STL with arrange0/orient0/ensure-on-bed. Null/omitted keeps arrange1. Source SHA binding, typed limits, nominal centred140mm profile/mesh check, immutable original/completed artifact, server transform snapshot lock across tabs. Read docs/MODEL_TRANSFORMS.md before changes: stdlib bounded worker512MiB/30s, capture geometry_transform hash/bounds/options, scratch cleanup; native2.3 coordinate probes/four adapter runs plus actual ephemeral HTTP/native trial passed with zero printer sessions and unchanged profiles. New editor/browser/host2.5 acceptance pending; no hardware approval. Camera drag is not object drag; gizmos/face picker/nonuniform scale/multiple models deferred. Fixed prime/start paths do NOT follow model and known overlap remains queued separately; never claim nominal fit is clearance or promote draft03 silently.
 
-### Future upload/start UX note (not implemented)
+### Start-after-upload checkbox implemented
 
-During editor work the user requested a future “Start print when upload completes” checkbox, checked by default; unchecked means save only. See docs/ROADMAP.md. This was a note for later, not a runtime/default change now. Current separate Save/Start and capability gates remain; future composition must preserve confirmed exact save, fresh READY, one attempt, no start on failed/unknown save/unhealthy cleanup, no automatic stop/retry and distinct outcome recording. No hardware authorization.
+After the earlier future note, the user explicitly requested implementation. See docs/START_AFTER_UPLOAD.md. Checked by default only when job controls are enabled; Save button clearly says Save + start with exact name, unchecked means save only. API start_after_upload omitted=false; true requires current artifact SHA and receipt source_id plus upload/job/generated-output permissions. Backend holds busy across save/fresh-session start, requires confirmed M29, actual hash match, healthy release and finalized save capture before one fresh READY/M23. No start on failed/unknown save/release/recording, no retry/stop. Save fact survives start failure; saved identity/start_attempted prevent repeats. Separate save/start captures linked by save_id/save_capture; client job-only captures now1MiB vs upload64MiB, budgets reserved up front. Browser default/persistence/labels and negative-loopback orchestration tests added; no hardware authorization or physical trial. CLI defaults unchanged.
 
 ### Web quality controls
 

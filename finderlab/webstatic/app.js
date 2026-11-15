@@ -90,9 +90,13 @@
         el("start").disabled = Boolean(busy || !config || !config.job_controls_enabled || !state.saved ||
             !state.save_id || state.start_attempted || state.phase === "unknown");
         el("stop").disabled = Boolean(busy || !config || !config.job_controls_enabled);
+        el('start-after-upload').disabled = Boolean(busy || !config || !config.job_controls_enabled || !config.upload_enabled || state.saved);
+        if (config && !config.job_controls_enabled) el('start-after-upload').checked = false;
         el("start").textContent = state.saved_name ? `Start ${state.saved_name} · may heat/move` : "Start saved file · may heat/move";
         el("remote").disabled = busy;
-        el("save").textContent = config && config.owned_dummy ? "Save to dummy · no start" : "Save to Finder · no start";
+        const startAfter = Boolean(config && config.job_controls_enabled && el('start-after-upload').checked);
+        const endpoint = config && config.owned_dummy ? 'dummy' : 'Finder';
+        el('save').textContent = startAfter ? `Save + start ${el('remote').value || 'selected file'} on ${endpoint} · may heat/move` : `Save to ${endpoint} · no start`;
         if (state.phase === "empty") el("incoming").value = 0;
         el("download").hidden = !state.artifact || busy;
         text("selection", state.name || "One file at a time. Choosing a file only stores it locally.");
@@ -110,17 +114,20 @@
         text("slicer-log", (state.error ? "Operation error: " + state.error + "\n\n" : "") + excerpt);
         text("bytes", `${state.acknowledged || 0} / ${state.size || 0} bytes acknowledged`);
         el("outgoing").value = state.size ? 100 * (state.acknowledged || 0) / state.size : 0;
-        text("result", state.saved ? "Final save confirmed. Saving does not start or stop a print." :
+        text("result", state.saved ? (state.start_after_upload ? 'Final save confirmed. Start was also requested; see the separate job outcome below.' : 'Final save confirmed. Saving does not start or stop a print.') :
             state.phase === "unknown" ? "Remote result UNKNOWN. Inspect logs and physical state before retrying." :
             "Acknowledged bytes are not final save confirmation.");
-        text("job-result", state.job_result === "start_acknowledged" ? "Start acknowledged. The printer may heat/move; supervise it. No live job progress is inferred." :
+        text("job-result", state.job_result === 'start_not_sent' ? 'Start after upload requested, but no start sent by this operation. Inspect save/release/recording errors; no automatic retry.' :
+            state.job_result === 'start_pending' ? 'Save confirmed; fresh connection/READY check before the one requested start attempt.' : state.job_result === "start_acknowledged" ? "Start acknowledged. The printer may heat/move; supervise it. No live job progress is inferred." :
             state.job_result === "cancel_acknowledged" ? "Cancel command acknowledged. This does NOT prove READY, motion stopped or cooled heaters. Check the printer physically." :
             /_unknown$/.test(state.job_result || "") ? "Job result UNKNOWN. Check physical state; no automatic retry was performed." :
             "No job-control result in this slot. Cached acknowledgements are not live printer status.");
         if (config && config.owned_dummy) {
             text("job-result", state.job_result === "start_acknowledged" ? "Virtual job started in the owned dummy. No G-code, motion or heating is executed." :
                 state.job_result === "cancel_acknowledged" ? "Virtual cancel acknowledged by the owned dummy." :
-                /_unknown$/.test(state.job_result || "") ? "Virtual job result unknown; inspect local diagnostics." : "No virtual job requested yet.");
+                /_unknown$/.test(state.job_result || "") ? "Virtual job result unknown; inspect local diagnostics." :
+                state.job_result === 'start_not_sent' ? 'Virtual start requested but not sent; inspect save diagnostics.' :
+                state.job_result === 'start_pending' ? 'Virtual save confirmed; start pending fresh READY.' : 'No virtual job requested yet.');
         }
         text("job-gating", config && config.owned_dummy ? "Confirmed virtual Start/Cancel available. This endpoint is the owned dummy, not hardware." : config && config.job_controls_enabled ? "Explicit job controls ENABLED. Start uses only this slot's confirmed saved filename." :
             "Job controls disabled. Restart with --enable-job-controls only for a deliberate supervised trial.");
@@ -246,8 +253,12 @@
         }
         action("slice", body);
     });
+    el('start-after-upload').addEventListener('change', render);
+    el('remote').addEventListener('input', render);
     el("save").addEventListener("click", () => {
-        action("save", {confirm: true, remote_name: el("remote").value});
+        action("save", {confirm: true, remote_name: el("remote").value,
+            start_after_upload: Boolean(config && config.job_controls_enabled && el('start-after-upload').checked),
+            artifact_sha256: state.sha256, source_id: state.source_id});
     });
     el("start").addEventListener("click", () => {
         action("start", {confirm: true, save_id: state.save_id});

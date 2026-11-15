@@ -247,6 +247,20 @@ validation; no protocol framing/CRC/timing/start/end template changed. Fixed
 priming does not follow the model and its overlap remains unresolved. No agent
 printer/proxy connection or new hardware authorization.
 
+## WEB-COMBINED-022 — Explicit save/start intent, loopback tests only
+
+The user requested implementation of the earlier checked-by-default web
+start-after-upload checkbox. With job controls enabled, the labelled combined
+button click now composes save and start; unchecked/omitted API remains save-only.
+Artifact hash/receipt identity, confirmed M29, healthy release, complete save
+recording and fresh-session READY gate one exact-name M23 attempt. Separate
+linked captures preserve save vs start outcomes. No retry or automatic M26;
+CLI behavior/framing/CRC/firmware parsing and startup/priming are unchanged.
+Fresh loopback tests cover failure/recording/identity/READY gates, exact
+commands and no repeat; UI tests cover changed default and explicit save-only.
+This is orchestration policy, not new Finder hardware/protocol evidence or
+agent hardware authorization. See START_AFTER_UPLOAD.md.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.

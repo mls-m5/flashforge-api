@@ -463,24 +463,26 @@ initial view was accepted by the user. The next milestone below adds typed
 single-model edits; face picking/multiple models and the repeated fixed-purge
 issue remain separate, not silently changed.
 
-## Future requested upload option: checked-by-default start after save
+## Upload option now implemented: checked-by-default start after save
 
 During model-editor work, the user explicitly requested **a note for the later
 upload-workflow change**, not implementation now: a checkbox labelled along the
 lines of “Start print when upload completes”, **checked by default**. Unchecked
 means save/upload only. “Completes” refers to the file upload, not a prior print.
-Current separate Save/Start behavior, launcher flags and no-auto-start policy
-are unchanged by this note or by model transformations.
+That request was initially a note only. The user subsequently explicitly asked
+to implement it: it is now the web default when server job controls are enabled.
+Unchecked/legacy API remains save-only; launcher capabilities/CLI defaults are
+unchanged. See START_AFTER_UPLOAD.md for the implemented gates and tests.
 
-When implemented, the button/labels must clearly show the combined intent before
+The implementation's button/labels clearly show the combined intent before
 the initiating click (no recurring popup), and the option must respect server
 job-control/generated-output capabilities. Compose only verified save of the
 exact resulting identity/name with a fresh READY check and one start attempt;
 failed/unknown transfer, invalidated identity or unhealthy cleanup cannot trigger
 start. No blind retry, automatic stop or start of an older saved file. Record
-requested intent, save confirmation and start outcome separately. Add negative
-orchestration/UI tests and update the documented default deliberately; this note
-does not authorize an agent printer connection or motion trial.
+requested intent, save confirmation and start outcome separately. Negative
+orchestration/UI tests cover these gates and the changed default; no physical
+printer/proxy connection or agent motion trial is authorized by the software work.
 
 ## Typed single-model editing implemented
 

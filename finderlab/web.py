@@ -33,6 +33,7 @@ STATIC = Path(__file__).with_name("webstatic")
 PRINT_LIMIT = 8 * 1024 * 1024
 MODEL_LIMIT = 64 * 1024 * 1024
 CAPTURE_LIMIT = 64 * 1024 * 1024
+JOB_CAPTURE_LIMIT = 1024 * 1024
 STORAGE_LIMIT = 256 * 1024 * 1024
 STATIC_FILES = {"/": ("index.html", "text/html; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
 for _name in ("app.js", "manual.js", "preview.js", "toolpath-view.js", "toolpath-worker.js", "model-preview.js", "model-worker.js", "model-transform.js",
@@ -139,7 +140,8 @@ class Workbench:
                 "size": 0, "name": "", "error": "", "warning": "", "capture": "",
                 "sha256": "", "sliced": False, "artifact": False, "slicer_log": "",
                 "suggested_name": "", "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested", "slicer_stage": "", "slice_settings": None,
-                "effective_quality": None, "model": False, "source_sha256": "", "source_id": "", "model_transform": None}
+                "effective_quality": None, "model": False, "source_sha256": "", "source_id": "", "model_transform": None, "start_after_upload": False,
+                "save_capture": "", "start_capture": ""}
 
     def capacity(self, reserve):
         if self.monitor and self.monitor.capture and not self.monitor.capture.closed:
@@ -259,7 +261,7 @@ class Workbench:
         self.idle()
         if operation not in ("slice", "save", "start", "stop"):
             raise WebError(400, "Unknown operation")
-        allowed = ({"confirm", "remote_name"} if operation == "save" else {"confirm", "save_id"} if operation == "start"
+        allowed = ({"confirm", "remote_name", "start_after_upload", "artifact_sha256", "source_id"} if operation == "save" else {"confirm", "save_id"} if operation == "start"
                    else {"confirm", "settings", "transform", "source_sha256", "source_id"} if operation == "slice" else {"confirm"})
         if set(data) - allowed or data.get("confirm") is not True:
             raise WebError(400, "Explicit confirmation and only documented fields are required")
@@ -273,7 +275,7 @@ class Workbench:
                     raise WebError(409, "Saved file changed; refresh before confirming Start")
                 if self.state["start_attempted"]:
                     raise WebError(409, "Start was already attempted; do not blindly repeat it")
-            self.capacity(CAPTURE_LIMIT + 1024 * 1024)
+            self.capacity(JOB_CAPTURE_LIMIT + 1024 * 1024)
             if operation == "start":
                 self.state["start_attempted"] = True
             self.state.update(busy=True, phase="connecting", error="", warning="", capture="")
@@ -296,6 +298,10 @@ class Workbench:
             if "source_id" in data and data["source_id"] != self.state["source_id"]:
                 raise WebError(409, "Source slot changed; reload before slicing")
         else:
+            if type(data.get("start_after_upload", False)) is not bool:
+                raise WebError(400, "start_after_upload must be a boolean")
+            if data.get("start_after_upload", False) and not self.config.enable_job_controls:
+                raise WebError(409, "Start after upload requires server --enable-job-controls")
             if not self.config.enable_upload:
                 raise WebError(409, "Printer uploads are disabled on the server")
             if self.artifact is None:
@@ -306,6 +312,11 @@ class Workbench:
                 raise WebError(409, "Previous save is uncertain; inspect physical state/logs, then discard to reset")
             if self.state["sliced"] and not self.config.allow_sliced_upload:
                 raise WebError(409, "Generated-output uploads need server --allow-sliced-upload after separate profile review")
+            combined = data.get("start_after_upload", False)
+            if (combined or "artifact_sha256" in data) and data.get("artifact_sha256") != self.state["sha256"]:
+                raise WebError(409, "Selected print artifact changed; refresh before saving/starting")
+            if (combined or "source_id" in data) and data.get("source_id") != self.state["source_id"]:
+                raise WebError(409, "Selected file slot changed; refresh before saving/starting")
             name = data.get("remote_name")
             if not isinstance(name, str):
                 raise WebError(400, "An ASCII remote basename is required")
@@ -315,8 +326,12 @@ class Workbench:
                 raise WebError(400, str(exc)) from exc
             if self.state["sliced"] and Path(name).suffix.lower() not in (".gcode", ".g"):
                 raise WebError(400, "Plain sliced G-code cannot be renamed to GX")
-        self.capacity(CAPTURE_LIMIT + PRINT_LIMIT + 1024 * 1024)
+        self.capacity(CAPTURE_LIMIT + PRINT_LIMIT + (JOB_CAPTURE_LIMIT if data.get("start_after_upload") else 0) + 1024 * 1024)
         self.state.update(busy=True, phase="slicing" if operation == "slice" else "connecting", error="", warning="", capture="")
+        if operation == "save":
+            self.state["start_after_upload"] = data.get("start_after_upload", False)
+            if self.state["start_after_upload"]:
+                self.state["job_result"] = "start_not_sent"
         if operation == "slice":
             self.state["slicer_log"] = ""
             self.state["slicer_stage"] = ""
@@ -389,14 +404,23 @@ class Workbench:
     async def _operation(self, operation, data):
         capture = None
         network = False
+        combined = operation == "save" and data.get("start_after_upload", False)
+        confirmed = None
+        follow_start = False
         try:
             capture = WebCapture(self.folder / "captures", "slice" if operation == "slice" else "client", state=self.state,
-                              max_bytes=CAPTURE_LIMIT, max_sessions=1,
-                              metadata={"operation": operation, "start_requested": operation == "start", "interface": "standalone-web",
+                              max_bytes=JOB_CAPTURE_LIMIT if operation in ("start", "stop") else CAPTURE_LIMIT, max_sessions=1,
+                              metadata={"operation": operation, "start_requested": operation == "start" or combined,
+                                        "start_after_upload": combined or data.get("_after_upload", False),
+                                        "source_id": self.state["source_id"], "expected_artifact_sha256": data.get("artifact_sha256"),
+                                        "interface": "standalone-web",
                                         "target_kind": "owned_dummy" if self.owned_dummy else "configured_endpoint"})
             self.state["capture"] = str(capture.path)
+            if operation in ("save", "start"):
+                self.state[operation + "_capture"] = str(capture.path)
             if operation == "start":
-                capture.manifest["metadata"].update(saved_name=self.state["saved_name"], save_id=self.state["save_id"])
+                capture.manifest["metadata"].update(saved_name=self.state["saved_name"], save_id=self.state["save_id"],
+                                                       save_capture=self.state["save_capture"], saved_sha256=self.state["sha256"])
             if operation == "slice":
                 result = await slice_model(self.source, self.slot / self.state["suggested_name"], self.config.slicing,
                                            capture=capture, settings=self.state["slice_settings"], transform=self.state["model_transform"])
@@ -416,7 +440,11 @@ class Workbench:
                             result = await client.upload(self.artifact, remote_name=data["remote_name"], progress=progress)
                             self.state.update(phase="saved", saved=True, sha256=result.sha256,
                                               saved_name=result.path.removeprefix("0:/user/"), save_id=uuid.uuid4().hex)
-                            capture.manifest["metadata"].update(upload_confirmed=True, remote_path=result.path, save_id=self.state["save_id"])
+                            capture.manifest["metadata"].update(upload_confirmed=True, remote_path=result.path, save_id=self.state["save_id"],
+                                                                uploaded_sha256=result.sha256)
+                            confirmed = (self.state["save_id"], self.state["saved_name"], self.state["sha256"])
+                            if "artifact_sha256" in data and result.sha256 != data["artifact_sha256"]:
+                                raise ValueError("Saved bytes differ from selected artifact; start blocked, inspect the source")
                         elif operation == "start":
                             await client.start(self.state["saved_name"], confirm=True)
                             self.state.update(phase="start_acknowledged", job_result="start_acknowledged")
@@ -453,7 +481,21 @@ class Workbench:
                     self.monitor.request_stop()
                 self.state.update(phase="unknown" if network else "failed", error="Recording failed: " + str(exc))
             finally:
-                self.state["busy"] = False
+                # Do not release the local operation slot between save and start.
+                # A fully finalized save recording AND healthy release are required.
+                follow_start = bool(combined and confirmed and capture and capture.closed and not capture.failed
+                                    and capture.manifest.get("complete")
+                                    and self.state["saved"] and self.state["phase"] == "saved"
+                                    and not self.state["warning"] and not self.state["error"]
+                                    and confirmed == (self.state["save_id"], self.state["saved_name"], self.state["sha256"]))
+                if follow_start:
+                    self.state.update(start_attempted=True, phase="connecting", job_result="start_pending")
+                else:
+                    self.state["busy"] = False
+        if follow_start:
+            # New firmware-gated session, fresh READY inside client.start(), exact
+            # saved name/identity. Never repeat on failure or add an automatic stop.
+            await self._operation("start", {"confirm": True, "save_id": confirmed[0], "_after_upload": True})
 
     async def close(self):
         if self.task and not self.task.done():

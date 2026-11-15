@@ -522,6 +522,106 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await self.post("/api/save", {"confirm": True, "remote_name": "p.gx"}))[0], 409)
             self.assertEqual(client.call_count, 1)
 
+    async def combined_request(self):
+        self.server.work.config = replace(self.config, enable_job_controls=True)
+        await self.file('source.gx')
+        state=self.server.work.state
+        return {'confirm':True,'remote_name':'combined exact.gx','start_after_upload':True,
+                'artifact_sha256':state['sha256'],'source_id':state['source_id']}
+
+    async def test_combined_save_start_is_exact_fresh_and_separately_recorded(self):
+        from finderlab.web import WebError
+        data=await self.combined_request()
+        original=WebCapture.close; busy=[]
+        def close(capture):
+            original(capture)
+            if capture.manifest['metadata']['operation']=='save':
+                busy.append(self.server.work.state['busy'])
+                with self.assertRaises(WebError):self.server.work.discard()
+        with patch.object(WebCapture,'close',close):
+            self.assertEqual((await self.post('/api/save',data))[0],200)
+            state=await self.finish()
+        self.assertEqual(busy,[True]);self.assertTrue(state['saved']);self.assertTrue(state['start_attempted'])
+        self.assertEqual(self.mock.active_file,'combined exact.gx');self.assertEqual(state['job_result'],'start_acknowledged')
+        self.assertNotEqual(state['save_capture'],state['start_capture'])
+        saved=json.loads((Path(state['save_capture'])/'manifest.json').read_bytes())
+        started=json.loads((Path(state['start_capture'])/'manifest.json').read_bytes())
+        self.assertTrue(saved['complete']);self.assertTrue(saved['metadata']['start_after_upload'])
+        self.assertEqual(saved['metadata']['save_id'],started['metadata']['save_id'])
+        raw=(Path(state['start_capture'])/'sessions/s0001/client-to-server.bin').read_bytes().splitlines()
+        self.assertEqual(raw,[b'~M601 S1',b'~M115',b'~M119',b'~M23 0:/user/combined exact.gx',b'~M602'])
+        self.assertEqual((await self.post('/api/save',data))[0],409)
+        self.assertEqual((await self.post('/api/start',{'confirm':True,'save_id':state['save_id']}))[0],409)
+
+    async def test_combined_capability_type_and_stale_artifact_gates_before_connect(self):
+        data=await self.combined_request()
+        with patch('finderlab.web.FinderClient') as client:
+            for key,value,code in [('start_after_upload','true',400),('artifact_sha256','old',409),('source_id','old',409)]:
+                self.assertEqual((await self.post('/api/save',data|{key:value}))[0],code)
+            missing=data.copy();missing.pop('artifact_sha256')
+            self.assertEqual((await self.post('/api/save',missing))[0],409)
+            self.server.work.config=replace(self.config,enable_job_controls=False)
+            self.assertEqual((await self.post('/api/save',data))[0],409)
+            client.assert_not_called()
+
+    async def test_combined_failed_save_never_starts(self):
+        from unittest.mock import AsyncMock
+        from finderlab.client import ResultUnknown
+        data=await self.combined_request()
+        with patch('finderlab.web.FinderClient.upload',new=AsyncMock(side_effect=ResultUnknown('lost M29'))),patch('finderlab.web.FinderClient.start',new=AsyncMock()) as start:
+            await self.post('/api/save',data);state=await self.finish()
+            start.assert_not_awaited()
+        self.assertFalse(state['saved']);self.assertEqual(state['job_result'],'start_not_sent')
+        self.assertFalse(state['start_attempted']);self.assertEqual(state['phase'],'unknown')
+
+    async def test_combined_changed_artifact_bytes_cannot_trigger_start(self):
+        from unittest.mock import AsyncMock
+        data=await self.combined_request();upload=FinderClient.upload
+        async def mutate(client,path,**kwargs):
+            Path(path).write_bytes(b'; changed before upload\n')
+            return await upload(client,path,**kwargs)
+        with patch('finderlab.web.FinderClient.upload',mutate),patch('finderlab.web.FinderClient.start',new=AsyncMock()) as start:
+            await self.post('/api/save',data);state=await self.finish();start.assert_not_awaited()
+        self.assertTrue(state['saved']);self.assertEqual(state['phase'],'unknown');self.assertEqual(state['job_result'],'start_not_sent')
+
+    async def test_combined_release_or_save_finalization_failure_blocks_start(self):
+        from unittest.mock import AsyncMock
+        data=await self.combined_request()
+        original=FinderClient.close
+        async def fail_release(client):
+            await original(client);client.cleanup_error='synthetic release failure'
+        with patch('finderlab.web.FinderClient.close',fail_release),patch('finderlab.web.FinderClient.start',new=AsyncMock()) as start:
+            await self.post('/api/save',data);state=await self.finish();start.assert_not_awaited()
+        self.assertTrue(state['saved']);self.assertEqual(state['job_result'],'start_not_sent');self.assertIsNone(self.mock.active_file)
+        await self.post('/api/discard',{'confirm':True})
+        data=await self.combined_request();close=WebCapture.close
+        def fail_capture(capture):close(capture);raise OSError('save record finalization failure')
+        with patch.object(WebCapture,'close',fail_capture),patch('finderlab.web.FinderClient.start',new=AsyncMock()) as start:
+            await self.post('/api/save',data);state=await self.finish();start.assert_not_awaited()
+        self.assertTrue(state['saved']);self.assertEqual(state['phase'],'unknown');self.assertEqual(state['job_result'],'start_not_sent')
+
+    async def test_combined_fresh_not_ready_and_unknown_start_never_retry_or_cancel(self):
+        data=await self.combined_request();close=WebCapture.close
+        def external_job(capture):
+            close(capture)
+            if capture.manifest['metadata']['operation']=='save':
+                self.mock._files['external.gx']=b'x';self.mock._active_file='external.gx'
+        with patch.object(WebCapture,'close',external_job):
+            await self.post('/api/save',data);state=await self.finish()
+        raw=(Path(state['start_capture'])/'sessions/s0001/client-to-server.bin').read_bytes()
+        self.assertNotIn(b'~M23',raw);self.assertNotIn(b'~M26',raw)
+        self.assertEqual(self.mock.active_file,'external.gx');self.assertTrue(state['saved']);self.assertTrue(state['start_attempted'])
+        self.mock._active_file=None
+        await self.post('/api/discard',{'confirm':True});data=await self.combined_request()
+        from unittest.mock import AsyncMock
+        from finderlab.client import ResultUnknown
+        with patch('finderlab.web.FinderClient.start',new=AsyncMock(side_effect=ResultUnknown('lost start ACK'))) as start:
+            await self.post('/api/save',data);state=await self.finish()
+            await self.request('GET','/api/state');await self.request('GET','/api/state')
+            self.assertEqual(start.await_count,1)
+        self.assertTrue(state['saved']);self.assertEqual(state['job_result'],'start_unknown')
+        self.assertEqual((await self.post('/api/start',{'confirm':True,'save_id':state['save_id']}))[0],409)
+
     async def save_for_controls(self):
         self.server.work.config = replace(self.config, enable_job_controls=True)
         self.server.config = self.server.work.config
