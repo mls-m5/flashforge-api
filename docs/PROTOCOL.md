@@ -315,6 +315,19 @@ acceptance for this reported trial only; print completion, motion/material /
 clearance safety and other firmware remain unverified. No new connection,
 command, raw capture edit or runtime guard/default change. See GX_GENERATION.md.
 
+## SLICER-PLATE-027 — Multi-STL shared layout, native/HTTP offline only
+
+The page now accepts multiple unsliced STL sources with independent transforms
+and bakes a single layer-by-layer compound, arrange0/orient0. Native2.3/private03
+trial20261115T173143Z-735740a875ad and whole-plate GX
+20261115T173144Z-8ad707c2a959 produced122559/137071-byte artifacts respectively,
+with source/profile hashes unchanged and zero printer sessions. A fresh ephemeral
+HTTP/native trial also passed (PLATE.md). No transport, CRC, firmware or job-control
+semantics changed; no agent hardware/proxy contact. Nominal bounds/XY-box gaps and
+priming guard are not physical clearance validation. Browser/host2.5 plate behavior
+remains user acceptance; earlier user GX display does not validate multi-model
+motion/material/printing. Capture/source metadata remain private.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.

@@ -82,6 +82,19 @@ rewritten: restart the backend and **re-slice**. Upload/start permissions and
 checkbox behavior are unchanged. Nominal guards remain; this default change is
 not new physical/host2.5 validation. See [docs/PRIMING_REVIEW.md](docs/PRIMING_REVIEW.md).
 
+## Several STL models on one plate
+
+Select/drop multiple STL files, or add more after the first file **before Slice**.
+The shared 3D plate lets you select a part in the list or by clicking its mesh,
+then change its XY position, rotation and uniform scale independently. Remove
+parts individually; Slice produces one combined layer-by-layer job, and GX's
+miniature includes the whole plate. Camera dragging is still camera movement,
+not a model-drag gizmo. Up to8 STL files/64MiB/200k combined triangles; nominal
+bounds and conservative1mm XY bounding-box gaps apply. Existing single3MF/print
+file workflows remain separate. Restart the backend and hard-reload browsers.
+See [docs/PLATE.md](docs/PLATE.md) for limits, native offline/HTTP evidence and
+pending browser/host2.5 acceptance. No printer was contacted during development.
+
 ## Inspect the model before slicing
 
 After selecting STL/supported3MF, the input model now appears in a separate
@@ -92,7 +105,8 @@ add uniform scale, XYZ rotation and XY model movement**, with +90°/Center/Reset
 buttons and automatic Z-on-bed. Editing enables manual placement; explicit
 Slice bakes a private geometry derivative and disables Orca auto-arrange.
 Original files stay unchanged. Discard/reselect to edit a completed slice;
-face-to-bed picking, mouse gizmos and multiple models remain future work.
+face-to-bed picking and mouse gizmos remain future work. Multiple STL models
+are now supported in the shared plate view above.
 See [docs/MODEL_TRANSFORMS.md](docs/MODEL_TRANSFORMS.md) for coordinate/resource
 limits and actual offline native2.3 placement trials. The user accepted the
 initial mesh view; new editor/browser/host2.5 acceptance remains pending.
@@ -302,6 +316,8 @@ node tests/test_model_editor_integration.js
 node tests/test_start_after_upload_ui.js
 node tests/test_gx_ui.js
 node tests/test_web_rejection_ui.js
+node tests/test_plate_ui.js
+node tests/test_plate_upload_ui.js
 ```
 
 Tests use ephemeral loopback ports and never connect to a physical printer. Generated test files use the ignored project-local `.tmp/` directory and are cleaned up; do not use the system temporary directory for project work. No third-party dependencies are required. One integration test retains the uploader's existing three-second pause.

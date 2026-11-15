@@ -30,6 +30,7 @@ export class ToolpathView {
         this.camera.updateProjectionMatrix(); this.render();
     }
     clear() {
+        if(this.selectionBox){this.scene.remove(this.selectionBox);this.selectionBox.geometry.dispose();this.selectionBox.material.dispose();this.selectionBox=null;}
         for (const path of this.paths) {
             this.scene.remove(path); path.geometry.dispose(); path.material.dispose();
         }
@@ -78,6 +79,30 @@ export class ToolpathView {
         mesh.position.set(-center.x, -center.y, -geometry.boundingBox.min.z);
         mesh.userData.kind = 'model'; this.paths.push(mesh); this.scene.add(mesh);
         this.bounds = geometry.boundingBox.clone().translate(mesh.position); this.reset();
+    }
+    setPlate(entries, selected, wireframe=false) {
+        this.clear();this.bounds=new THREE.Box3();
+        for(const item of entries){
+            if(!item.layout)continue;
+            const geometry=new THREE.BufferGeometry();
+            geometry.setAttribute('position',new THREE.BufferAttribute(item.data.positions,3));
+            geometry.setAttribute('normal',new THREE.BufferAttribute(item.data.normals,3));
+            const mesh=new THREE.Mesh(geometry,new THREE.MeshNormalMaterial({side:THREE.DoubleSide,wireframe}));
+            mesh.userData.kind='model';mesh.userData.modelId=item.id;
+            mesh.matrixAutoUpdate=false;mesh.matrix.set(...item.layout.matrix);mesh.matrixWorldNeedsUpdate=true;
+            this.paths.push(mesh);this.scene.add(mesh);
+            const box=new THREE.Box3(new THREE.Vector3(...item.layout.bounds.map(b=>b[0])),new THREE.Vector3(...item.layout.bounds.map(b=>b[1])));
+            this.bounds.union(box);
+            if(item.id===selected){this.selectionBox=new THREE.Box3Helper(box,0xffd166);this.scene.add(this.selectionBox);}
+        }
+        this.render();
+    }
+    pickModel(clientX,clientY) {
+        const rect=this.renderer.domElement.getBoundingClientRect();
+        const pointer=new THREE.Vector2((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1);
+        this.scene.updateMatrixWorld(true);this.camera.updateMatrixWorld(true);
+        const ray=new THREE.Raycaster();ray.setFromCamera(pointer,this.camera);
+        return ray.intersectObjects(this.paths,false)[0]?.object.userData.modelId || null;
     }
     setModelLayout(layout) {
         const mesh = this.paths.find(p => p.userData.kind === 'model');

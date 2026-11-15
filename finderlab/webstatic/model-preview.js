@@ -17,6 +17,7 @@ function readTransform(){
     return normalizeTransform(t);
 }
 function publish(){
+    if(currentState.models?.length>1)return;
     const editable=currentState.model&&currentState.phase==='model_ready'&&!currentState.busy;
     el('model-manual').disabled=!editable;
     el('model-transform-fields').disabled=!editable||!modelData;
@@ -94,6 +95,7 @@ function fail(message,ticket){if(ticket===revision)clear('Model preview unavaila
 function accept(state){
     const key=state.model&&/^[0-9a-f]{64}$/.test(state.source_sha256||'')?state.source_sha256+':'+(state.source_id||'')+':'+state.name:'';
     currentState=state;
+    if(state.models?.length>1){if(identity){identity='';attempted='';clear('Multiple STL plate active.');}return;}
     if(key!==identity){identity=key;attempted='';published='';el('model-manual').checked=false;setFields(normalizeTransform({}));clear(key?'New source model available.':'Choose an STL/3MF to see input geometry before slicing.');}
     // Once Slice starts, all viewers adopt its immutable server snapshot, not another tab's draft.
     if(state.slice_settings!==null&&state.slice_settings!==undefined){

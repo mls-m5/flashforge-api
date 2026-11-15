@@ -155,6 +155,24 @@ acceptance remains pending. Gizmos/face picking/multiple models remain future.
 See MODEL_PREVIEW.md and MODEL_TRANSFORMS.md for limits, mathematical contract,
 source/artifact generation guards, tests and fixed-purge/clearance limitations.
 
+### Multiple STL plate sources and immutable compound layout
+
+The web slot can now hold up to8 unsliced STL sources (64MiB aggregate), with
+serial receipt, individual opaque identities, revision-bound removal and source
+GETs. Single3MF/print-file slots remain standalone. A dedicated plate controller
+shares the bounded parser/Three renderer but retains independent numeric drafts,
+mesh selection and cached generation tickets. Every source must appear exactly
+once in explicit Slice's typed plate snapshot; stale/missing/injected models
+cannot fall back to slicing only the first file. Assembly bakes disjoint nominal
+XY layouts in a bounded worker into one private STL, arrange0/orient0 and private
+process by-layer sequencing. Full-height XY AABBs need1mm separation; this is
+conservative geometry admission, not head/clip/firmware clearance simulation.
+Originals stay unchanged; successful Slice retains the exact compound mesh for
+whole-plate GX, with separate input/compound hashes/capture provenance. Same
+operation/job/access/priming guards; no automatic Slice/Save/Start or hardware
+connection. See PLATE.md for limits, endpoints, native2.3/HTTP trials and browser /
+host2.5 acceptance gaps. Gizmos/face picking remain future.
+
 ### Explicit experimental GX packaging and CPU miniature
 
 After a successful supported model Slice, the page offers a separate GX action.

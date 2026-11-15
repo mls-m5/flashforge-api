@@ -27,6 +27,18 @@ firmware commands. No printer/proxy/hardware upload/start or remote read-back
 was performed by the agent. Broader host2.5 metadata variants and other-device
 acceptance remain pending. Current source models/profiles remain private.
 
+## Whole-plate thumbnails
+
+Multiple STL models are now supported in the web plate workflow (PLATE.md).
+After its successful Slice, GX renders the exact retained compound STL with
+all baked relative positions/scales/rotations, not only the first source. The
+camera fits/centres the assembly visually. This avoids the single-source
+automatic-arrangement caveat for an explicit plate layout; supports/compensation /
+material are still not simulated. Original individual inputs and code remain
+unchanged, source/compound identities are captured separately. New native2.3 /
+HTTP two-model trials passed; actual browser/host2.5 multi-model acceptance is
+still separate from the user's earlier single-file GX display confirmation.
+
 ## Rendering, camera and image layout
 
 `finderlab/gx.py` implements an original stdlib CPU triangle rasterizer: fixed

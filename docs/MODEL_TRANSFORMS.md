@@ -1,5 +1,13 @@
 # Single-model scale, rotation and XY placement
 
+## Multiple STL extension now available
+
+The single-model behavior below remains; adding another STL before Slice now
+opens a shared plate with independent transforms, selection/removal, exact baked
+combined Slice and whole-plate GX. See PLATE.md for its bounded source/identity /
+overlap contract and native/HTTP evidence. Multiple3MF, gizmos and face picking
+remain future; single3MF still works unchanged.
+
 ## Implemented workflow
 
 The user accepted the original mesh preview and requested geometry editing next.

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Finder · local workbench</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/manual.js" defer></script><script type="module" src="/preview.js"></script><script type="module" src="/model-preview.js"></script></head>
+<title>Finder · local workbench</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/manual.js" defer></script><script type="module" src="/preview.js"></script><script type="module" src="/model-preview.js"></script><script type="module" src="/plate-preview.js"></script></head>
 <body><main>
 <p id="action-error" class="warning" role="alert"></p>
 <header><p class="eyebrow">LOCAL · EXPERIMENTAL · FINDER V1.5</p><h1>Prepare. Save. You decide.</h1>
@@ -41,11 +41,24 @@
 </section>
 <section><h2>1 <span>Choose a file</span></h2>
 <div id="drop" tabindex="0"><strong>Drop an STL, 3MF or print file here</strong><p>STL / 3MF up to 64 MiB · GX / G-code / G up to 8 MiB</p>
-<label for="file">or choose a file</label><input id="file" type="file" accept=".stl,.3mf,.gx,.gcode,.g"></div>
-<p id="selection">One file at a time. Choosing a file only stores it locally.</p>
+<label for="file">or choose a file</label><input id="file" type="file" multiple accept=".stl,.3mf,.gx,.gcode,.g"></div>
+<p id="selection">Add STL models before Slice, or choose one standalone 3MF/print file. File receipt only stores data locally.</p>
 <label>Browser → local server <progress id="incoming" max="100" value="0"></progress></label>
 <button id="discard" disabled>Discard current file</button></section>
-<section><h2>Model preview <span>· original STL / 3MF</span></h2>
+<section id="plate-section" hidden><h2>Build plate <span>· multiple STL models</span></h2>
+<p>Add STL files using the file picker or drop zone. Select a model in the list or click its mesh, then move/rotate/scale it with the numeric controls. Camera drag remains camera orbit, not object drag. All models are sliced together, layer by layer, with no automatic rearrangement.</p>
+<label>Selected model <select id="plate-model"></select></label><button id="plate-remove">Remove selected model</button>
+<div id="plate-canvas" aria-label="Multiple-model 3D build plate"></div>
+<fieldset id="plate-fields"><legend>Selected model · draft until Slice</legend><div class="model-transform-grid">
+<label>Scale (%) <input id="plate-scale" type="number" min="1" max="1000" value="100"></label>
+<label>Centre X (mm) <input id="plate-x" type="number" min="-70" max="70" step="0.5" value="0"></label>
+<label>Centre Y (mm) <input id="plate-y" type="number" min="-70" max="70" step="0.5" value="0"></label>
+<label>Rotate X (°) <input id="plate-rotate-x" type="number" min="-360" max="360" value="0"></label>
+<label>Rotate Y (°) <input id="plate-rotate-y" type="number" min="-360" max="360" value="0"></label>
+<label>Rotate Z (°) <input id="plate-rotate-z" type="number" min="-360" max="360" value="0"></label>
+</div><button id="plate-center">Center selected XY</button><button id="plate-fit">Fit camera</button></fieldset>
+<p id="plate-message" role="status"></p><p class="warning">At most8 STL models,64MiB total,200k combined triangles. Full-height XY bounding boxes must have at least1mm gap; this conservative test is not physical clearance. Skirt/brim/support may need more space. Inspect the resulting toolpaths before Save/Start. Once sliced, discard the plate to edit a new version.</p></section>
+<section id="single-model-section"><h2>Model preview <span>· original STL / 3MF</span></h2>
 <label><input id="model-enabled" type="checkbox" checked> Show input model before slicing</label>
 <p id="model-message" role="status">Choose an STL/3MF.</p><div id="model-canvas" aria-label="3D input model view"></div>
 <p id="model-dimensions"></p>

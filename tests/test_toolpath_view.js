@@ -34,5 +34,10 @@ async function main(){
  assert.equal(v.paths[0].matrixAutoUpdate,false);assert.equal(vertices[0],10);
  v.reset(true);assert.deepEqual(v.controls.target.toArray(),[0,0,10]);
  v.setModelLayout(null);assert.equal(v.paths[0].visible,false,'invalid edits hide stale geometry');
+ v.setPlate([{id:'a',data:{positions:vertices,normals:new Float32Array(9)},layout:{matrix:[1,0,0,-20,0,1,0,-20,0,0,1,-30,0,0,0,1],bounds:[[-10,-9],[0,1],[0,0]]}},
+ {id:'b',data:{positions:vertices,normals:new Float32Array(9)},layout:{matrix:[1,0,0,10,0,1,0,-20,0,0,1,-30,0,0,0,1],bounds:[[20,21],[0,1],[0,0]]}}],'b');
+ assert.equal(v.paths.length,2);assert.equal(v.paths[1].userData.modelId,'b');assert(v.selectionBox);
+ assert.deepEqual(v.bounds.min.toArray(),[-10,0,0]);assert.deepEqual(v.bounds.max.toArray(),[21,1,0]);
+ v.clear();assert.equal(v.selectionBox,null);
  console.log('Vendored Three geometry batching, height uniforms, camera and disposal checks passed (no GPU).');
 }main().catch(e=>{console.error(e);process.exitCode=1;});

@@ -23,6 +23,7 @@ from .capture import Capture, CaptureError
 from .client import ClientConfig, FinderClient, remote_path
 from .slicer import SliceConfig, slice_model
 from .model_transform import normalize_transform
+from .plate import normalize_plate, MAX_MODELS
 from .slice_settings import normalize_settings
 from .passive_status import status_from_capture
 from .active_status import ActiveMonitor
@@ -36,7 +37,7 @@ CAPTURE_LIMIT = 64 * 1024 * 1024
 JOB_CAPTURE_LIMIT = 1024 * 1024
 STORAGE_LIMIT = 256 * 1024 * 1024
 STATIC_FILES = {"/": ("index.html", "text/html; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
-for _name in ("app.js", "manual.js", "preview.js", "toolpath-view.js", "toolpath-worker.js", "model-preview.js", "model-worker.js", "model-transform.js",
+for _name in ("app.js", "manual.js", "preview.js", "toolpath-view.js", "toolpath-worker.js", "model-preview.js", "model-worker.js", "model-transform.js", "plate-preview.js",
               "vendor/three/three.module.min.js", "vendor/three/OrbitControls.js"):
     STATIC_FILES["/" + _name] = (_name, "text/javascript; charset=utf-8")
 STATIC_FILES["/vendor/three/LICENSE"] = ("vendor/three/LICENSE", "text/plain; charset=utf-8")
@@ -124,6 +125,8 @@ class Workbench:
         self.owned_printer = None
         self.manual_capture = ""
         self.model_cache = None
+        self.model_paths = {}
+        self.gx_geometry = None
         self.state = self.empty()
         # Do not let two servers operate the same workspace at once.
         import fcntl
@@ -141,7 +144,7 @@ class Workbench:
                 "sha256": "", "sliced": False, "artifact": False, "slicer_log": "",
                 "suggested_name": "", "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested", "slicer_stage": "", "slice_settings": None,
                 "effective_quality": None, "model": False, "source_sha256": "", "source_id": "", "model_transform": None, "start_after_upload": False,
-                "save_capture": "", "start_capture": "", "gx_metadata": None, "gx_unavailable": "Slice a model first", "gx_generated": False}
+                "models": [], "plate": None, "save_capture": "", "start_capture": "", "gx_metadata": None, "gx_unavailable": "Slice a model first", "gx_generated": False}
 
     def capacity(self, reserve):
         monitor_reserve = 0
@@ -172,14 +175,16 @@ class Workbench:
 
     async def receive(self, reader, length, name):
         self.idle()
-        if self.source is not None:
-            raise WebError(409, "Discard the current file before choosing another")
         if (not isinstance(name, str) or not 1 <= len(name) <= 200 or "/" in name or "\\" in name
                 or any(ord(c) < 32 or ord(c) == 127 for c in name)):
             raise WebError(400, "Use a plain filename, not a path or control characters")
         suffix = Path(name).suffix.lower()
         if suffix not in (".stl", ".3mf", ".gx", ".gcode", ".g"):
             raise WebError(400, "Choose STL, 3MF, GX, G-code or G")
+        if self.source is not None:
+            if self.source.suffix != '.stl' or suffix != '.stl' or self.artifact or self.state['slice_settings'] is not None:
+                raise WebError(409,'Only unsliced STL plates accept additional STL files; discard before another print/3MF')
+            await self.append_model(reader,length,name);return
         limit = MODEL_LIMIT if suffix in (".stl", ".3mf") else PRINT_LIMIT
         if not 0 < length <= limit:
             raise WebError(413, f"File must contain 1–{limit} bytes")
@@ -206,6 +211,10 @@ class Workbench:
                               size=length, sha256=digest.hexdigest(), source_sha256=digest.hexdigest(),
                               model=suffix in (".stl", ".3mf"), source_id=uuid.uuid4().hex, artifact=self.artifact is not None,
                               suggested_name=suggested_name(name))
+            if suffix in ('.stl','.3mf'):
+                identifier=uuid.uuid4().hex
+                self.model_paths={identifier:path}
+                self.state['models']=[dict(id=identifier,name=name,sha256=digest.hexdigest(),size=length)]
         except BaseException:
             shutil.rmtree(self.slot, ignore_errors=True)
             self.slot = None
@@ -214,12 +223,53 @@ class Workbench:
         finally:
             self.state["busy"] = False
 
+    async def append_model(self, reader, length, name):
+        if len(self.state['models'])>=MAX_MODELS:raise WebError(413,'Plate limit:8 STL models')
+        if not 0<length<=32*1024*1024 or sum(m['size'] for m in self.state['models'])+length>MODEL_LIMIT:
+            raise WebError(413,'Plate limit:32MiB per additional STL,64MiB total')
+        self.capacity(length+4096)
+        identifier=uuid.uuid4().hex;path=self.slot/(identifier+'.stl');digest=hashlib.sha256()
+        self.state.update(busy=True)
+        try:
+            async with asyncio.timeout(60):
+                with path.open('xb') as output:
+                    remaining=length
+                    while remaining:
+                        data=await reader.read(min(65536,remaining))
+                        if not data:raise WebError(400,'Additional STL body ended early; existing plate preserved')
+                        output.write(data);digest.update(data);remaining-=len(data)
+            self.model_paths[identifier]=path
+            self.state['models']=[*self.state['models'],dict(id=identifier,name=name,sha256=digest.hexdigest(),size=length)]
+            self.state.update(source_id=uuid.uuid4().hex,name=f"{len(self.state['models'])} STL models",suggested_name='plate.gcode',size=sum(m['size'] for m in self.state['models']))
+        except BaseException:
+            path.unlink(missing_ok=True);raise
+        finally:self.state['busy']=False
+
+    def remove_model(self,data):
+        self.idle()
+        if set(data)!={'confirm','source_id','model_id'} or data.get('confirm') is not True:
+            raise WebError(400,'Remove requires confirm, source_id and model_id')
+        if self.artifact or self.state['slice_settings'] is not None or len(self.state['models'])<2:
+            raise WebError(409,'Remove models only before Slice; use Discard to remove the final file')
+        if data['source_id']!=self.state['source_id']:raise WebError(409,'Plate changed; refresh')
+        identifier=data['model_id']
+        if not isinstance(identifier,str) or identifier not in self.model_paths:raise WebError(404,'No such model')
+        self.model_paths[identifier].unlink()
+        del self.model_paths[identifier]
+        models=[m for m in self.state['models'] if m['id']!=identifier]
+        self.state['models']=models;self.source=self.model_paths[models[0]['id']]
+        self.state.update(source_id=uuid.uuid4().hex,source_sha256=models[0]['sha256'],sha256=models[0]['sha256'],
+                          name=models[0]['name'] if len(models)==1 else f'{len(models)} STL models',size=sum(m['size'] for m in models),
+                          suggested_name=suggested_name(models[0]['name']) if len(models)==1 else 'plate.gcode')
+
     def discard(self):
         self.idle()
         if self.slot:
             shutil.rmtree(self.slot)
         self.source = self.artifact = self.slot = None
         self.model_cache = None
+        self.model_paths = {}
+        self.gx_geometry = None
         self.state = self.empty()
 
     async def model_geometry(self):
@@ -270,7 +320,7 @@ class Workbench:
         if operation not in ("slice", "save", "start", "stop", "gx"):
             raise WebError(400, "Unknown operation")
         allowed = ({"confirm", "remote_name", "start_after_upload", "artifact_sha256", "source_id"} if operation == "save" else {"confirm", "save_id"} if operation == "start"
-                   else {"confirm", "settings", "transform", "source_sha256", "source_id"} if operation == "slice"
+                   else {"confirm", "settings", "transform", "source_sha256", "source_id", "plate"} if operation == "slice"
                    else {"confirm", "artifact_sha256", "source_id"} if operation == "gx" else {"confirm"})
         if set(data) - allowed or data.get("confirm") is not True:
             raise WebError(400, "Explicit confirmation and only documented fields are required")
@@ -309,11 +359,14 @@ class Workbench:
             try:
                 settings = normalize_settings(data.get("settings"))
                 transform = normalize_transform(data.get("transform"))
+                plate = normalize_plate(data.get('plate'),[m['id'] for m in self.state['models']]) if len(self.state['models'])>1 else None
+                if plate is None and 'plate' in data:raise ValueError('Plate layout requires multiple models')
+                if plate and transform is not None:raise ValueError('Use per-model transforms for a plate')
             except ValueError as exc:
                 raise WebError(400, str(exc)) from exc
             if (transform is not None or "source_sha256" in data) and data.get("source_sha256") != self.state["source_sha256"]:
                 raise WebError(409, "Source model changed; reload before applying transforms")
-            if "source_id" in data and data["source_id"] != self.state["source_id"]:
+            if (plate is not None or "source_id" in data) and data.get("source_id") != self.state["source_id"]:
                 raise WebError(409, "Source slot changed; reload before slicing")
         else:
             if type(data.get("start_after_upload", False)) is not bool:
@@ -345,7 +398,7 @@ class Workbench:
             if self.state["sliced"] and ((self.state['gx_generated'] and Path(name).suffix.lower() != '.gx')
                                          or (not self.state['gx_generated'] and Path(name).suffix.lower() not in ('.gcode','.g'))):
                 raise WebError(400, "Selected generated format requires its actual extension; renaming is not conversion")
-        self.capacity(CAPTURE_LIMIT + PRINT_LIMIT + (JOB_CAPTURE_LIMIT if data.get("start_after_upload") else 0) + 1024 * 1024)
+        self.capacity(CAPTURE_LIMIT + PRINT_LIMIT + (16*1024*1024 if operation=='slice' and plate else 0) + (JOB_CAPTURE_LIMIT if data.get("start_after_upload") else 0) + 1024 * 1024)
         self.state.update(busy=True, phase="slicing" if operation == "slice" else "connecting", error="", warning="", capture="")
         if operation == "save":
             self.state["start_after_upload"] = data.get("start_after_upload", False)
@@ -356,6 +409,7 @@ class Workbench:
             self.state["slicer_stage"] = ""
             self.state["slice_settings"] = settings
             self.state["model_transform"] = transform
+            self.state['plate'] = plate
             self.state["effective_quality"] = None
         self.task = asyncio.create_task(self._operation(operation, data))
 
@@ -443,16 +497,18 @@ class Workbench:
             if operation == 'gx':
                 from .gx_export import export_gx
                 destination=self.artifact.with_suffix('.gx')
-                info=await export_gx(self.artifact,self.source,destination,self.config.slicing,capture=capture,
-                                     metadata=self.state['gx_metadata'],transform=self.state['model_transform'],
-                                     expected_gcode_sha256=data['artifact_sha256'],expected_model_sha256=self.state['source_sha256'])
+                info=await export_gx(self.artifact,self.gx_geometry['path'] if self.gx_geometry else self.source,destination,self.config.slicing,capture=capture,
+                                     metadata=self.state['gx_metadata'],transform={} if self.gx_geometry else self.state['model_transform'],
+                                     expected_gcode_sha256=data['artifact_sha256'],expected_model_sha256=self.gx_geometry['sha256'] if self.gx_geometry else self.state['source_sha256'])
                 self.artifact=destination
                 self.state.update(phase='review',gx_generated=True,size=info['size'],sha256=info['sha256'],
                                   suggested_name=Path(self.state['suggested_name']).with_suffix('.gx').name,
                                   warning='Experimental GX envelope/thumbnail; printer display/firmware acceptance not verified. G-code body unchanged.')
             elif operation == "slice":
                 result = await slice_model(self.source, self.slot / self.state["suggested_name"], self.config.slicing,
-                                           capture=capture, settings=self.state["slice_settings"], transform=self.state["model_transform"])
+                                           capture=capture, settings=self.state["slice_settings"], transform=self.state["model_transform"],
+                                           plate=[dict(e,path=str(self.model_paths[e['id']]),sha256=next(m['sha256'] for m in self.state['models'] if m['id']==e['id'])) for e in self.state['plate']] if self.state['plate'] else None)
+                self.gx_geometry=capture.manifest['metadata'].get('plate_geometry')
                 self.artifact = result.path
                 self.state.update(phase="review", sliced=True, artifact=True, size=result.size, sha256=result.sha256,
                                   effective_quality=capture.manifest["metadata"].get("effective_quality"),
@@ -638,7 +694,7 @@ class WebServer:
                         raise WebError(400, "Unexpected query")
                     if headers.get("content-type") != "application/json":
                         raise WebError(415, "Expected JSON")
-                    if length > 2048:
+                    if length > (8192 if uri.path=='/api/slice' else 2048):
                         raise WebError(413, "JSON body is too large")
                     async with asyncio.timeout(10):
                         data = json.loads(await reader.readexactly(length))
@@ -651,7 +707,9 @@ class WebServer:
                         self.work.toggle_monitor(data)
                         await self.reply(writer, 200, self.work.monitor.report() if self.work.monitor else {"monitor_running": False})
                         return
-                    if uri.path == "/api/discard" and set(data) == {"confirm"} and data["confirm"] is True:
+                    if uri.path == '/api/model-remove':
+                        self.work.remove_model(data)
+                    elif uri.path == "/api/discard" and set(data) == {"confirm"} and data["confirm"] is True:
                         self.work.discard()
                     elif uri.path in ("/api/slice", "/api/save", "/api/start", "/api/stop", "/api/gx"):
                         self.work.start(uri.path.removeprefix("/api/"), data)
@@ -659,7 +717,7 @@ class WebServer:
                         raise WebError(404, "Unknown operation")
                 await self.reply(writer, 200, self.work.state)
             else:
-                if (uri.query and uri.path != '/api/gx-thumbnail') or int(headers.get("content-length", "0")) != 0:
+                if (uri.query and uri.path not in ('/api/gx-thumbnail','/api/model')) or int(headers.get("content-length", "0")) != 0:
                     raise WebError(400, "Unexpected query/body")
                 if uri.path == "/api/config":
                     await self.reply(writer, 200, {"token": self.token, "target": f"{self.config.client.host}:{self.config.client.port}",
@@ -684,10 +742,16 @@ class WebServer:
                     if not secrets.compare_digest(headers.get("x-finder-token", ""), self.token):
                         raise WebError(403, "Reload the page before requesting model preview")
                     self.work.idle()
-                    tag = '"' + self.work.state["source_sha256"] + '"'
+                    chosen=None
+                    if uri.query:
+                        query=parse_qs(uri.query,strict_parsing=True,max_num_fields=1)
+                        if set(query)!={'model'} or len(query['model'])!=1:raise WebError(400,'Expected one model id')
+                        chosen=next((m for m in self.work.state['models'] if m['id']==query['model'][0]),None)
+                        if not chosen:raise WebError(404,'No such model')
+                    tag = '"' + (chosen['sha256'] if chosen else self.work.state["source_sha256"]) + '"'
                     if "if-match" in headers and headers["if-match"] != tag:
                         raise WebError(412, "Source model changed; reload model preview")
-                    path, skipped = await self.work.model_geometry()
+                    path, skipped = (self.work.model_paths[chosen['id']],0) if chosen and self.work.model_paths[chosen['id']].suffix=='.stl' else await self.work.model_geometry()
                     with path.open("rb") as file:
                         async with asyncio.timeout(30):
                             await self.head(writer, 200, "application/octet-stream", path.stat().st_size,

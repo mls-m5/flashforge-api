@@ -75,9 +75,9 @@
         }
         renderMonitor();
         const busy = pending || polling || modelPreparing || state.busy || uncertain || monitorPending;
-        el("file").disabled = busy || state.phase !== "empty";
+        el("file").disabled = busy || !(state.phase === 'empty' || (state.phase === 'model_ready' && state.models?.length && state.models.every(m=>/\.stl$/i.test(m.name)) && state.slice_settings == null && state.models.length<8));
         el("discard").disabled = busy || state.phase === "empty";
-        el("slice").disabled = busy || !config || !config.slicing_enabled || state.phase !== "model_ready" || Boolean(modelDraft && (modelDraft.source_sha256 !== state.source_sha256 || modelDraft.source_id !== state.source_id || modelDraft.error || modelDraft.locked));
+        el("slice").disabled = busy || !config || !config.slicing_enabled || state.phase !== "model_ready" || Boolean(state.models?.length>1 && !modelDraft?.plate) || Boolean(modelDraft && (modelDraft.source_sha256 !== state.source_sha256 || modelDraft.source_id !== state.source_id || modelDraft.error || modelDraft.locked));
         el("quality-settings").disabled = el("slice").disabled;
         el("brim-width").disabled = el("slice").disabled || el("brim-mode").value !== "outer";
         el("hole-compensation").disabled = el("slice").disabled;
@@ -190,11 +190,11 @@
         // GET only reads cached state, never printer status.
         if (accepted) await refresh();
     }
-    function receive(file) {
-        if (!config || pending || polling || modelPreparing || monitorPending || state.busy || uncertain || state.phase !== "empty" || !file) return;
+    function receive(file, done=()=>{}) {
+        if (!config || pending || polling || modelPreparing || monitorPending || state.busy || uncertain || !['empty','model_ready'].includes(state.phase) || !file) {done(false);return;}
         const stl = /\.(stl|3mf)$/i.test(file.name);
         if (!/\.(stl|3mf|gx|gcode|g)$/i.test(file.name) || !file.size || file.size > (stl ? config.model_limit : config.print_limit)) {
-            text("error", "Choose a nonempty STL/3MF (up to 64 MiB) or GX/G-code/G (up to 8 MiB)."); return;
+            text("error", "Choose a nonempty STL/3MF (up to 64 MiB) or GX/G-code/G (up to 8 MiB)."); done(false);return;
         }
         pending = true; clearTimeout(timer); text("error", ""); el("incoming").value = 0; render();
         const xhr = new XMLHttpRequest();
@@ -204,7 +204,7 @@
         xhr.timeout = 70000;
         xhr.upload.onprogress = event => { if (event.lengthComputable) el("incoming").value = 100 * event.loaded / event.total; };
         function failed(message) {
-            uncertain = true; pending = false; text("error", message + " Refresh the result before selecting again."); render();
+            uncertain = true; pending = false; text("error", message + " Refresh the result before selecting again; already received models remain."); render();done(false);
         }
         xhr.onerror = xhr.ontimeout = () => failed("Browser upload response lost.");
         xhr.onload = () => {
@@ -213,18 +213,27 @@
                 if (xhr.status !== 200) throw new Error(data.error || "File was not accepted");
                 state = data; pending = false;
                 el("remote").value = state.suggested_name || "";
-                render();
+                el('file').value = ''; // Permit deliberately adding the same STL as another copy.
+                render();done(true);
             } catch (error) { failed(error.message); }
         };
         xhr.send(file);
     }
-    el("file").addEventListener("change", event => receive(event.target.files[0]));
+    function receiveFiles(files){
+        const chosen=Array.from(files||[]);if(!chosen.length)return;
+        if(chosen.length>1 && (!chosen.every(f=>/\.stl$/i.test(f.name)) || chosen.length+(state.models?.length||0)>8)){
+            text('error','Choose up to8 STL models together; 3MF/print files remain standalone.');render();return;
+        }
+        let index=0;
+        function next(ok=true){if(ok&&index<chosen.length)receive(chosen[index++],next);}
+        next();
+    }
+    el("file").addEventListener("change", event => receiveFiles(event.target.files));
     el("drop").addEventListener("dragover", event => { event.preventDefault(); el("drop").classList.add("over"); });
     el("drop").addEventListener("dragleave", () => el("drop").classList.remove("over"));
     el("drop").addEventListener("drop", event => {
         event.preventDefault(); el("drop").classList.remove("over");
-        if (event.dataTransfer.files.length !== 1) { text("error", "Drop one file at a time."); return; }
-        receive(event.dataTransfer.files[0]);
+        receiveFiles(event.dataTransfer.files);
     });
     el("refresh").addEventListener("click", refresh);
     el("printer-refresh").addEventListener("click", refreshPrinter);
@@ -267,9 +276,14 @@
             if (modelDraft.source_sha256 !== state.source_sha256 || modelDraft.source_id !== state.source_id || modelDraft.error || modelDraft.locked) {
                 text('error', modelDraft.error || 'Source model changed or was already sliced; refresh result.'); return;
             }
-            body.transform = modelDraft.transform; body.source_sha256 = modelDraft.source_sha256; body.source_id = modelDraft.source_id;
+            if(modelDraft.plate)body.plate=modelDraft.plate;
+            else body.transform = modelDraft.transform;
+            body.source_sha256 = modelDraft.source_sha256; body.source_id = modelDraft.source_id;
         }
         action("slice", body);
+    });
+    if(document.addEventListener)document.addEventListener('finder-remove-model',event=>{
+        action('model-remove',{confirm:true,source_id:event.detail.source_id,model_id:event.detail.model_id});
     });
     el('create-gx').addEventListener('click',()=>action('gx',{confirm:true,artifact_sha256:state.sha256,source_id:state.source_id}));
     el('start-after-upload').addEventListener('change', render);

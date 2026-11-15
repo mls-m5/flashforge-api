@@ -128,6 +128,22 @@ capture improves reproducibility, not print safety.
 
 Generated `sliced.gcode` is retained under the run directory by default, or at standalone slice's explicit `--output`. It has a **separate** size bound (`--max-file-size`) and is outside `--max-capture-bytes`; original profiles/model snapshots and native temporary data are cleaned from project-local `.tmp/`. Raw slicer log chunks are bounded independently and count toward the existing event/log quota. Full details and trust limits: [SLICING.md](SLICING.md).
 
+## Multi-model plate provenance
+
+One unsliced slot may now retain up to8 original STL inputs. Explicit Slice's
+`plate_assembly` event/metadata records all opaque model IDs/source hashes,
+normalized transforms, bounds, compound size/hash/count and arrange/orient0,
+sequential_printing:false/safety_validated:false. `slicing_inputs.model` remains
+the primary original; it is not silently relabelled as the combined mesh.
+`plate_geometry` records the actual retained baked STL path/hash and subsequent
+GX input uses that compound. Original per-model files/compound/output stay in
+the private slot until Discard; captures persist. Appending/removing files or
+editing drafts creates no printer session or replay; Slice/export keep their
+own no-network capture modes. Failed append removes only partial new bytes,
+never prior inputs. Capacity reserves another16MiB for compound retention; same
+worker/process/log/storage limits. See PLATE.md for HTTP/native evidence and
+remaining browser/host2.5/non-safety limits. No raw recording is edited.
+
 ## GX export provenance
 
 Successful Slice now retains optional `gx_metadata` and `gx_unavailable` in
@@ -238,7 +254,7 @@ Event types currently emitted:
 - `manual_virtual_intent`: synthetic owned-dummy control intent/before/candidate, no wire command and not physical-motion evidence;
 - `slicer_settings`, `slicer_command`, `slicer_output`, `slicer_exit`, `slicer_result`: optional Orca/helper stages described above;
 - `gx_result`: optional offline container/CPU-thumbnail candidate evidence, no firmware/safety assertion;
-- `geometry_import`, `geometry_transform`, `priming_review`: optional geometry-only3MF import, manual-layout and first-layer review metadata; no printer session or safety certification.
+- `geometry_import`, `geometry_transform`, `plate_assembly`, `priming_review`: optional geometry-only3MF import, manual-layout and first-layer review metadata; no printer session or safety certification.
 
 Each event includes `v`, monotonically increasing `seq`, `session_id` (or null for run-level events), UTC timestamp and `monotonic_ns` elapsed since capture start. Sequence order is logging order, not proof of causality between simultaneous directions.
 

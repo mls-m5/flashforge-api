@@ -75,6 +75,17 @@ default; the adapter's optional `settings` argument is independently validated.
 Native2.3 cube trial verifies actual Brim paths/0.12mm layers with5mm outer brim,
 not physical adhesion performance or every model's fit/clearance.
 
+## Optional multi-model plate layout
+
+The web adapter now supplies an optional typed `plate` snapshot (2–8 STL sources,
+independent transforms) instead of a single transform. Bounded assembly checks
+source identities/nominal fit/conservative XY gaps and bakes one combined STL,
+then slices with arrange0/orient0 and private process `print_sequence=by layer`.
+Original profiles/meshes remain untouched. Successful Slice retains the exact
+compound for GX. No sequential whole-object mode or implicit CLI behavior change.
+See PLATE.md for API/capture/limits and actual native2.3/HTTP evidence; no physical
+or rendered-browser acceptance follows from native success.
+
 ## Optional subsequent GX export
 
 Slice still produces plain G-code without rewriting its bytes. It now retains

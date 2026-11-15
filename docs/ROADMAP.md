@@ -571,6 +571,25 @@ without latching an unknown-response lock; genuinely unknown/lost/408/5xx outcom
 still require explicit Refresh. No automatic retry/deletion, no quota increase
 or hardware action. Browser retry/host2.5 acceptance remains user-run.
 
+## Multiple STL plate implemented after the requested wait experiment
+
+The user asked to resume multi-STL work after a2h40m sleep; the tool returned
+and this session resumed. No hardware connection was involved in the wait.
+The picker/drop zone now accepts serial STL additions before Slice. Shared mesh
+view/list/click selection and independent numeric transforms/removal prepare
+one immutable typed plate snapshot. Bounded compound assembly preserves source
+hashes/placement, checks nominal bounds/conservative1mm XY-box gaps and combined
+200k triangles, uses arrange0/orient0/by-layer sequencing and retains exact mesh
+for whole-plate GX. No sequential-object printing, automatic reslice/upload/start,
+print-file mixing, model-drag gizmos or face picker. Max8STL/64MiB; single3MF
+mode remains separate. Additional compound storage is quota-reserved.
+
+Native2.3/private03 and a fresh ephemeral HTTP/native two-model Slice/GX trial
+passed with unchanged originals and zero printer calls. Captures and full limits
+are in PLATE.md. The generated miniature was viewed locally and shows both
+parts; body remains byte-identical. Browser/WebGL/LAN editing and host2.5 plate
+acceptance remain user-run, not inferred from earlier GX printer-screen success.
+
 ## Deferred work
 
 Virtual print-progress simulation, additional firmware/client profiles, richer fault injection, exportable reports and optional separate print controls can follow. Print controls require a new safety/design decision rather than being added as a side effect of upload support.

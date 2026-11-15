@@ -140,7 +140,7 @@ def _work_size(work, limit):
 
 
 async def _run(executable, arguments, work, config, capture, *, stage, timeout):
-    label = {"geometry_transform":"Geometry transform", "priming_review":"Priming review", "gx_export":"GX export"}.get(stage, f"Orca {stage}")
+    label = {"geometry_transform":"Geometry transform", "priming_review":"Priming review", "gx_export":"GX export", "plate_assembly":"Plate assembly"}.get(stage, f"Orca {stage}")
     command = [executable, *map(str, arguments)]
     capture.event("slicer_command", stage=stage, argv=command)
     wrapper = Path(__file__).with_name("_slicer_worker.py")
@@ -223,12 +223,16 @@ def _slice_slot(scratch):
         yield
 
 
-async def slice_model(source, output, config: SliceConfig, *, capture, settings=None, transform=None) -> SliceResult:
+async def slice_model(source, output, config: SliceConfig, *, capture, settings=None, transform=None, plate=None) -> SliceResult:
     """STL -> exactly one plain G-code file. Never overwrite an existing output.
 
     The caller owns the output/capture lifetime. Temporary inputs and tool data
     are removed even on failure/cancellation; failed output is never published.
     """
+    if plate is not None:
+        from .plate import normalize_plate
+        normalize_plate([dict(id=e['id'],transform=e['transform']) for e in plate],[e['id'] for e in plate])
+        if transform is not None:raise SliceError('Plate and single transform cannot be combined')
     chosen_transform = normalize_transform(transform)
     chosen_settings = normalize_settings(settings)
     overrides = process_overrides(chosen_settings)
@@ -269,7 +273,24 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
             inputs[kind] = _copy_bounded(getattr(config, kind), path, MIB)
             _check_profile(path, kind)
         model_path = work / "model.stl"
-        if chosen_transform is not None:
+        if plate is not None:
+            copies=[]
+            for i,entry in enumerate(plate):
+                snapshot=work/f'plate-{i}.stl'
+                copied=_copy_bounded(entry['path'],snapshot,min(32*MIB,config.max_model_size))
+                if copied['sha256']!=entry['sha256']:raise SliceError('Plate source changed')
+                copies.append(dict(entry,path=str(snapshot)))
+                if sum(Path(e['path']).stat().st_size for e in copies)>64*MIB:raise SliceError('Plate snapshots exceed64MiB total')
+            (work/'plate.json').write_text(json.dumps(copies))
+            await _run(sys.executable,[Path(__file__).with_name('plate.py'),work/'plate.json',work/'machine.json',
+                       work/'placed.stl',work/'plate-result.json'],work,replace(config,memory_mib=min(512,config.memory_mib)),
+                       capture,stage='plate_assembly',timeout=min(30,config.timeout))
+            report=work/'plate-result.json'
+            if not report.is_file() or report.stat().st_size>65536:raise SliceError('Invalid plate report')
+            info=json.loads(report.read_bytes());capture.event('plate_assembly',**info)
+            capture.manifest['metadata']['plate_assembly']=info
+            model_path=work/'placed.stl'
+        elif chosen_transform is not None:
             capture.manifest["metadata"]["geometry_transform_limits"] = {
                 "memory_mib": min(512, config.memory_mib), "timeout": min(30, config.timeout),
                 "max_source_bytes": 32 * MIB, "max_triangles": 200000}
@@ -288,9 +309,10 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
         # Apply only the typed quality allowlist to a private profile snapshot.
         # Never edit the server-owned originals, templates, machine or filament.
         process_path = work / "process.json"
-        if overrides:
+        if overrides or plate is not None:
             effective = json.loads(process_path.read_bytes())
             effective.update(overrides)
+            if plate is not None:effective['print_sequence']='by layer'
             encoded = (json.dumps(effective, indent=2) + "\n").encode()
             if len(encoded) > MIB:
                 raise SliceError("Effective process profile exceeds 1 MiB")
@@ -317,7 +339,7 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
         for flag in REQUIRED_FLAGS:
             if flag.encode() not in help_data:
                 raise SliceError(f"Installed Orca CLI does not advertise required flag {flag}; check version/build")
-        await _run(executable, ["--slice", "0", "--arrange", "0" if chosen_transform is not None else "1", "--orient", "0", "--ensure-on-bed",
+        await _run(executable, ["--slice", "0", "--arrange", "0" if chosen_transform is not None or plate is not None else "1", "--orient", "0", "--ensure-on-bed",
                                "--load-settings", str(work / "machine.json") + ";" + str(work / "process.json"),
                                "--load-filaments", work / "filament.json", "--datadir", work / "data",
                                "--outputdir", work / "output", model_path],
@@ -366,6 +388,12 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
         try:
             with writer:
                 writer.write(data)
+            if plate is not None:
+                destination=output.with_suffix('.plate.stl')
+                try:_copy_bounded(model_path,destination,16*MIB)
+                except BaseException:
+                    destination.unlink(missing_ok=True);raise
+                capture.manifest['metadata']['plate_geometry']={'path':str(destination),'sha256':info['sha256']}
         except BaseException:
             output.unlink(missing_ok=True)
             raise

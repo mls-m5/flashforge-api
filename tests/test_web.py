@@ -283,7 +283,7 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
         with patch("finderlab.web.FinderClient") as connect:
             for path in ("/", "/app.js", "/manual.js", "/style.css", "/preview.js", "/toolpath-worker.js",
                          "/toolpath-view.js", "/vendor/three/three.module.min.js", "/vendor/three/OrbitControls.js",
-                         "/vendor/three/LICENSE", "/model-preview.js", "/model-worker.js", "/model-transform.js", "/api/model", "/api/config", "/api/state",
+                         "/vendor/three/LICENSE", "/model-preview.js", "/model-worker.js", "/model-transform.js", "/plate-preview.js", "/api/model", "/api/config", "/api/state",
                          "/api/printer-status", "/api/manual-state", "/api/artifact", "/api/gx-thumbnail"):
                 code, body = await self.request("GET", path, headers={"Authorization": ""})
                 self.assertEqual(code, 401, path)
@@ -500,6 +500,56 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
                 monitor.capture.closed=True
                 work.capacity(10)
         finally:work.monitor=None
+
+    async def test_add_remove_multiple_stl_and_failed_append_preserves_existing_plate(self):
+        from test_model_transform import ASCII
+        await self.file('first.stl',ASCII);old=self.server.work.state['source_id']
+        self.assertEqual((await self.file('second.stl',ASCII))[0],200)
+        state=self.server.work.state;self.assertEqual(len(state['models']),2);self.assertNotEqual(state['source_id'],old)
+        ids=[m['id'] for m in state['models']]
+        for identifier in ids:
+            code,body=await self.request('GET','/api/model?model='+identifier,headers={'X-Finder-Token':self.server.token})
+            self.assertEqual((code,body),(200,ASCII))
+        count=len(state['models'])
+        code,_=await self.request('POST','/api/file?name=partial.stl',b'short',{'Content-Type':'application/octet-stream','Content-Length':'100'},early_eof=True)
+        self.assertEqual(code,400);self.assertEqual(len(state['models']),count);self.assertFalse(state['busy'])
+        self.assertEqual((await self.post('/api/model-remove',{'confirm':True,'source_id':old,'model_id':ids[0]}))[0],409)
+        token=state['source_id']
+        self.assertEqual((await self.post('/api/model-remove',{'confirm':True,'source_id':token,'model_id':ids[0]}))[0],200)
+        self.assertEqual(len(state['models']),1);self.assertEqual(state['name'],'second.stl')
+        self.assertNotEqual(state['source_id'],token)
+        self.assertEqual((await self.request('GET','/api/model'))[1],ASCII)
+        self.assertEqual((await self.file('more.gx'))[0],409)
+
+    async def test_plate_slice_snapshot_and_gx_cover_all_models_with_no_upload(self):
+        from test_model_transform import ASCII,MACHINE
+        from test_gx_generation import CODE,PROCESS,FILAMENT
+        self.configure_fake_orca();config=self.server.work.config.slicing
+        config.machine.write_text(json.dumps(json.loads(config.machine.read_bytes())|MACHINE))
+        config.process.write_text(json.dumps(json.loads(config.process.read_bytes())|PROCESS|{'print_sequence':'by object'}))
+        config.filament.write_text(json.dumps(json.loads(config.filament.read_bytes())|FILAMENT))
+        fake=Path(config.orca);fake.write_text(fake.read_text().replace(f'PAYLOAD={PAYLOAD!r}',f'PAYLOAD={CODE!r}').replace('value("--arrange") == "1"','value("--arrange") == "0"').replace('name == "model.stl"','name == "placed.stl"'))
+        fake.write_text(fake.read_text().replace('print("READY "', 'assert json.loads(pathlib.Path(settings[1]).read_text())["print_sequence"] == "by layer"\nprint("READY "'))
+        await self.file('a.stl',ASCII);await self.file('b.stl',ASCII)
+        state=self.server.work.state;layout=[dict(id=m['id'],transform={'x':x}) for m,x in zip(state['models'],(-20,20))]
+        body={'confirm':True,'source_id':state['source_id'],'plate':layout}
+        with patch('finderlab.web.FinderClient') as client:
+            self.assertEqual((await self.post('/api/slice',{'confirm':True}))[0],400)
+            self.assertEqual((await self.post('/api/slice',body|{'source_id':'old'}))[0],409)
+            self.assertEqual((await self.post('/api/slice',body))[0],200);state=await self.finish()
+            self.assertEqual(state['phase'],'review',state['error']);self.assertEqual(state['plate'][0]['transform']['x'],-20.)
+            self.assertEqual(json.loads(config.process.read_bytes())['print_sequence'],'by object','original process remains unchanged')
+            geometry=self.server.work.gx_geometry
+            from finderlab.model_transform import read_stl
+            self.assertEqual(len(read_stl(geometry['path'])),6)
+            self.assertEqual((await self.file('too-late.stl',ASCII))[0],409)
+            self.assertEqual((await self.post('/api/model-remove',{'confirm':True,'source_id':state['source_id'],'model_id':layout[0]['id']}))[0],409)
+            await self.post('/api/gx',{'confirm':True,'source_id':state['source_id'],'artifact_sha256':state['sha256']});state=await self.finish()
+            self.assertTrue(state['gx_generated'],state['error'])
+            manifest=json.loads((Path(state['capture'])/'manifest.json').read_bytes())
+            self.assertEqual(manifest['metadata']['gx_result']['triangles'],2)
+            self.assertEqual(manifest['metadata']['gx_inputs']['model']['sha256'],geometry['sha256'])
+            client.assert_not_called()
 
     async def test_receive_limits_early_eof_and_single_slot(self):
         for name in ("../escape.gx", "wrong.obj", "bad%00.gx"):
