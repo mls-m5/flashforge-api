@@ -33,6 +33,11 @@ PRINT_LIMIT = 8 * 1024 * 1024
 MODEL_LIMIT = 64 * 1024 * 1024
 CAPTURE_LIMIT = 64 * 1024 * 1024
 STORAGE_LIMIT = 256 * 1024 * 1024
+STATIC_FILES = {"/": ("index.html", "text/html; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
+for _name in ("app.js", "manual.js", "preview.js", "toolpath-view.js", "toolpath-worker.js",
+              "vendor/three/three.module.min.js", "vendor/three/OrbitControls.js"):
+    STATIC_FILES["/" + _name] = (_name, "text/javascript; charset=utf-8")
+STATIC_FILES["/vendor/three/LICENSE"] = ("vendor/three/LICENSE", "text/plain; charset=utf-8")
 
 
 def suggested_name(name):
@@ -550,19 +555,21 @@ class WebServer:
                     self.work.idle()
                     if not self.work.artifact:
                         raise WebError(404, "No print-file artifact")
+                    etag = '"' + self.work.state["sha256"] + '"'
+                    if "if-match" in headers and headers["if-match"] != etag:
+                        raise WebError(412, "Artifact changed; refresh preview before loading")
                     path = self.work.artifact
                     with path.open("rb") as file:
                         async with asyncio.timeout(30):
                             await self.head(writer, 200, "application/octet-stream", path.stat().st_size,
-                                            'Content-Disposition: attachment; filename="' + self.work.state["suggested_name"] + '"\r\n')
+                                            'Content-Disposition: attachment; filename="' + self.work.state["suggested_name"] + '"\r\nETag: ' + etag + '\r\n')
                             while chunk := file.read(65536):
                                 writer.write(chunk)
                                 await writer.drain()
-                elif uri.path in ("/", "/app.js", "/manual.js", "/style.css"):
-                    name = "index.html" if uri.path == "/" else uri.path[1:]
-                    types = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8", "manual.js": "text/javascript; charset=utf-8", "style.css": "text/css; charset=utf-8"}
+                elif uri.path in STATIC_FILES:
+                    name, kind = STATIC_FILES[uri.path]
                     data = (STATIC / name).read_bytes()
-                    await self.reply(writer, 200, data, types[name])
+                    await self.reply(writer, 200, data, kind)
                 else:
                     raise WebError(404, "Not found")
         except WebError as exc:
@@ -593,7 +600,7 @@ class WebServer:
         writer.write((f"HTTP/1.1 {status} Response\r\nContent-Type: {kind}\r\nContent-Length: {length}\r\n"
                       "Connection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n"
                       "Referrer-Policy: no-referrer\r\n"
-                      "Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'\r\n"
+                      "Content-Security-Policy: default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'\r\n"
                       + extra + "\r\n").encode("ascii"))
         await asyncio.wait_for(writer.drain(), 10)
 

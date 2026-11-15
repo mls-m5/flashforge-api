@@ -4,7 +4,7 @@ const fs = require('node:fs'), vm = require('node:vm'), path = require('node:pat
 const flush = () => new Promise(resolve => setImmediate(resolve));
 function setup(enabled = true) {
     const elements = new Map(), requests = [], timers = new Map();
-    let next = 0, confirmation = true, fail = false, readFail = false, release = null;
+    let next = 0, fail = false, readFail = false, release = null;
     let report = {enabled, virtual_only: true, busy: false, job_active: false, blocked: false,
         message: enabled ? 'Virtual rehearsal only' : 'Physical manual controls are locked',
         state: enabled ? {revision: 0, rgb: [0, 0, 0], offsets_mm: {X: 0, Y: 0, Z: 0}, extruded_mm: 0, warm_nozzle_simulated: false} : null};
@@ -15,7 +15,7 @@ function setup(enabled = true) {
         return elements.get(id);
     }
     const context = {
-        document: {getElementById: el}, confirm: () => confirmation,
+        document: {getElementById: el}, confirm: () => {throw new Error('No confirmation popup allowed');},
         setTimeout(fn) {timers.set(++next, fn); return next;}, clearTimeout(id) {timers.delete(id);},
         async fetch(url, options = {}) {
             requests.push({url, options});
@@ -41,7 +41,7 @@ function setup(enabled = true) {
         }
     };
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../finderlab/webstatic/manual.js'), 'utf8'), context);
-    return {el, requests, timers, set confirmation(value) {confirmation = value;},
+    return {el, requests, timers,
         set fail(value) {fail = value;}, set readFail(value) {readFail = value;},
         set release(value) {release = value;}, get report() {return report;},
         set report(value) {report = value;}};
@@ -53,9 +53,6 @@ async function main() {
     assert.equal(h.el('manual-controls').disabled, false);
     assert.equal(h.el('manual-feed').disabled, true);
     h.el('manual-feed').handlers.click(); await flush(); assert.equal(count(), 0, 'cold extruder locked');
-    h.confirmation = false;
-    h.el('manual-x-plus').handlers.click(); await flush(); assert.equal(count(), 0);
-    h.confirmation = true;
     h.el('manual-light').handlers.click(); await flush();
     assert.deepEqual(h.report.state.rgb, [136, 138, 133]);
     assert.match(h.el('manual-values').textContent, /NOT printer feedback/);

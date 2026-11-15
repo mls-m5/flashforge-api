@@ -80,5 +80,5 @@ Generated-package tests cover transforms/units/reflection, preset exclusion,
 malformed/external/unsupported inputs and quota bounds. Fake-Orca and ephemeral
 loopback HTTP tests verify 3MF is model-only, cannot directly Save, gets server
 profiles/overrides, and generates a separate downloadable print file. Existing
-CLI/web tests remain standard-library only. G-code-preview work is paused and
-not included in this milestone.
+CLI/web tests remain standard-library only. G-code preview was paused for this
+urgent milestone and is now implemented separately; see PREVIEW.md.

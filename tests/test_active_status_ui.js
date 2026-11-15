@@ -2,7 +2,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), vm = require('node:vm'), path = require('node:path');
 const elements = new Map(), calls = [], timers = new Map();
-let next = 0, confirmation = false, fail = false;
+let next = 0, fail = false;
 let report = {passive: false, monitor_running: true, monitor_stopping: false, stale: false,
     source: 'dummy-monitor', session: 's0001', upstream: '127.0.0.1:12345', message: 'Active status polling',
     samples: {M105: {values: {nozzle: 20, nozzle_target: 0, bed: 0, bed_target: 0}, observed_utc: 'example', age_seconds: 0}}};
@@ -12,7 +12,7 @@ function el(id) {
     return elements.get(id);
 }
 const context = {
-    document: {getElementById: el}, confirm: () => confirmation,
+    document: {getElementById: el}, confirm: () => {throw new Error('No confirmation popup allowed');},
     setTimeout(fn) {timers.set(++next, fn); return next;}, clearTimeout(id) {timers.delete(id);},
     async fetch(url, options = {}) {
         calls.push({url, options});
@@ -41,9 +41,7 @@ async function main() {
     assert.equal(calls.filter(c => c.url === '/api/monitor').length, 1);
     assert.equal(el('monitor-start').disabled, false);
     await el('monitor-start').handlers.click(); await flush();
-    assert.equal(calls.filter(c => c.url === '/api/monitor').length, 1, 'restart needs confirmation');
-    confirmation = true;
-    await el('monitor-start').handlers.click(); await flush();
+    assert.equal(calls.filter(c => c.url === '/api/monitor').length, 2, 'one explicit click starts polling without a popup');
     assert.equal(el('monitor-stop').disabled, false);
     fail = true;
     await el('monitor-stop').handlers.click(); await flush();

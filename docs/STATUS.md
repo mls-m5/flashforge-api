@@ -22,7 +22,7 @@ pending. No agent hardware connection was made.
   there is **no automatic error retry/reconnect**. Other processes/FlashPrint
   are not covered by this local lock.
 - **Stop status polling** closes only monitoring, not the print. **Start status
-  polling** explicitly confirms reconnection. Refresh only reads cached HTTP
+  polling** explicitly requests reconnection with one click, no modal popup. Refresh only reads cached HTTP
   data; opening/reloading a browser tab never restarts polling or retries jobs.
   Stop is allowed during a local operation; cleanup may wait for its lock.
 - To leave polling off at startup: `./tools/start_proxy_web.sh --no-monitor`.

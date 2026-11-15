@@ -123,6 +123,16 @@ server profile/effective-setting hashes remain independent. Private scratch
 conversion is cleaned up, not source-modified. Reports/bounds can reveal model
 geometry and must remain private. See 3MF.md for importer limits and native trial.
 
+## Browser preview is derived in-memory only
+
+Preview GETs read cached state and the bounded current artifact, not printer
+storage/status. Worker geometry stays in browser memory; no new capture/event,
+raw-recording rewrite or server cache. Artifact ETag/If-Match uses the current
+state hash; it is not remote-printer readback. Parser warnings and rendering
+never certify protocol/physical behavior. See PREVIEW.md for limits and local
+MIT dependency provenance. LAN authentication covers modules, worker and vendor
+assets; no credentials/model data are sent to a CDN.
+
 ## Offline numerical review reports
 
 `python3 -m finderlab review FILE` reads a bounded regular G-code file (or the

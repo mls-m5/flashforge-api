@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Finder · local workbench</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/manual.js" defer></script></head>
+<title>Finder · local workbench</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/manual.js" defer></script><script type="module" src="/preview.js"></script></head>
 <body><main>
 <header><p class="eyebrow">LOCAL · EXPERIMENTAL · FINDER V1.5</p><h1>Prepare. Save. You decide.</h1>
 <p>Prepare a model, review the output, then explicitly save it to Finder. Nothing starts printing automatically.</p></header>
@@ -64,8 +64,21 @@
 </fieldset><p id="applied-quality"></p>
 <button id="slice" disabled>Slice model offline</button> <a id="download" href="/api/artifact" hidden>Download print file for review</a>
 <p>3MF imports core mesh geometry only. Embedded printer, filament, layer settings and start/end code are not loaded. Components/advanced extensions are rejected; export STL if unsupported. Orca arranges the imported geometry as before.</p>
-<p>No 3D preview, GX thumbnail generation or toolpath safety validator is implemented yet.</p>
+<p>Buttons act immediately without confirmation popups. Slice, Save and Start remain separate. No GX generation or toolpath safety validator is implemented.</p>
 <details><summary>Latest Orca diagnostic excerpt (private)</summary><pre id="slicer-log">No Orca output recorded yet.</pre></details></section>
+<section><h2>Toolpath preview <span>· current server artifact</span></h2>
+<label><input id="preview-enabled" type="checkbox" checked> Load preview automatically after slicing / selecting a print file</label>
+<p id="preview-message" role="status">Choose a print file or finish Slice.</p>
+<div id="preview-canvas" aria-label="3D toolpath view"></div>
+<p>Drag to orbit the camera, scroll/pinch to zoom, right-drag/two-finger drag to pan. This does not move the model or printer. Green: inferred extrusion. Blue: travel. Magenta: unknown extrusion.</p>
+<label for="preview-layer">Visible deposition height</label><input id="preview-layer" type="range" min="0" max="0" value="0" disabled>
+<p id="preview-height">No current preview</p>
+<label><input id="preview-travel" type="checkbox"> Show travel (including known startup/end segments)</label>
+<label><input id="preview-assume-e" type="checkbox"> Assume absolute E when missing (viewer only; useful for older GX, not firmware validation)</label>
+<button id="preview-fit">Fit camera</button><button id="preview-reload">Reload preview · no printer commands</button>
+<pre id="preview-warnings"></pre>
+<p class="warning">Linear command-coordinate lines only, not solid printed material or physical simulation. Homing/offset paths, unsupported commands and unknown origins are omitted; warnings matter. Grid is a nominal centered 140 mm reference, not measured clearance. Preview does not authorize printing or prove collision safety.</p>
+</section>
 <section><h2>3 <span>Save, without starting</span></h2>
 <label for="remote">Remote ASCII basename (may overwrite an existing file)</label><input id="remote" type="text" maxlength="128" placeholder="sample.gx" autocomplete="off">
 <button id="save" disabled>Save to Finder · no start</button>

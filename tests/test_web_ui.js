@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 const path = require("node:path");
 const elements = new Map(), posts = [], xhrs = [];
-let confirmation = true, failNextPost = false;
+let failNextPost = false;
 const config = {token: "test-token", target: "127.0.0.1:9000", upload_enabled: true,
     slicing_enabled: true, sliced_upload_enabled: false, job_controls_enabled: true, model_limit: 64 * 1024 ** 2, print_limit: 8 * 1024 ** 2};
 let state = {phase: "empty", busy: false};
@@ -26,7 +26,7 @@ class XHR {
 const context = {
     document: {getElementById: element},
     XMLHttpRequest: XHR,
-    confirm: () => confirmation,
+    confirm: () => { throw new Error("No browser confirmation dialogs allowed"); },
     clearTimeout: id => fakeWindowTimers.delete(id),
     setTimeout: fn => { fakeWindowTimers.set(++timerId, fn); return timerId; },
     async fetch(url, options = {}) {
@@ -62,8 +62,7 @@ async function main() {
     assert.equal(xhrs[0].headers["X-Finder-Token"], config.token);
     xhrs[0].finish({phase: "file_ready", busy: false, name: "sample.gx", suggested_name: "sample.gx", artifact: true, size: 5129});
     assert.equal(element("remote").value, "sample.gx");
-    confirmation = false; click("save"); assert.equal(posts.length, 0);
-    confirmation = true; click("save"); click("save");
+    click("save"); click("save");
     await flush();
     assert.equal(posts.length, 1, "double click submits once");
     assert.equal(posts[0].url, "/api/save");
@@ -72,17 +71,13 @@ async function main() {
     assert.equal(element("save").disabled, true);
     assert.equal(posts.filter(p => p.url === "/api/start").length, 0, "save never starts automatically");
     element("remote").value = "different.gx";
-    confirmation = false; click("start");
-    assert.equal(posts.length, 1);
-    confirmation = true; click("start"); click("start"); await flush();
+    click("start"); click("start"); await flush();
     assert.equal(posts.filter(p => p.url === "/api/start").length, 1);
     assert.equal(posts.at(-1).data.save_id, "saved-identity");
     assert.equal(posts.at(-1).data.remote_name, undefined, "Start does not use the editable remote input");
     assert.equal(element("start").disabled, true);
     assert.match(element("job-result").textContent, /may heat\/move/);
-    confirmation = false; click("stop");
-    assert.equal(posts.filter(p => p.url === "/api/stop").length, 0);
-    confirmation = true; click("stop"); await flush();
+    click("stop"); await flush();
     assert.equal(posts.at(-1).url, "/api/stop");
     assert.match(element("job-result").textContent, /does NOT prove READY/);
     click("discard"); await flush();
@@ -123,9 +118,8 @@ async function main() {
     assert.equal(posts.length, beforeSlice);
     element("contour-compensation").validity = {badInput: false};
     element("contour-compensation").value = "-0.2";
-    confirmation = false; click("slice");
     assert.equal(posts.length, beforeSlice, "quality choice alone does not slice");
-    confirmation = true; click("slice"); await flush();
+    click("slice"); await flush();
     assert.equal(posts.at(-1).url, "/api/slice");
     assert.deepEqual(posts.at(-1).data.settings, {layer_height: 0.12, brim: "outer", brim_width: 5, xy_hole_compensation: 0.2, xy_contour_compensation: -0.2});
     assert.equal(element("quality-settings").disabled, true);

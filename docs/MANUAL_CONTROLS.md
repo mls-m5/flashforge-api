@@ -1,5 +1,13 @@
 # Manual-control panel: virtual rehearsal, physical controls locked
 
+## Browser interaction update
+
+Recurring confirmation popups are removed at the user's request. A permitted
+button click (or explicit simulated-warm checkbox change) now initiates the
+virtual intent directly. Revision/typed/ownership/busy/job guards and API
+`confirm:true` remain; uncertainty still never auto-retries. Historical
+references below to confirmation mean the initiating action, not a modal dialog.
+
 ## Current scope
 
 The panel has light colour/off, single-click XYZ steps, and extruder feed/retract.

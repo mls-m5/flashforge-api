@@ -48,10 +48,6 @@
     }
     async function action(intent) {
         if (pending || reading || uncertain || el("manual-controls").disabled) return;
-        const summary = intent.action === "jog" ? `${intent.axis} ${intent.distance} mm` :
-            intent.action === "extrude" ? `extruder ${intent.distance} mm` :
-            intent.action === "warm" ? `simulated warm nozzle ${intent.enabled ? "on" : "off"}` : `light RGB ${intent.rgb.join("/")}`;
-        if (!confirm(`Rehearse ${summary} in the owned dummy? This changes only virtual counters/light state. No motion, heat or printer command is sent.`)) { render(); return; }
         const body = {...intent, revision: report.state.revision, confirm: true};
         pending = true; clearTimeout(timer); render(); text("manual-error", "");
         try {

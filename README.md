@@ -32,7 +32,7 @@ In terminal 2:
 python3 -m finderlab web --enable-upload --target-port 9000
 ```
 
-Open **http://127.0.0.1:8000**. Drop an existing FlashPrint `.gx` (or `.gcode`/`.g`), then explicitly confirm **Save to Finder · no start**. Selecting a file does not connect to a printer. STL requires separately configured Orca and trusted profiles. The old Sailfish draft is still rejected; a separately authorized **offline Marlin-emission draft 02 now slices natively**, but is not a print-ready or physically validated Finder profile. Generated-output saving is blocked by default pending separate profile review. Uploads are disabled without `--enable-upload`. To deliberately enable separate **Start saved file** and **Request cancel** buttons, also add `--enable-job-controls`. Each requires its own confirmation; Start may heat/move, and Cancel is not an emergency stop. Saving still never starts a print.
+Open **http://127.0.0.1:8000**. Drop an existing FlashPrint `.gx` (or `.gcode`/`.g`), then click **Save to Finder · no start**. Selecting a file does not connect to a printer. STL requires separately configured Orca and trusted profiles. The old Sailfish draft is still rejected; a separately authorized **offline Marlin-emission draft 02 now slices natively**, but is not a print-ready or physically validated Finder profile. Generated-output saving is blocked by default pending separate profile review. Uploads are disabled without `--enable-upload`. To deliberately enable separate **Start saved file** and **Request cancel** buttons, also add `--enable-job-controls`. Each requires its own button click (no popup); Start may heat/move, and Cancel is not an emergency stop. Saving still never starts a print.
 
 For a one-command local slicing/upload test, stop any previous web server and run `./tools/start_dummy_upload_test.sh`. It owns a fresh ephemeral dummy (not an existing hardware proxy), enables virtual Save and separately confirmed virtual Start/Cancel (no G-code execution). No separate dummy process is needed. This requires the local Orca/draft profiles and does not authorize physical printing.
 
@@ -70,6 +70,21 @@ Verify the proxy target and close FlashPrint/other clients first. Use
 `--no-monitor` to leave polling off at startup. Stop status polling does not
 cancel a print; the offline launcher and passive watcher remain disconnected. The proxy is not a safety
 filter and the new candidate's physical startup remains unverified.
+
+## Inspect the current toolpath
+
+After Slice or selecting a server-side print file, a local Three.js view now
+shows linear toolpaths with camera orbit/zoom/pan, deposition-height slider and
+optional travel lines. It never fetches printer storage or sends commands.
+Warnings identify unmodeled homing/arcs/modes; this is not collision/firmware
+validation or physical material simulation. Three.js is vendored locally with
+its MIT license, no CDN. See [docs/PREVIEW.md](docs/PREVIEW.md).
+
+Browser action popups have been removed at the user's request. **A button click
+acts immediately**; Save and Start remain separate, with unchanged server guards
+and no automatic retries. Start shows the exact saved basename; inspect it and
+coordinate with other operators. Restart the backend and reload browsers for
+new code/assets. Actual rendered-browser/GPU acceptance remains pending.
 
 ## Share the full page on a trusted home network
 
@@ -218,6 +233,9 @@ node tests/test_web_ui.js
 node tests/test_passive_status_ui.js
 node tests/test_active_status_ui.js
 node tests/test_manual_ui.js
+node tests/test_toolpath_worker.js
+node tests/test_preview_ui.js
+node tests/test_toolpath_view.js
 ```
 
 Tests use ephemeral loopback ports and never connect to a physical printer. Generated test files use the ignored project-local `.tmp/` directory and are cleaned up; do not use the system temporary directory for project work. No third-party dependencies are required. One integration test retains the uploader's existing three-second pause.

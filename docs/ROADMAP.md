@@ -424,6 +424,20 @@ sessions, unchanged profiles). Host2.5/browser/physical tool suitability remain
 acceptance checks; no agent upload/Start. The separate local Three.js preview
 work is unfinished/paused and not part of this milestone.
 
+## Linear toolpath preview and no-popup actions implemented
+
+The user prioritized G-code preview before future model arrangement, approved
+local MIT Three.js and requested removal of repeated browser confirmation dialogs.
+The current server artifact now has a bounded worker-parsed batch-line view,
+camera controls, height slider and optional travel/explicit E assumption. ETag /
+If-Match, cancellation/worker generations and errors clear stale geometry. No
+printer file discovery/fetch, model arrangement, volume simulation, sequence
+playback, image export or GX generator. Backend/CLI confirmations and operation
+policies remain; browser button clicks now initiate directly without popups.
+See PREVIEW.md for license/provenance, parser/resource limits and tests.
+Rendered-browser/WebGL/LAN module acceptance is pending; automated HTTP/parser /
+controller checks and private offline file parses are not GPU/physical evidence.
+
 ## Deferred work
 
 Virtual print-progress simulation, additional firmware/client profiles, richer fault injection, exportable reports and optional separate print controls can follow. Print controls require a new safety/design decision rather than being added as a side effect of upload support.

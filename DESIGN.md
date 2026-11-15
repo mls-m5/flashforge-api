@@ -117,6 +117,23 @@ Implemented client contract: `.gx`/`.gcode`/`.g` byte-preserving transfer (no co
 
 `finderlab/web.py` and `finderlab/webstatic/` implement a dependency-free loopback page. One bounded raw file receive stores an STL/print file; a separate confirmed Slice uses server-owned Orca/profiles; a third confirmed Save uses the existing client without start/stop. Generated G-code is downloadable for review and cannot be sent unless the operator explicitly enables generated-output saving. Separately opt-in job controls (`--enable-job-controls`) expose confirmed Start of the exact saved filename (per-save identity, one attempt, fresh READY check) and confirmed Cancel (not emergency stop). They share the operation lock, never run automatically and preserve save confirmation separately from uncertain job results. No HTTP request can select targets, profiles, host paths or arbitrary native flags. GET cached status never connects to a printer. Low-level startup stays disconnected unless configured with `--auto-monitor`; the proxy/owned-dummy launcher now selects that status-only startup mode by user request. Offline slicing and the passive watcher stay disconnected. Host/Origin/token checks, bounded HTTP parsing/timeouts, single-slot/process locks, capture quotas and conservative persistent storage admission bound this experimental local service. Native process limits are not a sandbox. No validated Finder Orca profile ships: the original Sailfish rejection remains; a separate Marlin-emission draft 02 now generates offline review artifacts with unresolved physical blockers. See [docs/WEB.md](docs/WEB.md). The default Compose now starts this page; Podman CLI is also documented.
 
+### Read-only modular toolpath view
+
+A pinned local MIT Three.js renderer, bounded Web Worker parser and independent
+controller now preview only the current server artifact. Batch LineSegments
+and per-segment height shader filtering avoid per-move objects/reuploads.
+Unknown origins and unsupported paths are omitted/reported; extrusion modes /
+E resets/retract debt are nominal interpretation, not firmware/material physics.
+GET artifact ETag/If-Match and controller generations/termination prevent stale
+async results replacing a changed slot. No server parse/cache/printer endpoint
+or mutation is introduced. Static assets/worker retain LAN auth/Host policy and
+CSP self-only. See PREVIEW.md; renderer/GPU/browser acceptance remains pending.
+Future volume/image export/arrangement are separate, not implemented.
+
+Browser popups are removed by explicit user request. The initiating button click
+is consent; API confirm fields, backend locks/policies/identity/READY gates and
+no-auto-start/no-retry remain. Persistent labels replace modal reminders.
+
 ### Optional private-LAN access
 
 `web_access.py` validates explicit specific-interface LAN opt-in, restricts
@@ -205,7 +222,7 @@ native-code sandbox or physical bed/clearance validation. See WEB.md for limits.
 
 The research repo includes a separately packaged GPLv3 plugin in `plugins/octoprint-flashforge-finder2` (registered as a Git submodule). It uses OctoPrint admin-only Settings/Simple API/Template mixins to upload an OctoPrint local file through a bounded background worker. It does not replace OctoPrint's PrinterInterface or serial transport, and exposes no start/stop, arbitrary G-code, automatic connection or slicer. The plugin is disabled by default and is independently installable. Its Linux Compose test shares host networking only to reach a deliberately configured host-loopback dummy/proxy; OctoPrint binds its UI to loopback. Docker runtime/browser acceptance is still pending. See [docs/OCTOPRINT.md](docs/OCTOPRINT.md) and the plugin's own README/SOURCE for exact limits and evidence.
 
-The standalone page delivers the file selection, configured target, confirmation, bounded transfer and honest progress subset below. Browser/container acceptance, a 3D/toolpath preview, native Finder profile validation and richer job cancellation remain outstanding:
+The standalone page delivers the file selection, configured target, confirmation, bounded transfer and honest progress subset below. Browser/container acceptance, richer volume/arrangement preview, native Finder profile validation and richer job cancellation remain outstanding:
 
 Klienten ska ha konfigurerbar målport, begränsade väntetider, inkrementell svarsläsning och ett verifierat sätt att avgöra framgång. Ingen godtycklig tresekunderspaus utan evidens. Lås en aktiv operation per fysisk skrivare som konservativt grundval. Återförsök aldrig en delvis genomförd uppladdning blint; resultatet kan vara okänt och kräva återanslutning/manuell kontroll.
 

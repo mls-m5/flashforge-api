@@ -279,7 +279,9 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
     async def test_lan_auth_guards_all_assets_reads_and_mutations_before_side_effects(self):
         await self.lan_server()
         with patch("finderlab.web.FinderClient") as connect:
-            for path in ("/", "/app.js", "/manual.js", "/style.css", "/api/config", "/api/state",
+            for path in ("/", "/app.js", "/manual.js", "/style.css", "/preview.js", "/toolpath-worker.js",
+                         "/toolpath-view.js", "/vendor/three/three.module.min.js", "/vendor/three/OrbitControls.js",
+                         "/vendor/three/LICENSE", "/api/config", "/api/state",
                          "/api/printer-status", "/api/manual-state", "/api/artifact"):
                 code, body = await self.request("GET", path, headers={"Authorization": ""})
                 self.assertEqual(code, 401, path)
@@ -744,6 +746,29 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             client.assert_not_called()
         self.assertTrue(state["sliced"])
         self.assertEqual((await self.request("GET","/api/artifact"))[1],PAYLOAD)
+
+    async def test_preview_artifact_identity_and_static_routes_are_read_only(self):
+        from finderlab.web import STATIC_FILES
+        with patch("finderlab.web.FinderClient") as client:
+            self.assertEqual((await self.request("GET", "/api/artifact"))[0],404)
+            for route in STATIC_FILES:
+                self.assertEqual((await self.request("GET",route))[0],200,route)
+            self.assertEqual((await self.request("GET","/vendor/three/../../web.py"))[0],404)
+            payload=b"G21\nG90\nM82\nG92 E0\nG1 X0 Y0 Z.2\nG1 X1 E1\n"
+            await self.file("preview.gcode",payload)
+            tag='"'+hashlib.sha256(payload).hexdigest()+'"'
+            code,body=await self.request("GET","/api/artifact",headers={"If-Match":tag})
+            self.assertEqual(code,200);self.assertEqual(body,payload)
+            self.assertIn(('ETag: '+tag).encode(),self.last_headers)
+            self.assertIn(b"worker-src 'self'",self.last_headers)
+            self.assertEqual((await self.request("GET","/api/artifact",headers={"If-Match":'"stale"'}))[0],412)
+            self.server.work.state["busy"]=True
+            self.assertEqual((await self.request("GET","/api/artifact",headers={"If-Match":tag}))[0],409)
+            self.server.work.state["busy"]=False
+            await self.post("/api/discard",{"confirm":True})
+            self.assertEqual((await self.request("GET","/api/artifact",headers={"If-Match":tag}))[0],404)
+            client.assert_not_called()
+        self.assertEqual(list(self.server.work.folder.glob("captures/*")),[])
 
     async def test_fake_slice_then_separate_review_and_save_gate(self):
         self.configure_fake_orca()

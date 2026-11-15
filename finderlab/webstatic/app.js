@@ -48,6 +48,10 @@
     }
     function text(id, value) { el(id).textContent = value || ""; }
     function render() {
+        // Notify the independent viewer immediately on local slot/job transitions.
+        if (document.dispatchEvent && typeof CustomEvent !== "undefined") {
+            document.dispatchEvent(new CustomEvent("finder-artifact-state", {detail: {...state, busy: state.busy || pending || uncertain}}));
+        }
         renderMonitor();
         const busy = pending || polling || state.busy || uncertain || monitorPending;
         el("file").disabled = busy || state.phase !== "empty";
@@ -65,6 +69,7 @@
         el("start").disabled = Boolean(busy || !config || !config.job_controls_enabled || !state.saved ||
             !state.save_id || state.start_attempted || state.phase === "unknown");
         el("stop").disabled = Boolean(busy || !config || !config.job_controls_enabled);
+        el("start").textContent = state.saved_name ? `Start ${state.saved_name} · may heat/move` : "Start saved file · may heat/move";
         el("remote").disabled = busy;
         el("save").textContent = config && config.owned_dummy ? "Save to dummy · no start" : "Save to Finder · no start";
         if (state.phase === "empty") el("incoming").value = 0;
@@ -180,7 +185,6 @@
     async function toggleMonitor(enabled) {
         if (monitorPending || !config || !config.active_monitor_enabled ||
                 (enabled && el("monitor-start").disabled)) return;
-        if (enabled && !confirm(`Start status polling of ${config.target}? Close FlashPrint and other printer clients first. A proxy may reach hardware. Only status/handshake/release commands are sent, not print start/cancel.`)) return;
         monitorPending = true; render(); text("monitor-error", "");
         try {
             renderPrinter(await request("/api/monitor", {method: "POST", headers: {
@@ -193,9 +197,7 @@
     el("monitor-start").addEventListener("click", () => toggleMonitor(true));
     el("monitor-stop").addEventListener("click", () => toggleMonitor(false));
     el("discard").addEventListener("click", () => {
-        if (confirm("Remove current input/generated files? Private captures remain. This does not undo a printer save or cancel a print.")) {
-            action("discard", {confirm: true}); el("file").value = "";
-        }
+        action("discard", {confirm: true}); el("file").value = "";
     });
     el("brim-mode").addEventListener("change", render);
     el("slice").addEventListener("click", () => {
@@ -214,34 +216,16 @@
                 (contourInput.validity && contourInput.validity.badInput)) {
             text("error", "Use layer height 0.08–0.28 mm, brim width 1–10 mm and XY hole/contour compensation −0.5 to +0.5 mm per edge."); return;
         }
-        const summary = `Layer: ${layer || "server profile"}; brim: ${settings.brim}` +
-            (settings.brim === "outer" ? ` (${width} mm)` : "") +
-            `; XY hole compensation: ${hole === null ? "server profile" : hole + " mm per edge (diameter change about " + (2 * hole).toFixed(2) + " mm)"}` +
-            `; XY outer contour: ${contour === null ? "server profile" : contour + " mm per edge (width change about " + (2 * contour).toFixed(2) + " mm)"}`;
-        if (confirm(`Slice offline? ${summary}. First-layer height/retraction/templates stay unchanged. Output is NOT print-safety validated. No printer connection will be made.`)) {
-            action("slice", {confirm: true, settings});
-        }
+        action("slice", {confirm: true, settings});
     });
     el("save").addEventListener("click", () => {
-        const message = config.owned_dummy ? `Save to the newly owned dummy at ${config.target}? Files are virtual/RAM-only and no G-code is executed. No start or stop is sent.` :
-            `Save to ${config.target}? A proxy may reach real hardware and an existing remote file may be overwritten. Review the toolpaths first. No print start or stop will be sent.`;
-        if (confirm(message)) {
-            action("save", {confirm: true, remote_name: el("remote").value});
-        }
+        action("save", {confirm: true, remote_name: el("remote").value});
     });
     el("start").addEventListener("click", () => {
-        const message = config.owned_dummy ? `Start a virtual job for ${state.saved_name} in the owned dummy? No G-code will be executed.` :
-            `Start saved file ${state.saved_name} on ${config.target}? This may HEAT AND MOVE the printer. Remote file contents were not read back; close other printer clients and supervise physically.`;
-        if (confirm(message)) {
-            action("start", {confirm: true, save_id: state.save_id});
-        }
+        action("start", {confirm: true, save_id: state.save_id});
     });
     el("stop").addEventListener("click", () => {
-        const message = config.owned_dummy ? "Cancel the virtual job in the owned dummy? No hardware is contacted." :
-            `Request cancellation of the current job on ${config.target}? This can cancel a job started elsewhere. It is NOT an emergency stop or a guarantee of stopped motion or cooled heaters. Check the physical printer.`;
-        if (confirm(message)) {
-            action("stop", {confirm: true});
-        }
+        action("stop", {confirm: true});
     });
     request("/api/config").then(data => {
         config = data;
