@@ -18,6 +18,28 @@ Implemented:
 
 Not implemented in the research CLI: UDP discovery, replay/standalone analysis tooling, or physical job dynamics. The experimental OctoPrint plugin at `plugins/octoprint-flashforge-finder2` is **paused**, not a native Finder printer driver. The standalone page is now the primary UI; browser/container acceptance remains pending. **FlashPrint connection, upload and explicit virtual start/stop have now been observed against the dummy.** The new client has also uploaded the user's 3.67 MB GX to a fresh dummy with an exact byte match and no job started. A subsequent user-run host/proxy trial confirmed the new client's real-printer upload-only flow: all blocks, final save and release acknowledged, no start/stop sent. Other firmware, errors/retries and physical job-control actions remain separately bounded; mock success alone is not hardware evidence.
 
+## Clone and run with Docker Compose
+
+Linux server/local machine, safe default owned-dummy mode:
+
+```sh
+git clone https://github.com/mls-m5/flashforge-api.git
+cd flashforge-api
+cp .env.example .env
+docker compose up --build -d
+docker compose logs -f finder-web
+```
+
+Open `http://127.0.0.1:8000` on that server. For trusted-LAN access, set the
+server's specific192.168 address in `.env`; mandatory per-run login is printed
+in logs. No wildcard/public binding or automatic hardware connection. For the
+actual **STL→Slice→GX→Save** server workflow, add `compose.slicing.yml` and copy
+your trusted private profiles separately (they do not ship in Git). An opt-in
+`printer` Compose profile can run the recording proxy to an explicitly verified
+IP. Full setup, environment examples and persistence/backup instructions:
+**[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**. Docker/Podman runtime/build acceptance
+remains host-run; neither runtime is available in the agent environment.
+
 ## Open the standalone page (dummy first)
 
 In terminal 1, start a fresh dummy:

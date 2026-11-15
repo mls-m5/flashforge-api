@@ -3,6 +3,10 @@
 !docker/
 !docker/octoprint.Dockerfile
 !docker/web.Dockerfile
+!docker/entrypoint.py
+!tools/
+!tools/download_orca.py
+!LICENCE
 !finderlab/
 !finderlab/**
 !plugins/

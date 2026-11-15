@@ -322,6 +322,22 @@ History still uses the original capture ID; resolve its new archive location.
 The later automatic archive policy above preserves active logs and does not
 introduce automatic deletion/pruning. Original moved IDs remain unchanged.
 
+## Container persistence and console logs
+
+Compose packaging uses separate named volumes for web data (including its intact
+archive), scratch and raw proxy captures. The raw recording format is unchanged.
+Web auto-archive does not manage the separate proxy volume; its per-run quota /
+unknown-result behavior and manual finalized-record retention remain. Container
+console logs rotate10MiB×3 but include the web login password printed at each
+restart; keep Docker/Podman logs/private volumes out of Git/support screenshots.
+The env launcher prints no credential dump and never records arbitrary browser
+paths/targets. Image contexts exclude .env, captures, models, private profiles
+and Git metadata; profiles are separate readonly mounts. `down` preserves named
+volumes; `down -v` deletes them and is not routine cleanup. Back up deliberate
+volumes/config privately, never during active raw capture mutation. See
+DEPLOYMENT.md for unchanged no-retry/start policy and unverified runtime/build
+acceptance (agent has no Docker/Podman).
+
 ## Privacy and sharing
 
 Recordings can contain full uploaded models, filenames, serial numbers, IP/MAC addresses and every command sent. A mock's virtual storage is RAM-only, but **its capture files persist payload bytes on disk**. The run directory is created with private permissions where supported; also secure its parent directory and backups.

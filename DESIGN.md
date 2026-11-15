@@ -202,6 +202,22 @@ GET serves only the current hash-bound bitmap under LAN auth and self-only img
 CSP. See GX_GENERATION.md for unknown constants, external-vs-local evidence,
 resource/process limits, native offline trial and pending physical acceptance.
 
+### Compose packaging for a trusted Linux server
+
+The default Compose now owns a fresh dummy and loopback page with the lightweight
+web image target. A fixed environment-to-argv entrypoint validates modes, bind /
+subnet, numeric/resource/capability flags and optional profile/runtime mounts;
+no shell or browser-provided paths. A separate slicing override builds pinned
+Orca2.3.0/native runtimes, extracts without FUSE and mounts independently supplied
+trusted profiles read-only. Optional printer-profile proxy requires explicit
+literal target/hardware opt-in; web capabilities/status startup remain separate.
+Specific-interface LAN binding uses existing mandatory login/peer/Host rules.
+No wildcard ports, devices/engine sockets, privileged mode or implicit hardware
+selection. UID1000/named persistent volumes include archive and separate raw
+proxy evidence. See DEPLOYMENT.md for clone/up instructions, source/license and
+resource/retention constraints. Actual image/provider/native/browser acceptance
+remains unverified because agent Docker/Podman runtime is absent.
+
 ### Optional private-LAN access
 
 `web_access.py` validates explicit specific-interface LAN opt-in, restricts

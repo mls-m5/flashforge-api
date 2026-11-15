@@ -608,6 +608,21 @@ are explicit launcher options; default active limit is not raised automatically.
 Errors stay beside Slice as well as at page top. See STORAGE.md for evidence,
 path mappings, resource/collision/identity tests and restart requirements.
 
+## Compose server packaging implemented, host build acceptance pending
+
+User requested git clone→docker compose server workflow. Default Compose now
+starts a lightweight owned-dummy/loopback service with persistent named volumes
+and typed FINDER_* entrypoint configuration. Optional slicing override builds
+native2.3.0/runtimes with pinned download/extraction/help and mounts separately
+provisioned trusted profiles readonly; no private presets in image/repo. Optional
+printer profile records to explicit hardware target through loopback relay;
+web permissions and automatic status startup remain separately opt-in. Existing
+specific192.168/password/peer/Host rules apply, no public/wildcard ports/devices /
+engine sockets. Source/license provenance and maintenance/retention documented
+in DEPLOYMENT.md. Tests parse generated argv with real CLI and check safe modes /
+privacy/contracts, not a container/native/hardware trial. Docker/Podman unavailable
+here; host config/build/small offline Slice/browser/LAN acceptance is still needed.
+
 ## Deferred work
 
 Virtual print-progress simulation, additional firmware/client profiles, richer fault injection, exportable reports and optional separate print controls can follow. Print controls require a new safety/design decision rather than being added as a side effect of upload support.

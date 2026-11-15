@@ -1,0 +1,19 @@
+# Optional native Orca2.3.0 x86_64 build/runtime, no private profiles in image.
+# docker compose -f docker-compose.yml -f compose.slicing.yml up --build -d
+services:
+  finder-web:
+    platform: linux/amd64
+    build:
+      target: slicer
+    image: localhost/finderlab-web-slicer:local
+    mem_limit: 4g
+    environment:
+      FINDER_ENABLE_SLICING: "true"
+      OMP_NUM_THREADS: "2"
+    volumes:
+      - type: bind
+        source: ${FINDER_PROFILE_DIR:-./local-profiles/finder-offline-03}
+        target: /profiles
+        read_only: true
+        bind:
+          create_host_path: false

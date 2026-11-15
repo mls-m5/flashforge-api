@@ -1,25 +1,76 @@
-# Standalone loopback workbench. OctoPrint is paused: see compose.octoprint.yml.
-# Orca is not bundled in this initial image. See docs/WEB.md for native slicing.
+# Linux host networking is intentional: exact loopback/private-interface binds,
+# existing Host/Origin/auth policy, and an explicitly selected local proxy.
+# Default: fresh OWNED DUMMY, loopback UI, no hardware/native slicing.
 services:
   finder-web:
     build:
       context: .
       dockerfile: docker/web.Dockerfile
+      target: web
     image: localhost/finderlab-web:local
+    init: true
     network_mode: host
-    restart: "no"
+    restart: unless-stopped
+    stop_grace_period: 45s
+    environment:
+      FINDER_MODE: ${FINDER_MODE:-dummy}
+      FINDER_LISTEN_HOST: ${FINDER_LISTEN_HOST:-127.0.0.1}
+      FINDER_WEB_PORT: ${FINDER_WEB_PORT:-8000}
+      FINDER_LAN_NETWORK: ${FINDER_LAN_NETWORK:-192.168.0.0/16}
+      FINDER_PROXY_PORT: ${FINDER_PROXY_PORT:-9000}
+      FINDER_ENABLE_UPLOAD: ${FINDER_ENABLE_UPLOAD:-false}
+      FINDER_ENABLE_JOB_CONTROLS: ${FINDER_ENABLE_JOB_CONTROLS:-false}
+      FINDER_ALLOW_SLICED_UPLOAD: ${FINDER_ALLOW_SLICED_UPLOAD:-false}
+      FINDER_ENABLE_MONITOR: ${FINDER_ENABLE_MONITOR:-false}
+      FINDER_AUTO_MONITOR: ${FINDER_AUTO_MONITOR:-false}
+      FINDER_STORAGE_MIB: ${FINDER_STORAGE_MIB:-256}
+      FINDER_AUTO_ARCHIVE: ${FINDER_AUTO_ARCHIVE:-true}
     volumes:
       - web-data:/app/web-data
       - web-scratch:/app/.tmp
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    pids_limit: 128
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
     mem_limit: 1g
-    # Uploads remain disabled unless --enable-upload is explicitly added.
-    # Start/Cancel independently require --enable-job-controls and confirmation.
-    # No serial devices, Docker/Podman socket, privileged mode or host directories.
+    cpus: 2
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  # Opt-in only: docker compose --profile printer up --build -d
+  # Requires a deliberately selected literal printer IP and hardware opt-in.
+  # A transparent relay is not a safety filter. No commands injected at startup.
+  finder-proxy:
+    profiles: [printer]
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+      target: web
+    image: localhost/finderlab-proxy:local
+    init: true
+    network_mode: host
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      FINDER_SERVICE: proxy
+      FINDER_PRINTER_HOST: ${FINDER_PRINTER_HOST:-}
+      FINDER_PRINTER_PORT: ${FINDER_PRINTER_PORT:-8899}
+      FINDER_PROXY_PORT: ${FINDER_PROXY_PORT:-9000}
+      FINDER_ALLOW_HARDWARE: ${FINDER_ALLOW_HARDWARE:-false}
+    volumes:
+      - proxy-captures:/app/proxy-captures
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
 volumes:
   web-data:
   web-scratch:
+  proxy-captures:
