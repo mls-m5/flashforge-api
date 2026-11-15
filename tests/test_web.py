@@ -696,7 +696,10 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
                              {"layer_height": True}, {"layer_height": 10**1000}, {"post_process": "untrusted"}, [],
                              {"xy_hole_compensation": "0.2"}, {"xy_hole_compensation": True},
                              {"xy_hole_compensation": float("nan")}, {"xy_hole_compensation": float("inf")},
-                             {"xy_hole_compensation": -0.51}, {"xy_hole_compensation": 0.51}, {"xy_contour_compensation": 0.2}):
+                             {"xy_hole_compensation": -0.51}, {"xy_hole_compensation": 0.51},
+                             {"xy_contour_compensation": -.51}, {"xy_contour_compensation": .51},
+                             {"xy_contour_compensation": True}, {"xy_contour_compensation": "-0.2"},
+                             {"xy_contour_compensation": float("nan")}, {"xy_contour_compensation": float("inf")}):
                 code, _ = await self.post("/api/slice", {"confirm": True, "settings": settings})
                 self.assertEqual(code, 400)
             self.assertEqual(self.server.work.state["phase"], "model_ready")
@@ -707,7 +710,8 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
     async def test_web_quality_settings_recorded_and_locked_to_artifact(self):
         self.configure_fake_orca()
         await self.file("model.stl", b"solid synthetic\nendsolid synthetic")
-        settings = {"layer_height": 0.12, "brim": "outer", "brim_width": 5, "xy_hole_compensation": 0.2}
+        settings = {"layer_height": 0.12, "brim": "outer", "brim_width": 5,
+                    "xy_hole_compensation": 0.2, "xy_contour_compensation": -0.2}
         with patch("finderlab.web.FinderClient") as client:
             code, _ = await self.post("/api/slice", {"confirm": True, "settings": settings})
             self.assertEqual(code, 200)
@@ -718,7 +722,7 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(state["effective_quality"]["brim_width"], "5")
         self.assertEqual(state["effective_quality"]["initial_layer_print_height"], "0.2")
         self.assertEqual(state["effective_quality"]["xy_hole_compensation"], "0.2")
-        self.assertIsNone(state["effective_quality"]["xy_contour_compensation"])
+        self.assertEqual(state["effective_quality"]["xy_contour_compensation"], "-0.2")
         manifest = json.loads((Path(state["capture"]) / "manifest.json").read_text())
         self.assertEqual(manifest["metadata"]["slice_settings"], settings)
         self.assertEqual((await self.post("/api/slice", {"confirm": True, "settings": {"brim": "off"}}))[0], 409)

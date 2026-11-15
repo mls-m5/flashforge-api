@@ -21,8 +21,16 @@ class QualitySettingsTests(unittest.TestCase):
         for value in (True, "0.2", float("nan"), float("inf"), -float("inf"), -0.51, 0.51, 10**1000, [], {}):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 normalize_settings({"xy_hole_compensation": value})
-        with self.assertRaises(ValueError):
-            normalize_settings({"xy_contour_compensation": 0.2})
+
+    def test_contour_compensation_is_independent_bounded_and_optional(self):
+        self.assertNotIn("xy_contour_compensation", normalize_settings({}))
+        self.assertEqual(process_overrides({"xy_contour_compensation": None}), {})
+        for value in (-0.5, -0.2, 0, 0.2, 0.5):
+            self.assertEqual(process_overrides({"xy_contour_compensation": value, "xy_hole_compensation": 0.2}),
+                             {"xy_contour_compensation": format(value, ".8g"), "xy_hole_compensation": "0.2"})
+        for value in (True, "-0.2", float("nan"), float("inf"), -float("inf"), -.51, .51, 10**1000, [], {}):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                normalize_settings({"xy_contour_compensation": value})
 
     def test_rejects_non_numeric_non_finite_and_untrusted_keys(self):
         bad = [[], "outer", 2, {"post_process": ["shell"]}, {"machine_start_gcode": "G28"},

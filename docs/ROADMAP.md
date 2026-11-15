@@ -355,6 +355,18 @@ immutable artifacts and displayed applied settings. Host2.5 compensation output,
 rendered browsers and physical fit remain acceptance checks; no agent hardware
 contact/compensated upload occurred. See HOLE_COMPENSATION.md.
 
+## Independent outer-contour compensation implemented
+
+The user also requested outer dimensional correction. The Slice form now has
+`xy_contour_compensation`, initially0/off, finite−0.5..+0.5mm per edge, with
+null/omitted preserving profile. Negative shrinks outer boundaries: −0.2mm gives
+about−0.4mm width. Hole compensation remains independent. Both offsets can
+thin/remove walls; no scaling/Z/temperature/retraction/template change.
+Four native2.3 square-ring runs confirmed signs and independent combined
+hole+0.2 / contour−0.2 behavior, unchanged originals and final retract, and no
+printer sessions. Tests cover exact private snapshot changes and UI/API gates.
+Host2.5/physical fit/browser acceptance remains pending; see HOLE_COMPENSATION.md.
+
 ## M6 implementation update: standalone OctoPrint plugin checkpoint (paused)
 
 A separate GPLv3 repository is registered as `plugins/octoprint-flashforge-finder2`. Its initial admin-only tab/API uploads existing OctoPrint local files to a configured Finder V1.5 endpoint, disabled by default, with bounded snapshots/captures and no automatic start/stop. It is deliberately not a full PrinterInterface/serial driver. SDK mixin/permission tests and independent loopback protocol tests pass; its service worker also transferred the supplied GX byte-for-byte to a fresh dummy with no virtual print started. This is not Docker/browser or physical plugin acceptance. The Linux Compose example builds from the local submodule and makes the host dummy/proxy reachable while binding the OctoPrint UI to loopback; Docker is not available in this environment, so build/run remain pending. See [OCTOPRINT.md](OCTOPRINT.md).

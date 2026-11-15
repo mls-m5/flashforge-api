@@ -178,6 +178,22 @@ assert "machine_start_gcode" not in effective and "retraction_length" not in eff
             for kind, data in originals.items(): self.assertEqual(getattr(self.config, kind).read_bytes(), data)
         self.assertEqual(metadata["effective_process_sha256"], metadata["slicing_inputs"]["process"]["sha256"])
 
+    async def test_combined_compensation_only_changes_selected_snapshot_fields(self):
+        source = json.loads(self.config.process.read_text())
+        source.update(xy_hole_compensation="0.07", xy_contour_compensation="0.03")
+        self.config.process.write_text(json.dumps(source))
+        originals = {kind: getattr(self.config, kind).read_bytes() for kind in ("machine", "process", "filament")}
+        for i, value in enumerate((-.2, .2, 0, None)):
+            settings = {"xy_contour_compensation": value, "xy_hole_compensation": .2}
+            overrides = {"xy_hole_compensation": "0.2"}
+            if value is not None: overrides["xy_contour_compensation"] = format(value, ".8g")
+            self.set_behavior("ok")
+            check = f'assert json.loads(pathlib.Path(settings[1]).read_text()) == {dict(source, **overrides)!r}\n'
+            self.fake.write_text(self.fake.read_text().replace('print("READY "', check + 'print("READY "'))
+            await slice_model(self.source, self.root / f"contour-{i}.gcode", self.config, capture=self.capture, settings=settings)
+            self.assertEqual(self.capture.manifest["metadata"]["process_overrides"], overrides)
+            for kind, raw in originals.items(): self.assertEqual(getattr(self.config, kind).read_bytes(), raw)
+
     async def test_default_quality_options_preserve_profile_bytes(self):
         await self.slice()
         metadata = self.capture.manifest["metadata"]

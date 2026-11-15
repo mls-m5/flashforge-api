@@ -42,12 +42,14 @@ warm-nozzle flag are toy state, not hardware feedback. Physical/proxy manual
 controls remain locked pending verified small-step/thermal/mode behavior. See
 [docs/MANUAL_CONTROLS.md](docs/MANUAL_CONTROLS.md).
 
-The Slice section has **layer-height, brim and XY hole-compensation controls**.
+The Slice section has **layer-height, brim and independent XY hole/contour controls**.
 Layer/brim default to the server profile; hole compensation starts at0mm (off).
 For holes about0.4mm too small in diameter, +0.2mm per edge is a calibration
 trial, not a guaranteed fit. Clear the hole field to use the profile. Only a
-new confirmed Slice changes: existing files, original profiles, outer-contour
-compensation, first-layer height and retraction are untouched. Applied values
+new confirmed Slice changes: existing files, original profiles,
+first-layer height and retraction are untouched. The separate contour control
+also starts at0; −0.2mm shrinks outer dimensions by about0.4mm. Both are fixed
+per-edge offsets, not scaling; inspect thin walls and calibrate. Applied values
 are recorded per artifact. See [docs/HOLE_COMPENSATION.md](docs/HOLE_COMPENSATION.md).
 Review brim/hole footprint and thin walls before printing.
 

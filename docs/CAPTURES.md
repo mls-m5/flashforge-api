@@ -104,7 +104,9 @@ bytes actually passed to Orca. No overrides means identical original/effective
 bytes. Original profiles and all machine/filament/start/end/retraction settings
 are not edited. `xy_hole_compensation`, when selected, records a bounded per-edge
 process override; omitted/null preserves the profile, explicit0 disables it.
-Effective quality records both hole and unchanged outer-contour compensation.
+The independent `xy_contour_compensation` field uses the same typed bounds /
+profile behavior. Effective quality records both applied offsets. Negative
+contour shrinks outer boundaries; positive hole enlarges openings.
 These fields describe the artifact, not measured print dimensions or a global
 calibration. See HOLE_COMPENSATION.md for native offline evidence. Settings
 capture improves reproducibility, not print safety.

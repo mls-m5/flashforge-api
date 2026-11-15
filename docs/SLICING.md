@@ -40,14 +40,16 @@ Presence checks are **not** a semantic or safety certificate. Other settings mus
 ## Web quality overrides
 
 The web Slice form adds a narrow typed allowlist for layer height, brim and
-per-edge XY hole compensation; see [WEB.md](WEB.md). These values change only a validated private process JSON
+independent per-edge XY hole/outer-contour compensation; see [WEB.md](WEB.md). These values change only a validated private process JSON
 snapshot before help/slice, with original/effective hashes and applied settings
 recorded. No arbitrary JSON fields, CLI flags, templates, temperatures, machine
 or filament settings are accepted. Omitted/profile selections preserve original
 bytes. Hole values are finite−0.5..+0.5mm (positive expands openings); null/omitted
 preserves the profile, explicit0 disables its compensation. The UI starts at0.
-Only `xy_hole_compensation` changes, never `xy_contour_compensation`; both
-actual values are captured/displayed. This does not fix every hole orientation
+`xy_hole_compensation` expands openings for positive values;
+`xy_contour_compensation` shrinks outer dimensions for negative values. Each is
+independently optional with the same bounds/profile/zero behavior; both actual
+values are captured/displayed. Only selected private process fields change. This does not fix every hole orientation
 or ensure a fit; inspect thin walls and calibrate. See HOLE_COMPENSATION.md for
 six native2.3 square/circular ring comparisons with unchanged outer bounds and
 original profiles, no printer sessions, and pending host2.5/physical checks.

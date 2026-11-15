@@ -1,4 +1,4 @@
-# XY hole compensation: next Slice only
+# XY hole and outer-contour compensation: next Slice only
 
 The user reports holes printing about0.4mm too small in diameter (approximately
 0.2mm excess material per side) and requests a web setting. This is a reported
@@ -14,9 +14,14 @@ and reload both browsers to get the new backend/token/UI. In **Slice and review*
 - Allowed range: finite numbers from−0.5 to+0.5mm per edge. Negative shrinks
   openings. The browser's spinner increments0.05mm; input is an absolute offset,
   not a percentage or a direct diameter change. Clear for server profile.
+- **XY contour compensation** separately adjusts outer boundaries: initially0mm,
+  finite−0.5..+0.5mm per edge, clear for profile. **−0.2mm reduces outer width /
+  diameter by about0.4mm**; positive enlarges. Hole and outer settings are
+  independent, not one uniform scale. Combining outer−0.2 with hole+0.2 can
+  thin a wall by roughly0.4mm; inspect narrow walls before printing.
 - Confirm Slice, then review/download. No reslice, upload or Start is automatic.
-  Applied compensation is displayed with the output, including the unchanged
-  configured outer-contour value. An existing sliced/print file cannot be
+  Applied compensation is displayed with the output, including both independently
+  configured hole and outer-contour values. An existing sliced/print file cannot be
   retroactively changed: discard/reselect and slice a new version.
 - This affects internal XY contours/openings, not whole-model scale, Z error,
   every hole orientation, flow calibration or guaranteed dimensional accuracy.
@@ -25,10 +30,10 @@ and reload both browsers to get the new backend/token/UI. In **Slice and review*
   First-layer squish/elephant foot and size-dependent errors may need separate
   investigation. A successful native slice is not a physical safety certificate.
 
-The setting is Orca's existing **`xy_hole_compensation`**. Only that allowlisted
-field in a validated private process snapshot changes. Original machine/process/
-filament files, outer-contour compensation, templates, temperature and retraction
-are untouched. Save/Start/Cancel, monitoring and LAN controls are unchanged.
+The settings are Orca's existing **`xy_hole_compensation`** and
+**`xy_contour_compensation`**. Only selected allowlisted fields in a validated
+private process snapshot change. Original machine/process/filament files,
+templates, temperature and retraction are untouched. Save/Start/Cancel, monitoring and LAN controls are unchanged.
 No generated compensation candidate was uploaded/started or printer contacted.
 
 ## API, profile preservation and provenance
@@ -36,7 +41,7 @@ No generated compensation candidate was uploaded/started or printer contacted.
 POST `/api/slice` accepts the setting only in its confirmed typed `settings`:
 
 ```json
-{"confirm":true,"settings":{"xy_hole_compensation":0.2}}
+{"confirm":true,"settings":{"xy_hole_compensation":0.2,"xy_contour_compensation":-0.2}}
 ```
 
 Omitting the key or using null preserves the server process profile value;
@@ -44,15 +49,36 @@ Omitting the key or using null preserves the server process profile value;
 CLI/library calls and no-override profile bytes/hashes. The UI defaults to an
 explicit0, which can reserialize its private snapshot even when the source was
 already0. No server profile file changes. Strings, booleans, NaN/infinity and
-out-of-range values fail before native execution/printer access. Outer-contour
-settings and arbitrary Orca options remain forbidden as API inputs.
+out-of-range values fail before native execution/printer access. Both offsets
+use the same typed bounds and optional/profile behavior; arbitrary Orca options
+remain forbidden as API inputs.
 
 Normalized settings, actual process overrides, source/effective process hashes
 and effective hole/outer-contour values are recorded in `slicer_settings` and
 manifest metadata. These are applied to the artifact, not persistent global
 printer calibration or a change to files uploaded without slicing.
 
-## Native offline numerical evidence
+## Native outer-contour and combined-offset trial (Orca 2.3.0)
+
+Generated square ring, same unchanged draft02, second-layer Outer-wall nozzle
+centreline extrema (not measured part surfaces). Captures under ignored
+`captures/contour-quality/`, all finalized with zero printer sessions:
+
+| Hole / contour offset | Capture | Hole XY extrema | Outer XY extrema |
+| --- | --- | --- | --- |
+| 0 / 0 | 20261115T072537Z-ff31ebea6336 | ±5.2 | ±9.8 |
+| 0 / −0.2 | 20261115T072537Z-41fdfe0f3ab8 | ±5.2 | ±9.6 |
+| 0 / +0.2 | 20261115T072538Z-405aaaed5696 | ±5.2 | ±10.0 |
+| +0.2 / −0.2 | 20261115T072538Z-162a9ab17f6c | ±5.4 | ±9.6 |
+
+This confirms negative contour shrinks the examined outer paths without
+changing the opening unless separately selected. Source profile hashes and
+final retract−1.3mm stayed unchanged. No output postprocessing/check disabling,
+upload, Start or printer connection. Native2.5/physical fit and rendered-browser
+acceptance remain pending. Typed snapshot/HTTP/Node tests additionally cover
+positive/negative/zero/profile, invalid inputs and locked existing artifacts.
+
+## Earlier native hole-only numerical evidence
 
 Six actual **Orca2.3.0** runs via `slice_model`, unchanged private draft02,
 created generated2mm-high rings with nominal10mm square/circular openings.

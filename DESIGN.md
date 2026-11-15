@@ -180,12 +180,11 @@ for physical manual motion by a counter-only rehearsal.
 ### Per-slice quality settings
 
 `slice_settings.py` validates only layer height, brim mode/width and bounded
-per-edge XY hole compensation (−0.5..+0.5mm or profile). The web
+independent per-edge XY hole/outer-contour compensation (−0.5..+0.5mm or profile). The web
 API accepts that typed object only on confirmed Slice, not Save/Start or a
 running operation. The adapter applies an allowlist to its private process
 snapshot, records original/effective hashes and settings, and leaves machine,
-filament, outer-contour compensation, first-layer and retraction/templates
-unchanged. Omitted/profile values preserve profile bytes; the UI's initial
+filament, first-layer and retraction/templates unchanged. Omitted/profile values preserve profile bytes; the UI's initial
 hole0 explicitly disables any nonzero profile compensation. Positive hole
 values expand internal XY contours, not global model scale or guaranteed fits. Cached applied values belong to the generated artifact; controls
 cannot mutate an existing print file. This is not generic JSON editing, a

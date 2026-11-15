@@ -56,9 +56,10 @@
         el("quality-settings").disabled = el("slice").disabled;
         el("brim-width").disabled = el("slice").disabled || el("brim-mode").value !== "outer";
         el("hole-compensation").disabled = el("slice").disabled;
+        el("contour-compensation").disabled = el("slice").disabled;
         const applied = state.effective_quality;
-        text("applied-quality", applied ? `Applied to this file: layer ${applied.layer_height} mm · first layer ${applied.initial_layer_print_height} mm · brim ${applied.brim_type || "profile default"} · width ${applied.brim_width || "0"} mm · gap ${applied.brim_object_gap || "profile default"} mm · XY hole compensation ${applied.xy_hole_compensation ?? "profile default"} mm per edge · outer contour ${applied.xy_contour_compensation ?? "profile default"} mm (unchanged).` :
-            state.slice_settings ? "Slicing options submitted; effective values appear after successful slicing." : "No quality overrides applied yet. Layer/brim profile choices preserve defaults; hole compensation starts at 0 mm (clear for profile).");
+        text("applied-quality", applied ? `Applied to this file: layer ${applied.layer_height} mm · first layer ${applied.initial_layer_print_height} mm · brim ${applied.brim_type || "profile default"} · width ${applied.brim_width || "0"} mm · gap ${applied.brim_object_gap || "profile default"} mm · XY hole compensation ${applied.xy_hole_compensation ?? "profile default"} mm per edge · outer contour ${applied.xy_contour_compensation ?? "profile default"} mm per edge.` :
+            state.slice_settings ? "Slicing options submitted; effective values appear after successful slicing." : "No quality overrides applied yet. Layer/brim profile choices preserve defaults; hole/outer-contour compensation starts at 0 mm (clear for profile).");
         el("save").disabled = Boolean(busy || !config || !config.upload_enabled || !state.artifact || state.saved ||
             state.phase === "unknown" || (state.sliced && !config.sliced_upload_enabled));
         el("start").disabled = Boolean(busy || !config || !config.job_controls_enabled || !state.saved ||
@@ -202,16 +203,21 @@
         const width = Number(el("brim-width").value);
         const holeInput = el("hole-compensation");
         const hole = holeInput.value.trim() === "" ? null : Number(holeInput.value);
+        const contourInput = el("contour-compensation");
+        const contour = contourInput.value.trim() === "" ? null : Number(contourInput.value);
         const settings = {layer_height: layer === "" ? null : Number(layer), brim: el("brim-mode").value,
-            brim_width: width, xy_hole_compensation: hole};
+            brim_width: width, xy_hole_compensation: hole, xy_contour_compensation: contour};
         if (!Number.isFinite(width) || width < 1 || width > 10 || (settings.layer_height !== null &&
                 (!Number.isFinite(settings.layer_height) || settings.layer_height < 0.08 || settings.layer_height > 0.28)) || (hole !== null && (!Number.isFinite(hole) || hole < -0.5 || hole > 0.5)) ||
-                (holeInput.validity && holeInput.validity.badInput)) {
-            text("error", "Use layer height 0.08–0.28 mm, brim width 1–10 mm and XY hole compensation −0.5 to +0.5 mm per edge."); return;
+                (holeInput.validity && holeInput.validity.badInput) ||
+                (contour !== null && (!Number.isFinite(contour) || contour < -0.5 || contour > 0.5)) ||
+                (contourInput.validity && contourInput.validity.badInput)) {
+            text("error", "Use layer height 0.08–0.28 mm, brim width 1–10 mm and XY hole/contour compensation −0.5 to +0.5 mm per edge."); return;
         }
         const summary = `Layer: ${layer || "server profile"}; brim: ${settings.brim}` +
             (settings.brim === "outer" ? ` (${width} mm)` : "") +
-            `; XY hole compensation: ${hole === null ? "server profile" : hole + " mm per edge (diameter change about " + (2 * hole).toFixed(2) + " mm)"}`;
+            `; XY hole compensation: ${hole === null ? "server profile" : hole + " mm per edge (diameter change about " + (2 * hole).toFixed(2) + " mm)"}` +
+            `; XY outer contour: ${contour === null ? "server profile" : contour + " mm per edge (width change about " + (2 * contour).toFixed(2) + " mm)"}`;
         if (confirm(`Slice offline? ${summary}. First-layer height/retraction/templates stay unchanged. Output is NOT print-safety validated. No printer connection will be made.`)) {
             action("slice", {confirm: true, settings});
         }

@@ -390,9 +390,9 @@ part of the standalone workflow.
 
 ## Quality controls: brim, layer height and XY hole compensation
 
-The Slice section offers **Layer height**, **Brim**, and **XY hole compensation**.
-Layer/brim default to **Use server profile**; hole compensation defaults to
-**0 mm (off)**, or clear its field to keep the server profile value. Controls apply only to the next
+The Slice section offers **Layer height**, **Brim**, and independent **XY hole / contour compensation**.
+Layer/brim default to **Use server profile**; both compensation fields default to
+**0 mm (off)**, or clear either field to keep its server profile value. Controls apply only to the next
 explicitly confirmed Slice. They do not reslice, save, start or change a running
 print automatically. Existing GX/G-code files are never rewritten.
 
@@ -409,11 +409,17 @@ print automatically. Existing GX/G-code files are never rewritten.
   hole's diameter by about0.4 mm**. Negative shrinks them. This is not a percent
   scale or a diameter input. Empty/null means profile; omitted API/library key
   also preserves it. Explicit0 disables an existing nonzero profile setting.
-  Only `xy_hole_compensation` in the private process snapshot changes; existing
-  outer-contour compensation is displayed but never overridden by this control.
+  Only `xy_hole_compensation` in the private process snapshot changes via this
+  field; outer-contour compensation has its own independent field.
   Holes in other orientations, first-layer squish and material/flow errors may
   need different calibration. Enlarging openings can thin/remove narrow walls;
   inspect the generated output and test a small part before relying on fits.
+- XY contour compensation: same numeric bounds/default/profile semantics as
+  holes, using `xy_contour_compensation`. **−0.2mm per edge shrinks outer width /
+  diameter by about0.4mm**; positive enlarges. This is not global scaling or Z
+  correction. Outer−0.2 and hole+0.2 together can thin walls by about0.4mm.
+  Native offline sign/independence checks are in HOLE_COMPENSATION.md; printed
+  dimensions still need calibration. Both applied offsets are displayed.
 - A 5 mm outer brim is a reasonable experiment for lifting edges, not a
   guarantee. It consumes bed area/material, needs removal and can mark the
   bottom edge. Keep the bed clean/level and avoid drafts. Cold room conditions

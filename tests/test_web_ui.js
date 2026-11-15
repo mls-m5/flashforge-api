@@ -9,7 +9,7 @@ const config = {token: "test-token", target: "127.0.0.1:9000", upload_enabled: t
     slicing_enabled: true, sliced_upload_enabled: false, job_controls_enabled: true, model_limit: 64 * 1024 ** 2, print_limit: 8 * 1024 ** 2};
 let state = {phase: "empty", busy: false};
 function element(id) {
-    if (!elements.has(id)) elements.set(id, {value: id === "brim-width" ? "5" : id === "brim-mode" ? "profile" : id === "hole-compensation" ? "0" : "", textContent: "", disabled: false, hidden: false,
+    if (!elements.has(id)) elements.set(id, {value: id === "brim-width" ? "5" : id === "brim-mode" ? "profile" : ["hole-compensation", "contour-compensation"].includes(id) ? "0" : "", textContent: "", disabled: false, hidden: false,
         handlers: {}, classList: {add() {}, remove() {}},
         addEventListener(name, fn) { this.handlers[name] = fn; }});
     return elements.get(id);
@@ -42,7 +42,7 @@ const context = {
             if (url === "/api/slice") state = {...state, busy: false, phase: "review", sliced: true, artifact: true,
                 slice_settings: data.settings, effective_quality: {layer_height: data.settings.layer_height || "0.18",
                     initial_layer_print_height: "0.27", brim_type: "outer_only", brim_width: "5", brim_object_gap: "0.1",
-                    xy_hole_compensation: String(data.settings.xy_hole_compensation ?? 0), xy_contour_compensation: "0"}};
+                    xy_hole_compensation: String(data.settings.xy_hole_compensation ?? 0), xy_contour_compensation: String(data.settings.xy_contour_compensation ?? 0)}};
         }
         return {ok: true, json: async () => url === "/api/config" ? config : {...state}};
     }
@@ -112,16 +112,29 @@ async function main() {
     assert.equal(posts.length, beforeSlice, "bad numeric input must not silently select profile");
     element("hole-compensation").validity = {badInput: false};
     element("hole-compensation").value = "0.2";
+    for (const value of ["0.51", "-0.51", "NaN", "Infinity"]) {
+        element("contour-compensation").value = value;
+        click("slice"); await flush();
+        assert.equal(posts.length, beforeSlice, "invalid contour compensation must not submit");
+    }
+    element("contour-compensation").value = "";
+    element("contour-compensation").validity = {badInput: true};
+    click("slice"); await flush();
+    assert.equal(posts.length, beforeSlice);
+    element("contour-compensation").validity = {badInput: false};
+    element("contour-compensation").value = "-0.2";
     confirmation = false; click("slice");
     assert.equal(posts.length, beforeSlice, "quality choice alone does not slice");
     confirmation = true; click("slice"); await flush();
     assert.equal(posts.at(-1).url, "/api/slice");
-    assert.deepEqual(posts.at(-1).data.settings, {layer_height: 0.12, brim: "outer", brim_width: 5, xy_hole_compensation: 0.2});
+    assert.deepEqual(posts.at(-1).data.settings, {layer_height: 0.12, brim: "outer", brim_width: 5, xy_hole_compensation: 0.2, xy_contour_compensation: -0.2});
     assert.equal(element("quality-settings").disabled, true);
     assert.match(element("applied-quality").textContent, /layer 0.12 mm/);
     assert.match(element("applied-quality").textContent, /first layer 0.27 mm/);
     assert.match(element("applied-quality").textContent, /hole compensation 0.2 mm per edge/);
     assert.equal(element("hole-compensation").disabled, true);
+    assert.equal(element("contour-compensation").disabled, true);
+    assert.match(element("applied-quality").textContent, /outer contour -0.2 mm per edge/);
     element("hole-compensation").value = "0.4";
     const immutable = posts.length; click("slice");
     assert.equal(posts.length, immutable, "an existing slice cannot silently change");
@@ -173,8 +186,10 @@ async function main() {
     choose("profile-hole.stl", 100);
     xhrs.at(-1).finish({phase: "model_ready", busy: false, name: "profile-hole.stl", suggested_name: "profile-hole.gcode", artifact: false});
     element("hole-compensation").value = "";
+    element("contour-compensation").value = "";
     click("slice"); await flush();
     assert.equal(posts.at(-1).data.settings.xy_hole_compensation, null, "blank explicitly preserves server profile");
+    assert.equal(posts.at(-1).data.settings.xy_contour_compensation, null);
     console.log("Standalone page quality/hole compensation, confirmations, slice/save separation and uncertainty tests passed.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
