@@ -1,5 +1,5 @@
-# Default web target has no native slicer or private profiles. Optional slicer
-# target downloads a pinned upstream AppImage; see docs/DEPLOYMENT.md.
+# Compose uses slicer target with tracked Finder2 profiles; web target remains
+# available for a lightweight no-slicing image. See docs/DEPLOYMENT.md.
 FROM docker.io/python:3.11-slim-bookworm AS web
 LABEL org.opencontainers.image.source="https://github.com/mls-m5/flashforge-api"
 WORKDIR /app
@@ -14,6 +14,8 @@ USER finder
 ENTRYPOINT ["python3", "/app/docker/entrypoint.py"]
 
 FROM web AS slicer
+ENV FINDER_ENABLE_SLICING=true
+COPY profiles/finder2 /profiles
 USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates libwebkit2gtk-4.0-37 libgl1 libegl1 libgomp1 \

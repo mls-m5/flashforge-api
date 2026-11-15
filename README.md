@@ -11,16 +11,17 @@ Implemented:
 - **Persistent traffic logs and connection history** for mock, proxy and client commands, with exact request/reply streams.
 - A **recording TCP proxy** for comparing FlashPrint traffic with the real printer's responses.
 - A **print-file upload CLI and reusable async client** for `.gx`, `.gcode` and `.g`, with exact block ACKs/CRC32, upload-only defaults, explicit upload `--start`, and separate confirmed start/stop actions.
-- An **optional Orca CLI adapter**: offline `slice MODEL.stl`, or `upload MODEL.stl --slice` before any printer connection, using explicit trusted JSON profiles and bounded child processes. Native Orca/profile compatibility still needs a host trial.
+- An **optional Orca CLI adapter**: offline `slice MODEL.stl`, or `upload MODEL.stl --slice` before any printer connection, using explicit trusted JSON profiles and bounded child processes. Native2.3 and user-host2.5 slicing evidence is scoped in the profile docs; container acceptance remains pending.
 - Automated localhost tests, including the existing uploader, recording failures, proxy transport and fake-slicer orchestration.
-- A **standalone local page**: `python3 -m finderlab web`, with drag-and-drop, explicit offline slicing/review and explicit save-only or combined save/start intent. No accounts or OctoPrint setup. Orca/profile compatibility remains a blocker for native Finder slicing; existing FlashPrint GX files work independently.
+- A **standalone local page**: `python3 -m finderlab web`, with drag-and-drop, explicit offline slicing/review and explicit save-only or combined save/start intent. No accounts or OctoPrint setup. The tracked skirt03 profile now slices offline with native Orca; broader physical/container compatibility remains scoped, not a universal guarantee. Existing FlashPrint GX files work independently.
 - The original experimental [`upload.py`](upload.py), unchanged.
 
 Not implemented in the research CLI: UDP discovery, replay/standalone analysis tooling, or physical job dynamics. The experimental OctoPrint plugin at `plugins/octoprint-flashforge-finder2` is **paused**, not a native Finder printer driver. The standalone page is now the primary UI; browser/container acceptance remains pending. **FlashPrint connection, upload and explicit virtual start/stop have now been observed against the dummy.** The new client has also uploaded the user's 3.67 MB GX to a fresh dummy with an exact byte match and no job started. A subsequent user-run host/proxy trial confirmed the new client's real-printer upload-only flow: all blocks, final save and release acknowledged, no start/stop sent. Other firmware, errors/retries and physical job-control actions remain separately bounded; mock success alone is not hardware evidence.
 
 ## Clone and run with Docker Compose
 
-Linux server/local machine, safe default owned-dummy mode:
+Linux x86_64 server/local machine, including Orca and the Finder2 profiles;
+safe default owned-dummy mode:
 
 ```sh
 git clone https://github.com/mls-m5/flashforge-api.git
@@ -33,8 +34,10 @@ docker compose logs -f finder-web
 Open `http://127.0.0.1:8000` on that server. For trusted-LAN access, set the
 server's specific192.168 address in `.env`; mandatory per-run login is printed
 in logs. No wildcard/public binding or automatic hardware connection. For the
-actual **STL→Slice→GX→Save** server workflow, add `compose.slicing.yml` and copy
-your trusted private profiles separately (they do not ship in Git). An opt-in
+**STL→Slice→GX→virtual Save** workflow, Orca and the existing skirt03 configuration
+are now included by default: **no manual profile copying**. The reviewed source
+JSONs, upstream attribution and license are tracked in `profiles/finder2/`.
+An opt-in
 `printer` Compose profile can run the recording proxy to an explicitly verified
 IP. Full setup, environment examples and persistence/backup instructions:
 **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**. Docker/Podman runtime/build acceptance
@@ -56,7 +59,8 @@ python3 -m finderlab web --enable-upload --target-port 9000
 
 Open **http://127.0.0.1:8000**. Drop an existing FlashPrint `.gx` (or `.gcode`/`.g`), then click **Save to Finder · no start**. Selecting a file does not connect to a printer. STL requires separately configured Orca and trusted profiles. The old Sailfish draft is still rejected; a separately authorized **offline Marlin-emission draft 02 now slices natively**, but is not a print-ready or physically validated Finder profile. Generated-output saving is blocked by default pending separate profile review. Uploads are disabled without `--enable-upload`. To deliberately enable separate **Start saved file** and **Request cancel** buttons, also add `--enable-job-controls`. Each requires its own button click (no popup); Start may heat/move, and Cancel is not an emergency stop. With job controls enabled, the new **Start print when upload completes** checkbox is checked by default: the clearly labelled Save + start click composes confirmed save and one fresh-READY start. Uncheck for save only. No start on failed/unknown save, release or recording failure. See [docs/START_AFTER_UPLOAD.md](docs/START_AFTER_UPLOAD.md). CLI defaults remain upload-only.
 
-For a one-command local slicing/upload test, stop any previous web server and run `./tools/start_dummy_upload_test.sh`. It owns a fresh ephemeral dummy (not an existing hardware proxy), enables virtual Save and separately confirmed virtual Start/Cancel (no G-code execution). No separate dummy process is needed. This requires the local Orca/draft profiles and does not authorize physical printing.
+For a one-command local slicing/upload test, stop any previous web server and run `./tools/start_dummy_upload_test.sh`. It owns a fresh ephemeral dummy (not an existing hardware proxy), enables virtual Save and separately confirmed virtual Start/Cancel (no G-code execution). No separate dummy process is needed. This requires a local Orca installation; the Finder2 profiles are tracked in
+`profiles/finder2/`. It does not authorize physical printing.
 
 For a simple **virtual** light/XYZ/extruder panel without Orca or profiles, run
 `./tools/start_control_panel_test.sh`. It owns a fresh dummy; counters and its
@@ -96,7 +100,7 @@ filter and the new candidate's physical startup remains unverified.
 ## Standard priming: native skirt, not the fixed line
 
 At the user's explicit request, all standard web launchers (offline, owned dummy,
-proxy and LAN) now use the private03 native-skirt profiles with mandatory
+proxy and LAN) now use the tracked `profiles/finder2/` draft03 native-skirt profiles with mandatory
 `--check-priming`. Skirt follows the first-layer footprint, including manual
 placement and brim. The fixed02 prime is no longer selected by these launchers;
 missing03 fails without falling back. Existing G-code/printer files are not
@@ -203,18 +207,20 @@ Read [docs/CLIENT.md](docs/CLIENT.md) for proxy/direct hardware trials, safety c
 
 ## Slice STL with Orca (offline first)
 
-Download a pinned official Linux x86_64 AppImage with `python3 tools/download_orca.py` (older glibc selects 2.3.0; otherwise 2.5.0). It verifies size/SHA-256 but does not execute/extract the application or install runtime packages. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for setup. Then supply self-contained machine/process/filament JSON profiles:
+Download a pinned official Linux x86_64 AppImage with `python3 tools/download_orca.py` (older glibc selects 2.3.0; otherwise 2.5.0). It verifies size/SHA-256 but does not execute/extract the application or install runtime packages. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for setup. Then use the included self-contained Finder2 machine/process/filament JSON profiles:
 
 ```sh
 python3 -m finderlab slice upload/model.stl \
   --orca /path/to/orca-slicer \
-  --machine local-profiles/finder-machine.json \
-  --process local-profiles/finder-process.json \
-  --filament local-profiles/pla.json \
+  --machine profiles/finder2/machine.json \
+  --process profiles/finder2/process.json \
+  --filament profiles/finder2/filament.json --check-priming \
   --output upload/model-review.gcode
 ```
 
-For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native Orca 2.3.0 help/capability probing succeeds after approved runtime installation. A copied/edited local Finder draft now passes structural checks but native slicing is blocked by rejected Sailfish flavor; see [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md). A separate user-approved [draft 02](docs/ORCA_FINDER_DRAFT_02.md) now slices a generated cube and the supplied holder natively with 2.3.0, including an explicit slow Z layer-change step after detecting mixed-XYZ overspeed. These are offline review artifacts, **not approved for printing**; original profiles remain unchanged. Physical/motion/profile validation is still outstanding; automated orchestration tests continue using a fake CLI. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation, the probe reference and the newer 2.5.0 build's ABI blocker. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The standalone page exposes the same optional adapter with separate slice/review/save steps; a separate experimental GX/CPU-thumbnail export now follows a supported Slice (see docs/GX_GENERATION.md), but a validated Finder profile is not provided.
+For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. The current experimental native-skirt03 profiles now ship in `profiles/finder2/`
+with their upstream license/provenance; they are not a universally physically
+validated preset. Standard launchers select them with mandatory priming guard. Native Orca 2.3.0 help/capability probing succeeds after approved runtime installation. A copied/edited local Finder draft now passes structural checks but native slicing is blocked by rejected Sailfish flavor; see [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md). A separate user-approved [draft 02](docs/ORCA_FINDER_DRAFT_02.md) now slices a generated cube and the supplied holder natively with 2.3.0, including an explicit slow Z layer-change step after detecting mixed-XYZ overspeed. These are offline review artifacts, **not approved for printing**; original profiles remain unchanged. Physical/motion/profile validation is still outstanding; automated orchestration tests continue using a fake CLI. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation, the probe reference and the newer 2.5.0 build's ABI blocker. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The standalone page exposes the same optional adapter with separate slice/review/save steps; a separate experimental GX/CPU-thumbnail export now follows a supported Slice (see docs/GX_GENERATION.md), but a validated Finder profile is not provided.
 
 For offline review of placement-aware priming, `./tools/start_skirt_test.sh`
 selects separate draft03 with a native skirt instead of the fixed purge line.

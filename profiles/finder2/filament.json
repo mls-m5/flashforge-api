@@ -1,0 +1,162 @@
+{
+  "type": "filament",
+  "name": "PLA 220C Finder 2 - OFFLINE DRAFT 03",
+  "from": "system",
+  "instantiation": "true",
+  "activate_air_filtration": [
+    "0"
+  ],
+  "close_fan_the_first_x_layers": [
+    "1"
+  ],
+  "complete_print_exhaust_fan_speed": [
+    "0"
+  ],
+  "cool_plate_temp": [
+    "0"
+  ],
+  "cool_plate_temp_initial_layer": [
+    "0"
+  ],
+  "during_print_exhaust_fan_speed": [
+    "0"
+  ],
+  "eng_plate_temp": [
+    "0"
+  ],
+  "eng_plate_temp_initial_layer": [
+    "0"
+  ],
+  "fan_cooling_layer_time": [
+    "100"
+  ],
+  "fan_max_speed": [
+    "100"
+  ],
+  "fan_min_speed": [
+    "100"
+  ],
+  "filament_cost": [
+    "20"
+  ],
+  "filament_density": [
+    "1.24"
+  ],
+  "filament_diameter": [
+    "1.75"
+  ],
+  "filament_flow_ratio": [
+    "1.09"
+  ],
+  "filament_is_support": [
+    "0"
+  ],
+  "filament_max_volumetric_speed": [
+    "12"
+  ],
+  "filament_minimal_purge_on_wipe_tower": [
+    "15"
+  ],
+  "filament_multitool_ramming": [
+    "1"
+  ],
+  "filament_multitool_ramming_volume": [
+    "5"
+  ],
+  "filament_settings_id": [
+    "PLA 220C Finder 2 - OFFLINE DRAFT 03"
+  ],
+  "filament_soluble": [
+    "0"
+  ],
+  "filament_type": [
+    "PLA"
+  ],
+  "filament_vendor": [
+    "Generic"
+  ],
+  "full_fan_speed_layer": [
+    "0"
+  ],
+  "filament_shrink": [
+    "100%"
+  ],
+  "hot_plate_temp": [
+    "0"
+  ],
+  "hot_plate_temp_initial_layer": [
+    "0"
+  ],
+  "nozzle_temperature": [
+    "220"
+  ],
+  "nozzle_temperature_initial_layer": [
+    "220"
+  ],
+  "overhang_fan_speed": [
+    "100"
+  ],
+  "overhang_fan_threshold": [
+    "50%"
+  ],
+  "reduce_fan_stop_start_freq": [
+    "1"
+  ],
+  "required_nozzle_HRC": [
+    "3"
+  ],
+  "supertack_plate_temp": [
+    "0"
+  ],
+  "supertack_plate_temp_initial_layer": [
+    "0"
+  ],
+  "slow_down_for_layer_cooling": [
+    "1"
+  ],
+  "slow_down_layer_time": [
+    "4"
+  ],
+  "slow_down_min_speed": [
+    "10"
+  ],
+  "temperature_vitrification": [
+    "45"
+  ],
+  "textured_plate_temp": [
+    "0"
+  ],
+  "textured_plate_temp_initial_layer": [
+    "0"
+  ],
+  "filament_start_gcode": [
+    "; OFFLINE DRAFT - no extra filament hook"
+  ],
+  "filament_end_gcode": [
+    "; OFFLINE DRAFT - no extra filament hook"
+  ],
+  "compatible_printers": [
+    "Finder 2 - OFFLINE DRAFT 03"
+  ],
+  "inherits": "",
+  "additional_cooling_fan_speed": [
+    "0"
+  ],
+  "filament_multitool_ramming_flow": [
+    "20"
+  ],
+  "nozzle_temperature_range_low": [
+    "190"
+  ],
+  "nozzle_temperature_range_high": [
+    "240"
+  ],
+  "filament_id": "OFDSrzZ8",
+  "compatible_printers_condition": "",
+  "chamber_temperatures": [
+    "0"
+  ],
+  "enable_pressure_advance": [
+    "0"
+  ]
+}

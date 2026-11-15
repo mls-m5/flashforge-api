@@ -12,6 +12,25 @@ Restart/re-slice; existing G-code/printer files keep their original contents.
 No physical trial/agent hardware action or general print-safety approval follows
 from this software-default decision. Historical evidence/limitations below remain.
 
+## Tracked deployment source (subsequent user request)
+
+The user explicitly requested that everything required to start, except network /
+credentials, be checked in. `profiles/finder2/` now ships the three final03 runtime
+JSONs **byte-for-byte unchanged**, with AGPL3 license, the eight reviewed public
+Orca2.5 upstream JSON sources and sanitized hash/source provenance. No compiled
+host caches, private models, raw captures or full private manifests are included.
+All native launchers now select the tracked directory; default Compose bundles
+it with Orca2.3.0 and the mandatory guard, without a manual profile-copy step.
+Old ignored local03/02 remain untouched as historical sources. This packaging
+change is not new tuning, physical validation or agent hardware authorization.
+See profiles/finder2/README.md and DEPLOYMENT.md. Earlier private-only statements
+below describe the historical experiment, not current distribution.
+
+Native host2.3.0 recheck using the tracked paths produced84303-byte review-cube
+G-code with no priming issues, zero printer sessions and unchanged inputs:
+`.tmp/bundled-profile-captures/20261115T191337Z-5747bc86426a` (finalized). This
+verifies the packaged paths/profile identity offline, not a container/hardware run.
+
 ## Why a separate profile
 
 The user observed that draft02's fixed holder-derived purge line can cross

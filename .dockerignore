@@ -7,6 +7,16 @@
 !tools/
 !tools/download_orca.py
 !LICENCE
+!profiles/
+!profiles/finder2/
+!profiles/finder2/machine.json
+!profiles/finder2/process.json
+!profiles/finder2/filament.json
+!profiles/finder2/README.md
+!profiles/finder2/LICENSE.txt
+!profiles/finder2/provenance.json
+!profiles/finder2/upstream/
+!profiles/finder2/upstream/**
 !finderlab/
 !finderlab/**
 !plugins/

@@ -1,4 +1,5 @@
-# Optional native Orca2.3.0 x86_64 build/runtime, no private profiles in image.
+# Optional read-only CUSTOM profile mount. Default Compose already includes
+# Orca2.3.0 + tracked profiles/finder2; this file is NOT required to Slice.
 # docker compose -f docker-compose.yml -f compose.slicing.yml up --build -d
 services:
   finder-web:
@@ -12,7 +13,7 @@ services:
       OMP_NUM_THREADS: "2"
     volumes:
       - type: bind
-        source: ${FINDER_PROFILE_DIR:-./local-profiles/finder-offline-03}
+        source: ${FINDER_PROFILE_DIR:-./profiles/finder2}
         target: /profiles
         read_only: true
         bind:

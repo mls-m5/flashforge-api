@@ -340,6 +340,20 @@ separate archive budget, current/active/incomplete/source protection and no
 raw edits/deletion/printer action. Details/mappings in STORAGE.md. No agent
 hardware/proxy connection or new CRC/framing/timing behavior inferred.
 
+## SLICER-PACKAGING-029 — Tracked03 source, no protocol change
+
+The user explicitly requested all startup requirements except network/passwords
+be checked in. profiles/finder2 now distributes byte-identical final03 machine /
+process/filament JSON with AGPL3/source attribution and sanitized provenance.
+No raw captures/models/compiled host caches/network identifiers are included.
+Default Compose includes Orca2.3.0/profiles; native launchers use the same tracked
+source, mandatory priming guard/no02 fallback. Native host2.3 offline cube recheck
+`.tmp/bundled-profile-captures/20261115T191337Z-5747bc86426a` finalized with84303-byte
+output, no priming issues, zero printer sessions, unchanged profile/input hashes.
+No agent hardware connection, firmware/framing/CRC/template/tuning change or new
+physical-safety evidence. Container build/runtime remains host acceptance, not
+established by the native recheck. See DEPLOYMENT.md and ORCA_FINDER_DRAFT_03.md.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.

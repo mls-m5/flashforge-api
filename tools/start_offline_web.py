@@ -10,8 +10,8 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_PROFILE_NAME = "finder-offline-03"
-PROFILE = ROOT / "local-profiles" / DEFAULT_PROFILE_NAME
+DEFAULT_PROFILE_NAME = "finder2"
+PROFILE = ROOT / "profiles" / DEFAULT_PROFILE_NAME
 ORCA = ROOT / ".local-tools/orca-2.5.0/AppRun"
 ARCHIVE_ORCA = ROOT / ".local-tools/OrcaSlicer_Linux_AppImage_Ubuntu2404_V2.5.0.AppImage"
 FALLBACK_ORCA = ROOT / ".local-tools/orca-slicer"

@@ -1,0 +1,103 @@
+{
+  "type": "machine",
+  "name": "Finder 2 - OFFLINE DRAFT 03",
+  "from": "system",
+  "instantiation": "true",
+  "printer_technology": "FFF",
+  "deretraction_speed": [
+    "30"
+  ],
+  "extruder_colour": [
+    "#FCE94F"
+  ],
+  "extruder_offset": [
+    "0x0"
+  ],
+  "gcode_flavor": "marlin",
+  "machine_max_acceleration_extruding": [
+    "10000",
+    "10000"
+  ],
+  "machine_max_acceleration_retracting": [
+    "1000",
+    "1000"
+  ],
+  "machine_min_extruding_rate": [
+    "0"
+  ],
+  "machine_min_travel_rate": [
+    "0"
+  ],
+  "max_layer_height": [
+    "0.32"
+  ],
+  "min_layer_height": [
+    "0.08"
+  ],
+  "printable_height": "140",
+  "extruder_clearance_radius": "65",
+  "extruder_clearance_height_to_rod": "36",
+  "extruder_clearance_height_to_lid": "140",
+  "nozzle_diameter": [
+    "0.4"
+  ],
+  "printer_settings_id": "Finder 2 - OFFLINE DRAFT 03",
+  "printer_variant": "0.4",
+  "retraction_minimum_travel": [
+    "1"
+  ],
+  "retract_before_wipe": [
+    "70%"
+  ],
+  "retract_when_changing_layer": [
+    "1"
+  ],
+  "retraction_length": [
+    "1.3"
+  ],
+  "retract_length_toolchange": [
+    "1"
+  ],
+  "z_hop": [
+    "0"
+  ],
+  "retract_restart_extra": [
+    "0"
+  ],
+  "retract_restart_extra_toolchange": [
+    "0"
+  ],
+  "retraction_speed": [
+    "30"
+  ],
+  "single_extruder_multi_material": "0",
+  "change_filament_gcode": "",
+  "wipe": [
+    "0"
+  ],
+  "default_print_profile": "0.18mm Finder 2 - OFFLINE DRAFT 03",
+  "machine_start_gcode": "; FINDER03_START_BEGIN\n; OFFLINE MARLIN-EMISSION CANDIDATE - NOT APPROVED FOR PRINTING\nM140 S0 T0\nM104 S220 T0\nM104 S0 T1\nM107\nG90\nM82 ; explicit absolute E hypothesis, Finder support unverified\nG28\nM132 X Y Z A B\nG1 Z50.000 F420\nG161 X Y F3300\nM6 T0\nM651\nM907 X100 Y100 Z40 A80 B20\nM108 T0\nG92 E0\n; Native Orca skirt primes outside arranged model/brim. No fixed purge extrusion.\nG1 X0 Y0 F4800\nG92 E0\n; FINDER03_START_END\n",
+  "machine_end_gcode": "; FINDER02_END_BEGIN\n; OFFLINE CANDIDATE - slicer owns final retraction; no added E/XYZ park\nM107\nM104 S0 T0\nG162 Z F1800\nG28 X Y\nM132 X Y A B\nM652\nG91\nM18\n; FINDER02_END_END\n",
+  "layer_change_gcode": "; FINDER02_LAYER_Z_SPLIT - offline candidate\nG1 Z{layer_z} F420\n; AFTER_LAYER_CHANGE",
+  "before_layer_change_gcode": "",
+  "machine_pause_gcode": "",
+  "inherits": "",
+  "printer_model": "Generic Marlin Printer",
+  "printable_area": [
+    "-70x-70",
+    "70x-70",
+    "70x70",
+    "-70x70"
+  ],
+  "use_relative_e_distances": "0",
+  "emit_machine_limits_to_gcode": "0",
+  "machine_max_speed_z": [
+    "7",
+    "7"
+  ],
+  "default_filament_profile": [
+    "PLA 220C Finder 2 - OFFLINE DRAFT 03"
+  ],
+  "disable_m73": "1",
+  "use_firmware_retraction": "0"
+}

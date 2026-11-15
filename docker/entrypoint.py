@@ -52,11 +52,11 @@ def command(env, *, profile_dir=Path('/profiles'), orca=Path('/opt/orca/AppRun')
     if not boolean(env,'FINDER_AUTO_ARCHIVE',True):result+=['--no-auto-archive']
     slicing=boolean(env,'FINDER_ENABLE_SLICING')
     if slicing:
-        if not orca.is_file() or not os.access(orca,os.X_OK):raise ValueError('Slicing runtime absent; add compose.slicing.yml and rebuild')
+        if not orca.is_file() or not os.access(orca,os.X_OK):raise ValueError('Slicing runtime absent; rebuild the slicer image target')
         for kind in ('machine','process','filament'):
             path=profile_dir/(kind+'.json')
             if not path.is_file() or not 0<path.stat().st_size<=1024*1024:
-                raise ValueError('Missing/bounded trusted '+str(path)+'; copy your separately reviewed self-contained profiles (not supplied by Git)')
+                raise ValueError('Missing/bounded trusted '+str(path)+'; use the bundled Finder2 profiles or a complete trusted custom mount')
             result+=['--'+kind,str(path)]
         result+=['--orca',str(orca),'--check-priming']
     upload=boolean(env,'FINDER_ENABLE_UPLOAD');jobs=boolean(env,'FINDER_ENABLE_JOB_CONTROLS')

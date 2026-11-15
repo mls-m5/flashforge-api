@@ -13,6 +13,18 @@ embedded project settings never reach Orca. See [3MF.md](3MF.md) for supported
 transforms/units, rejected assemblies/extensions, provenance and the actual
 user-tool native trial. OBJ/SDL inputs remain unsupported. STL coordinates are interpreted as millimetres: no automatic unit conversion, scaling, repair or auto-orientation. Orca is asked to arrange the object and ensure it is on the bed, using the supplied machine profile.
 
+## Included Finder2 source profiles
+
+Following the user's deployment request, final native-skirt03 is now tracked as
+`profiles/finder2/{machine,process,filament}.json`, with unchanged runtime bytes,
+AGPL3 license, public upstream JSON snapshots and reviewed provenance. Standard
+native launchers use these and mandatory `--check-priming`; default Compose also
+includes Orca2.3.0. No hidden local-profile copy is required. Custom profiles remain
+trusted explicit server configuration. Raw CLI still requires profile/executable
+arguments and explicit guard selection. See profiles/finder2/README.md and
+DEPLOYMENT.md. Earlier private-only/no-profile-ships notes below are historical;
+shipping source does not certify universal physical safety or firmware support.
+
 ## Optional typed manual layout
 
 The web editor/library now accepts a separate optional `transform` argument:
@@ -43,7 +55,7 @@ original Sailfish draft is unchanged and still rejected. See its separate
 
 1. Install a trusted OrcaSlicer build separately. On Linux use its CLI-capable executable (or a trusted launcher). Set `--orca /absolute/path/to/orca-slicer` if it is not on PATH. Discovery tries `orca-slicer`, then `OrcaSlicer`. The adapter currently requires POSIX process/resource limits; Linux is the development platform. Windows execution is not supported by this adapter yet.
 2. Check that build's `--help`. The adapter runs and records a bounded help probe before every job and refuses missing required flags instead of guessing a different CLI. Some packages may need GUI/runtime libraries or a working AppImage/FUSE setup even for CLI execution; those are host installation issues, not automatically installed dependencies.
-3. Supply **three trusted, fully resolved/self-contained Orca JSON profiles**, with `type` set to `machine`, `process`, and `filament`. Keep them under ignored `local-profiles/`. Ordinary GUI exports may be *deltas* containing `inherits`; these are deliberately rejected because the isolated datadir has no implicit user presets. Resolve/copy all ancestor settings into a separate derivative first. **Deleting `inherits` without merging its settings is not flattening.** Do not overwrite your originals. The adapter does not currently flatten presets or import Prusa INI files.
+3. Use the tracked `profiles/finder2/` source or supply **three trusted, fully resolved/self-contained Orca JSON profiles**, with `type` set to `machine`, `process`, and `filament`. Keep unrelated private custom presets under ignored `local-profiles/`. Ordinary GUI exports may be *deltas* containing `inherits`; these are deliberately rejected because the isolated datadir has no implicit user presets. Resolve/copy all ancestor settings into a separate derivative first. **Deleting `inherits` without merging its settings is not flattening.** Do not overwrite your originals. The adapter does not currently flatten presets or import Prusa INI files.
 4. Review the effective settings and generated output offline before any physical use. No reviewed Finder 2 Orca profile ships with this change. An Adventurer/Finder 3/Bambu profile is not a substitute. The [Prusa investigation](SLICING_ANALYSIS.md) and [offline candidate](PRUSA_ITERATION_01.md) identify existing E-state, origin/envelope and Z-speed risks; Prusa macro syntax must not simply be pasted into Orca.
 
 To prevent critical settings silently being omitted, each profile must explicitly include at least:
@@ -114,14 +126,14 @@ by HTTP, and does not approve the changed startup for hardware.
 
 ## Offline first
 
-From the repository root, using your own reviewed profile files:
+From the repository root, using the included Finder2 draft03 source:
 
 ```sh
 python3 -m finderlab slice "upload/model.stl" \
   --orca /path/to/orca-slicer \
-  --machine local-profiles/finder-machine.json \
-  --process local-profiles/finder-process.json \
-  --filament local-profiles/pla.json \
+  --machine profiles/finder2/machine.json \
+  --process profiles/finder2/process.json \
+  --filament profiles/finder2/filament.json --check-priming \
   --output upload/model-review.gcode
 ```
 
@@ -140,9 +152,9 @@ In terminal 2:
 ```sh
 python3 -m finderlab upload "upload/model.stl" --slice \
   --orca /path/to/orca-slicer \
-  --machine local-profiles/finder-machine.json \
-  --process local-profiles/finder-process.json \
-  --filament local-profiles/pla.json \
+  --machine profiles/finder2/machine.json \
+  --process profiles/finder2/process.json \
+  --filament profiles/finder2/filament.json --check-priming \
   --port 9000 --remote-name "model-review.gcode"
 ```
 
@@ -202,6 +214,7 @@ External interface references, not Finder 2 protocol evidence:
 - [Orca CLI transforms](https://github.com/OrcaSlicer/OrcaSlicer/wiki/cli_transform): arrange/orient/ensure-on-bed;
 - [upstream PrintConfig.cpp](https://github.com/OrcaSlicer/OrcaSlicer/blob/main/src/libslic3r/PrintConfig.cpp): setting names only. Internal enum entries and the accepted flavor list differ; native 2.3.0 rejects Sailfish, and tagged 2.5.0 source excludes it from the accepted list.
 
-These upstream pages/main branch can change. The adapter runtime contains no copied upstream implementation/profile code; private draft profile derivatives retain source/license provenance separately. Downloaded versions and the native help probe are recorded in [ORCA_INSTALL.md](ORCA_INSTALL.md); draft 02 adds native geometry generation, not physical profile validation.
+These upstream pages/main branch can change. The adapter runtime contains no copied upstream implementation/profile code; the bundled draft03 profile derivatives retain AGPL3/source attribution in
+`profiles/finder2/`; private historical manifests remain ignored. Downloaded versions and the native help probe are recorded in [ORCA_INSTALL.md](ORCA_INSTALL.md); draft 02 adds native geometry generation, not physical profile validation.
 
 The user explicitly approved the draft 02 offline dialect experiment; native geometry generation now succeeds. Next review its documented G21/M82/M118 and physical homing/clearance blockers, confirm nozzle/material, and retain generated files as review-only until a separately bounded next trial is agreed. Physical start remains a separate approved decision. GX/thumbnail generation and a verified Finder Orca profile remain unimplemented. The standalone page's adapter wiring is now implemented and fake-executable tested; this does not resolve native profile compatibility or validate generated toolpaths.

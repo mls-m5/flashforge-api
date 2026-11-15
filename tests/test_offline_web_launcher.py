@@ -58,7 +58,7 @@ class LauncherTests(unittest.TestCase):
             launcher.build_command(native_skirt_test=True,proxy_port=9000)
 
     def test_all_standard_modes_use_skirt_and_mandatory_priming_guard(self):
-        self.assertEqual(launcher.DEFAULT_PROFILE_NAME,'finder-offline-03')
+        self.assertEqual(launcher.DEFAULT_PROFILE_NAME,'finder2')
         for options in ({},{'dummy_upload_test':True},{'proxy_port':9000},
                         {'proxy_port':9000,'enable_job_controls':True,'allow_sliced_upload':True},
                         {'proxy_port':9000,'lan_host':'192.168.1.20','enable_job_controls':True,'allow_sliced_upload':True}):
@@ -71,7 +71,7 @@ class LauncherTests(unittest.TestCase):
     def test_missing_skirt_never_falls_back_to_old_fixed_prime_profile(self):
         old=self.root/'local-profiles/finder-offline-02';old.mkdir(parents=True)
         for kind in ('machine','process','filament'):(old/(kind+'.json')).write_text('{}')
-        with patch.object(launcher,'PROFILE',self.root/'local-profiles/finder-offline-03'):
+        with patch.object(launcher,'PROFILE',self.root/'profiles/finder2'):
             with self.assertRaisesRegex(ValueError,'profile missing/invalid'):
                 launcher.build_command(proxy_port=9000)
 

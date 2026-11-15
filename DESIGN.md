@@ -204,12 +204,14 @@ resource/process limits, native offline trial and pending physical acceptance.
 
 ### Compose packaging for a trusted Linux server
 
-The default Compose now owns a fresh dummy and loopback page with the lightweight
-web image target. A fixed environment-to-argv entrypoint validates modes, bind /
+Default Compose owns a fresh dummy/loopback page with the native `slicer`
+image target and tracked `profiles/finder2/` settings. A fixed environment-to-argv entrypoint validates modes, bind /
 subnet, numeric/resource/capability flags and optional profile/runtime mounts;
-no shell or browser-provided paths. A separate slicing override builds pinned
-Orca2.3.0/native runtimes, extracts without FUSE and mounts independently supplied
-trusted profiles read-only. Optional printer-profile proxy requires explicit
+no shell or browser-provided paths. The default builds pinned Orca2.3.0/native
+runtimes, extracts without FUSE and bundles reviewed source JSON/license/provenance.
+Runtime profiles are unchanged from final03; native launchers use the same tracked
+directory, no hidden private dependency. Optional compose.slicing.yml now only
+mounts deliberate custom profiles read-only. Old private drafts remain untouched. Optional printer-profile proxy requires explicit
 literal target/hardware opt-in; web capabilities/status startup remain separate.
 Specific-interface LAN binding uses existing mandatory login/peer/Host rules.
 No wildcard ports, devices/engine sockets, privileged mode or implicit hardware

@@ -67,10 +67,16 @@ class ContainerConfigTests(unittest.TestCase):
                     {'FINDER_MODE':'proxy','FINDER_ALLOW_SLICED_UPLOAD':'true'}):
             with self.assertRaises(ValueError):entry.command(env)
 
-    def test_compose_and_build_contracts_exclude_private_inputs_and_keep_native_opt_in(self):
+    def test_compose_bundles_native_and_reviewed_profiles_but_excludes_private_inputs(self):
         base=(ROOT/'docker-compose.yml').read_text();extra=(ROOT/'compose.slicing.yml').read_text()
         image=(ROOT/'docker/web.Dockerfile').read_text();ignore=(ROOT/'.dockerignore').read_text()
-        self.assertIn('target: web',base);self.assertIn('profiles: [printer]',base)
+        self.assertIn('target: slicer',base);self.assertIn('profiles: [printer]',base)
+        web=base.split('  finder-proxy:')[0]
+        self.assertIn('FINDER_ENABLE_SLICING: "true"',web)
+        self.assertNotIn('type: bind',web)
+        self.assertIn('COPY profiles/finder2 /profiles',image)
+        self.assertIn('!profiles/finder2/provenance.json',ignore)
+        self.assertIn('${FINDER_PROFILE_DIR:-./profiles/finder2}',extra)
         self.assertIn('${FINDER_MODE:-dummy}',base);self.assertNotIn('ports:',base)
         self.assertIn('target: slicer',extra);self.assertIn('read_only: true',extra);self.assertIn('create_host_path: false',extra)
         self.assertIn('--version 2.3.0',image);self.assertIn('--appimage-extract',image);self.assertIn('USER finder',image)

@@ -1,19 +1,23 @@
 # Linux host networking is intentional: exact loopback/private-interface binds,
 # existing Host/Origin/auth policy, and an explicitly selected local proxy.
-# Default: fresh OWNED DUMMY, loopback UI, no hardware/native slicing.
+# Default: Orca + tracked Finder2 skirt03 profiles, fresh OWNED DUMMY,
+# loopback UI, no hardware. Linux x86_64 (native slicer asset).
 services:
   finder-web:
+    platform: linux/amd64
     build:
       context: .
       dockerfile: docker/web.Dockerfile
-      target: web
-    image: localhost/finderlab-web:local
+      target: slicer
+    image: localhost/finderlab-web-slicer:local
     init: true
     network_mode: host
     restart: unless-stopped
     stop_grace_period: 45s
     environment:
       FINDER_MODE: ${FINDER_MODE:-dummy}
+      FINDER_ENABLE_SLICING: "true"
+      OMP_NUM_THREADS: "2"
       FINDER_LISTEN_HOST: ${FINDER_LISTEN_HOST:-127.0.0.1}
       FINDER_WEB_PORT: ${FINDER_WEB_PORT:-8000}
       FINDER_LAN_NETWORK: ${FINDER_LAN_NETWORK:-192.168.0.0/16}
@@ -31,7 +35,7 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     pids_limit: 256
-    mem_limit: 1g
+    mem_limit: 4g
     cpus: 2
     logging:
       driver: json-file

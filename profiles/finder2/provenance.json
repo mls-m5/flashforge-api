@@ -1,0 +1,61 @@
+{
+  "profile": "Finder 2 draft03 native skirt / 0.4 mm / PLA",
+  "license": "AGPL-3.0",
+  "upstream_release": "OrcaSlicer v2.5.0",
+  "upstream_repository": "https://github.com/OrcaSlicer/OrcaSlicer/tree/v2.5.0/resources/profiles",
+  "modified_dates": ["2026-11-14"],
+  "packaged_date": "2026-11-15",
+  "packaging_changed_runtime_bytes": false,
+  "lineage": "Flattened Custom MyMarlin 0.4 and Generic PLA @System chains -> local draft01 -> user-authorized Marlin-emission draft02 stage C -> native-skirt draft03. See README.md for changes and evidence limitations.",
+  "runtime_sha256": {
+    "machine.json": "89d1435504155779a71198aba0b2c4acb040bfbd8f62e9ab3ae3dfc00dd97f5a",
+    "process.json": "15fa8ad4e70f02d1b4310e9f028e7ac36bef5c0b80df2c9efc751c8daf9ed058",
+    "filament.json": "094b84e273fe0b97d0f65604c4ef2ac8c81e82bb3be5835cebfb26011c4dcb15"
+  },
+  "license_sha256": "57c8ff33c9c0cfc3ef00e650a1cc910d7ee479a8bc509f6c9209a7c2a11399d6",
+  "upstream_sources": [
+    {
+      "path": "upstream/resources/profiles/Custom/machine/fdm_machine_common.json",
+      "url": "https://raw.githubusercontent.com/OrcaSlicer/OrcaSlicer/v2.5.0/resources/profiles/Custom/machine/fdm_machine_common.json",
+      "sha256": "f85c85a37ac01ca9ab814f657e6f4fdc2fffc6e3f75e1ef02c80aac2ef656621"
+    },
+    {
+      "path": "upstream/resources/profiles/Custom/machine/MyMarlin 0.4 nozzle.json",
+      "url": "https://raw.githubusercontent.com/OrcaSlicer/OrcaSlicer/v2.5.0/resources/profiles/Custom/machine/MyMarlin%200.4%20nozzle.json",
+      "sha256": "37c97f17f46bc9f253d0330cea21d5ae74c20b90a4b1a833f14fa37f0d55b3a1"
+    },
+    {
+      "path": "upstream/resources/profiles/Custom/process/fdm_process_common.json",
+      "url": "https://raw.githubusercontent.com/OrcaSlicer/OrcaSlicer/v2.5.0/resources/profiles/Custom/process/fdm_process_common.json",
+      "sha256": "3f50acf54f7e8aee8b0beb0fe89902976635c783ef5e04eb31680f57e438ea26"
+    },
+    {
+      "path": "upstream/resources/profiles/Custom/process/fdm_process_marlin_common.json",
+      "url": "https://raw.githubusercontent.com/OrcaSlicer/OrcaSlicer/v2.5.0/resources/profiles/Custom/process/fdm_process_marlin_common.json",
+      "sha256": "ffbb227f661e4136e54ad6825a1cdf18182f97b217a906fd7283ca5be6603737"
+    },
+    {
+      "path": "upstream/resources/profiles/Custom/process/0.20mm Standard @MyMarlin.json",
+      "url": "https://raw.githubusercontent.com/OrcaSlicer/OrcaSlicer/v2.5.0/resources/profiles/Custom/process/0.20mm%20Standard%20%40MyMarlin.json",
+      "sha256": "7591d01be16b25ccb6da7769457632925229f076245d3d9eff9f87044baa0bec"
+    },
+    {
+      "path": "upstream/resources/profiles/OrcaFilamentLibrary/filament/base/fdm_filament_common.json",
+      "url": "https://raw.githubusercontent.com/OrcaSlicer/OrcaSlicer/v2.5.0/resources/profiles/OrcaFilamentLibrary/filament/base/fdm_filament_common.json",
+      "sha256": "1928f6fe4d9a572d51c4172c8f0df2b39684341c3f687ce39c8f4138d63809fb"
+    },
+    {
+      "path": "upstream/resources/profiles/OrcaFilamentLibrary/filament/base/fdm_filament_pla.json",
+      "url": "https://raw.githubusercontent.com/OrcaSlicer/OrcaSlicer/v2.5.0/resources/profiles/OrcaFilamentLibrary/filament/base/fdm_filament_pla.json",
+      "sha256": "3eca9d67192a14939a523c098a2ad17df13018e76a2590f3133098d3d870215f"
+    },
+    {
+      "path": "upstream/resources/profiles/OrcaFilamentLibrary/filament/Generic PLA @System.json",
+      "url": "https://raw.githubusercontent.com/OrcaSlicer/OrcaSlicer/v2.5.0/resources/profiles/OrcaFilamentLibrary/filament/Generic%20PLA%20%40System.json",
+      "sha256": "37494b202e9b636270ad8f08ac9cd28843cbbb547847473e41e7590afa1ce9a0"
+    }
+  ],
+  "privacy_review": "Runtime and public upstream JSON manually reviewed: no printer IP/MAC/serial, login/password, private host paths or model geometry. No compiled caches, host config, raw captures or private full manifests included.",
+  "toolpaths_safety_validated": false,
+  "container_runtime_validated": false
+}

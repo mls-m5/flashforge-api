@@ -461,19 +461,19 @@ ownership inside these dedicated named volumes; do not substitute production
 volumes/directories. Stop with `podman stop finderlab-web`; private data persists.
 Rebuild the image after code changes.
 
-The lightweight `web` image target has no native Orca/profiles. Optional
-`slicer` target/`compose.slicing.yml` installs runtimes and verifies/extracts a
-pinned official2.3.0 x86_64 AppImage, without FUSE. Private profiles remain a
-required read-only mount, never baked into images or substituted automatically.
+The lightweight `web` image target has no native Orca/profiles. **Default
+Compose selects `slicer`**, installing runtimes and verifying/extracting pinned
+official2.3.0 x86_64 without FUSE, and copies tracked `profiles/finder2/` into the
+image. No manual profile provision is required. `compose.slicing.yml` is now only
+an optional readonly custom-profile mount. Ignored private drafts stay excluded.
 Docker/Podman is unavailable here: actual build/runtime/container native slicing
 remain host acceptance, not proven by command-builder tests.
 
 For git-clone/Compose server setup, environment examples, exact private-interface
 LAN/password rules, optional recording-proxy profile and persistence/updates,
 read [DEPLOYMENT.md](DEPLOYMENT.md). Default `docker compose up --build -d`
-starts an owned dummy and loopback UI, not hardware. Add the slicing override
-and separately provision your trusted profiles for STL slicing; configure proxy
-mode/capabilities explicitly for a real workflow. The paused OctoPrint example
+starts an owned dummy and loopback UI with Orca/Finder2 slicing, not hardware.
+Configure proxy mode/capabilities explicitly for a real workflow. The paused OctoPrint example
 stays `compose.octoprint.yml` and is not part of this deployment.
 
 ## Storage, HTTP and failure boundaries

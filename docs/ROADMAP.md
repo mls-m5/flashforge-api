@@ -611,10 +611,15 @@ path mappings, resource/collision/identity tests and restart requirements.
 ## Compose server packaging implemented, host build acceptance pending
 
 User requested git clone→docker compose server workflow. Default Compose now
-starts a lightweight owned-dummy/loopback service with persistent named volumes
-and typed FINDER_* entrypoint configuration. Optional slicing override builds
-native2.3.0/runtimes with pinned download/extraction/help and mounts separately
-provisioned trusted profiles readonly; no private presets in image/repo. Optional
+starts an owned-dummy/loopback service with persistent named volumes and typed
+FINDER_* entrypoint configuration. Following the user's explicit correction that
+startup requirements must ship in Git, default Compose now includes native2.3.0 /
+runtimes with pinned download/extraction/help plus tracked profiles/finder2.
+The three runtime JSONs are byte-identical to the existing final03; reviewed
+public upstream JSONs/AGPL3 license/sanitized provenance ship too. Native launchers
+use the same tracked directory; no private-profile copy step. Historical ignored
+drafts/captures/host caches remain untouched. Optional compose.slicing.yml is only
+a readonly custom-profile mount now, not a prerequisite for Slice. Optional
 printer profile records to explicit hardware target through loopback relay;
 web permissions and automatic status startup remain separately opt-in. Existing
 specific192.168/password/peer/Host rules apply, no public/wildcard ports/devices /

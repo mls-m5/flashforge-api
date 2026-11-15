@@ -331,8 +331,11 @@ unknown-result behavior and manual finalized-record retention remain. Container
 console logs rotate10MiB×3 but include the web login password printed at each
 restart; keep Docker/Podman logs/private volumes out of Git/support screenshots.
 The env launcher prints no credential dump and never records arbitrary browser
-paths/targets. Image contexts exclude .env, captures, models, private profiles
-and Git metadata; profiles are separate readonly mounts. `down` preserves named
+paths/targets. Image contexts exclude .env, captures, models, ignored private profile drafts
+and Git metadata. Reviewed tracked profiles/finder2 source/license/provenance is
+now bundled at the user's explicit request; runtime JSON bytes match final03.
+No raw logs/models/host caches/full private manifests are included. Custom profiles
+can separately override the bundled source with an optional readonly mount. `down` preserves named
 volumes; `down -v` deletes them and is not routine cleanup. Back up deliberate
 volumes/config privately, never during active raw capture mutation. See
 DEPLOYMENT.md for unchanged no-retry/start policy and unverified runtime/build

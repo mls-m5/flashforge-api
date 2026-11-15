@@ -2,8 +2,8 @@
 
 ## Status and boundaries
 
-The repository now provides a safe default Compose service, an optional native
-Orca image, and an opt-in recording proxy. **Docker/Podman is unavailable in the
+The repository provides a safe default Compose service **including native Orca
+and the tracked Finder2 skirt03 profiles**, plus an opt-in recording proxy. **Docker/Podman is unavailable in the
 agent environment**: command/configuration tests pass, but actual image builds,
 Compose provider compatibility and container/browser/native runtime acceptance
 must be verified on the deployment host. Do not describe this as a completed
@@ -31,7 +31,10 @@ Open **http://127.0.0.1:8000 on that server**. Default `FINDER_MODE=dummy` creat
 its **own fresh ephemeral simulator**, never reusing a printer or existing
 proxy. Uploads and confirmed virtual Start/Cancel target that dummy only; it
 never executes G-code/heats/moves. STL mesh/plate editing and existing print-file
-virtual saving are available. **Slice needs step2**, not a guessed profile.
+virtual saving are available. **Slice and GX use the bundled profiles**;
+no local-profile copying or Compose override is required. The build downloads
+pinned Orca and installs its runtime, so Internet access and build disk space
+are needed. Runtime models/previews have no CDN dependency.
 No OctoPrint/submodule initialization, pip/npm installation or cloud service.
 
 To view from another computer on your trusted home network, edit `.env`:
@@ -60,41 +63,38 @@ UI password. Console/logs contain credentials: do not publish them. **HTTP is
 unencrypted**, including Basic credentials/models. This is not a public-service
 security design. No automatic print is triggered by opening/reloading the page.
 
-## 2. Add Orca and your trusted Finder profiles
+## 2. Included Orca and Finder2 profiles (no manual provisioning)
 
-A public clone cannot include the private local Finder profiles, their geometry
-or raw evidence. There is **no universally validated print-ready Finder preset**
-in Git. Do not substitute an Adventurer/Creator/Guider profile or silently change
-firmware flavor. Copy your existing separately reviewed self-contained profile
-directory from your working machine, retaining its provenance/license files:
+The current project profiles ship in **`profiles/finder2/`**: machine, process
+and filament JSON, license, public upstream sources and reviewed provenance.
+Runtime JSON bytes are unchanged from the user's selected draft03 (native
+skirt/0.4mm/PLA); model geometry, logs, compiled host caches, network settings /
+passwords and full private manifests are not included. The default image copies
+this tracked source into `/profiles`. Native launchers use the same tracked
+directory instead of a hidden ignored local copy.
 
-```text
-local-profiles/finder-offline-03/
-  machine.json
-  process.json
-  filament.json
-  ...originals/provenance/license attribution...
-```
+These derive from **OrcaSlicer's generic profiles, not proprietary FlashForge
+configuration**. Their AGPLv3 license permits redistribution with source and
+attribution; both are included. See
+[`profiles/finder2/README.md`](../profiles/finder2/README.md). Tracking the existing
+profile is not universal physical/clearance approval. Do not substitute another
+printer's preset or silently change firmware flavor.
 
-For this user's current setup,03 is the deliberately selected native-skirt
-profile. Keep the originals; the service mounts them read-only. For a different
-trusted directory, set `FINDER_PROFILE_DIR=/absolute/server/path/to/profiles` in
-`.env`. Paths are server files, never uploaded/browser-supplied configuration.
-All3 JSON files must exist and be readable by the container's UID1000; bad/missing
-paths fail without automatically creating an empty directory/fallback preset.
-Native profile validation still runs on every explicit Slice.
+**Optional custom mount:** only for deliberate alternative self-contained
+profiles, set `FINDER_PROFILE_DIR=/absolute/server/path/to/profiles` in `.env`
+and add `-f docker-compose.yml -f compose.slicing.yml` to Compose commands.
+This readonly mount replaces `/profiles`; it is not needed for the default
+Finder2 workflow. Missing directories/3 bounded JSONs fail without a fallback.
+Retain license/provenance for custom settings. Native validation and mandatory
+priming guard still run for every explicit Slice.
 
-```sh
-docker compose -f docker-compose.yml -f compose.slicing.yml up --build -d
-docker compose -f docker-compose.yml -f compose.slicing.yml logs -f finder-web
-```
-
-The optional image uses Linux/amd64 **Orca2.3.0**, not your host's2.5 binary. Build
+The default image uses Linux/amd64 **Orca2.3.0**, not your host's2.5 binary. Build
 installs Debian bookworm runtime packages, downloads the official asset using
 our existing pinned size/SHA256 downloader, extracts without FUSE, retains
 upstream resources/licenses and probes bounded `--help` without a model/printer.
-No private profiles, uploaded models, captures, .env, Git metadata or host binary
-are copied into the build context/image. Profiles remain bind-mounted read-only.
+Only the reviewed tracked Finder2 profile directory is bundled. No private
+local-profiles, uploaded models, captures, .env, Git metadata or host binary is
+copied into the build context/image. Optional custom mounts are read-only.
 No host apt/runtime installation or serial device access is needed.
 
 The2.3 pin matches native offline evidence and glibc in the base image. It is
@@ -131,7 +131,7 @@ FINDER_ENABLE_MONITOR=true
 FINDER_AUTO_MONITOR=false
 ```
 
-Generated-output saving requires the slicing override/profiles. You can omit
+Generated-output saving uses the bundled slicer/profiles. You can omit
 job/generated-output flags when only ordinary GX/G-code save is wanted. By
 default status connection is **manual**, not automatic at service startup;
 `FINDER_AUTO_MONITOR=true` is a separate explicit choice and opens status-only
@@ -152,8 +152,7 @@ FINDER_ALLOW_HARDWARE=true
 Then (only after verifying target and intended capabilities):
 
 ```sh
-docker compose -f docker-compose.yml -f compose.slicing.yml \
-  --profile printer up --build -d
+docker compose --profile printer up --build -d
 ```
 
 The profile starts `finder-proxy` bound to127.0.0.1 on the explicitly chosen proxy
@@ -176,7 +175,7 @@ or a profile that slices is not a physical clearance certificate.
 
 Named volumes retain web inputs/artifacts/captures/archive, project scratch and
 separate raw proxy recordings. No host home/upload/source directory is mounted
-except the deliberate read-only profile directory. UID1000 runs processes;
+unless the optional deliberate read-only custom profile mount is selected. UID1000 runs processes;
 dedicated volumes initialize from owned image directories. On rootless Podman /
 SELinux, verify provider volume ownership/labels and read permissions explicitly;
 never solve this by privileged mode or mounting the engine socket/home directory.
@@ -186,7 +185,7 @@ acceptance is host-tested, not established by text-only tests here.
 ```sh
 # Rebuild/recreate after updating, only when no upload/slice/start is in flight:
 git pull
-docker compose -f docker-compose.yml -f compose.slicing.yml up --build -d
+docker compose up --build -d
 # Status/logs:
 docker compose ps
 docker compose logs --tail 100 finder-web
@@ -215,23 +214,34 @@ Configuration is a fixed allowlist of `FINDER_*` variables; unknown native CLI /
 command-line arguments are not silently accepted by the entrypoint. For an
 advanced raw CLI invocation, explicitly override entrypoint with `python3` and
 supply `-m finderlab web ...`; that bypasses the environment launcher, not backend
-access/capability/resource policy. Default Docker image target is `web`; direct
-`podman build`/`docker build` should specify `--target web` for the lightweight
-image or `--target slicer` for native runtime. Compose selects these explicitly.
+access/capability/resource policy. Default Compose target is `slicer`, including native runtime and tracked
+profiles. Direct `podman build`/`docker build` can specify `--target web` for a
+lightweight no-slicing image (entrypoint defaults slicing off there) or
+`--target slicer` for the full default runtime. Compose selects targets explicitly;
+the optional proxy still uses the lightweight `web` image.
 
 ## Checks and known gaps
 
 Dependency-free tests validate environment/CLI argv, safe owned-dummy default,
 specific LAN/password policy, explicit hardware/capability opt-ins, invalid
-settings, fixed profile/runtime paths and Compose/build privacy/target contracts.
+settings, tracked profile hashes/lineage/license, fixed runtime paths and
+Compose/build privacy/target contracts.
 The actual existing CLI parser accepts every generated argv, without launching
-printers/listeners/native tools. Native upload/plate/GX/archive regression tests
+printers/listeners/native tools. Validation:280 Python tests,16 existing Node
+checks, reviewed-trace integrity and diff whitespace checks passed. All280 Python
+tests also passed in a fresh `git checkout-index` copy containing only staged
+tracked files, explicitly lacking local-profiles, .local-tools and result.json.
+This verifies no hidden profile/test prerequisite, not an actual image build. Native upload/plate/GX/archive regression tests
 remain ephemeral-loopback/fake or separately labelled offline evidence.
 
 Run `python3 -m unittest discover -s tests -v`, existing Node checks, then on the
 actual host `docker compose config` (and with the slicing/profile options),
 `docker compose up --build`, browser/login/worker and small offline Slice/GX.
 Do not share rendered config/logs containing private IPs or login passwords.
+An additional **native host2.3.0 offline trial of the tracked source** succeeded:
+`.tmp/bundled-profile-captures/20261115T191337Z-5747bc86426a`, generated review cube,
+84303-byte output, no priming issues, zero printer sessions. All3 runtime hashes
+match the old local03 bytes and remained unchanged. This is not a container trial.
 Container build/slicing, browser/LAN login and physical server deployment remain
 unverified here because no Docker/Podman runtime is available. A real target/
 upload/start trial still requires deliberate user operation/supervision.
