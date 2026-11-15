@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
 const path = require("node:path");
-const elements = new Map(), posts = [], xhrs = [];
+const elements = new Map(), posts = [], xhrs = [], documentHandlers = {};
 let failNextPost = false;
 const config = {token: "test-token", target: "127.0.0.1:9000", upload_enabled: true,
     slicing_enabled: true, sliced_upload_enabled: false, job_controls_enabled: true, model_limit: 64 * 1024 ** 2, print_limit: 8 * 1024 ** 2};
@@ -24,7 +24,7 @@ class XHR {
     finish(next) { state = next; this.status = 200; this.responseText = JSON.stringify(next); this.onload(); }
 }
 const context = {
-    document: {getElementById: element},
+    document: {getElementById: element, addEventListener(name, fn) {documentHandlers[name]=fn;} },
     XMLHttpRequest: XHR,
     confirm: () => { throw new Error("No browser confirmation dialogs allowed"); },
     clearTimeout: id => fakeWindowTimers.delete(id),
@@ -86,6 +86,11 @@ async function main() {
     assert.equal(element("save").disabled, true);
     assert.equal(element("remote").value, "model.gcode");
     assert.equal(element("quality-settings").disabled, false);
+    documentHandlers['finder-model-preparing']({detail:true});await flush();
+    assert.equal(element('slice').disabled,true,'preparing geometry blocks overlapping jobs immediately');
+    const beforePreview=posts.length;click('slice');await flush();assert.equal(posts.length,beforePreview);
+    documentHandlers['finder-model-preparing']({detail:false});await flush();
+    assert.equal(element('slice').disabled,false,'cached state is reconciled after preparation/abort');
     assert.equal(element("brim-width").disabled, true);
     element("brim-mode").value = "outer";
     element("brim-mode").handlers.change();

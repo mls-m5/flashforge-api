@@ -2,11 +2,19 @@
 (() => {
     const el = id => document.getElementById(id);
     let config, state = {busy: false, phase: "empty"}, pending = false, uncertain = false;
-    let timer = null, polling = false;
+    let timer = null, polling = false, modelPreparing = false;
+    if (document.addEventListener) document.addEventListener('finder-model-preparing', event => {
+        // Defer rendering to avoid reentering a viewer's source/abort cleanup.
+        Promise.resolve().then(() => {
+            modelPreparing = Boolean(event.detail);
+            render();
+            if (!modelPreparing && !uncertain) refresh(); // after abort the bounded worker may still be finishing
+        });
+    });
     let printerTimer = null, printerPolling = false, monitorPending = false, printerReport = {};
     function renderMonitor() {
         el("monitor-start").disabled = Boolean(!config || !config.active_monitor_enabled || monitorPending || printerPolling ||
-            pending || polling || state.busy || uncertain || printerReport.monitor_running || printerReport.monitor_stopping);
+            pending || polling || modelPreparing || state.busy || uncertain || printerReport.monitor_running || printerReport.monitor_stopping);
         // Stopping observation is independent of file/job actions; never POST /api/stop.
         el("monitor-stop").disabled = Boolean(!config || !config.active_monitor_enabled || monitorPending || !printerReport.monitor_running);
     }
@@ -50,10 +58,10 @@
     function render() {
         // Notify the independent viewer immediately on local slot/job transitions.
         if (document.dispatchEvent && typeof CustomEvent !== "undefined") {
-            document.dispatchEvent(new CustomEvent("finder-artifact-state", {detail: {...state, busy: state.busy || pending || uncertain}}));
+            document.dispatchEvent(new CustomEvent("finder-artifact-state", {detail: {...state, busy: state.busy || pending || modelPreparing || uncertain}}));
         }
         renderMonitor();
-        const busy = pending || polling || state.busy || uncertain || monitorPending;
+        const busy = pending || polling || modelPreparing || state.busy || uncertain || monitorPending;
         el("file").disabled = busy || state.phase !== "empty";
         el("discard").disabled = busy || state.phase === "empty";
         el("slice").disabled = busy || !config || !config.slicing_enabled || state.phase !== "model_ready";
@@ -129,7 +137,7 @@
         } finally { polling = false; render(); }
     }
     async function action(operation, body) {
-        if (pending || polling || monitorPending || state.busy || uncertain) return;
+        if (pending || polling || modelPreparing || monitorPending || state.busy || uncertain) return;
         pending = true; clearTimeout(timer); text("error", ""); render();
         let accepted = false;
         try {
@@ -145,7 +153,7 @@
         if (accepted) await refresh();
     }
     function receive(file) {
-        if (!config || pending || polling || monitorPending || state.busy || uncertain || state.phase !== "empty" || !file) return;
+        if (!config || pending || polling || modelPreparing || monitorPending || state.busy || uncertain || state.phase !== "empty" || !file) return;
         const stl = /\.(stl|3mf)$/i.test(file.name);
         if (!/\.(stl|3mf|gx|gcode|g)$/i.test(file.name) || !file.size || file.size > (stl ? config.model_limit : config.print_limit)) {
             text("error", "Choose a nonempty STL/3MF (up to 64 MiB) or GX/G-code/G (up to 8 MiB)."); return;

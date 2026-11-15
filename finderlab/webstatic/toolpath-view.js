@@ -66,9 +66,27 @@ export class ToolpathView {
         primary.geometry.computeBoundingBox(); this.bounds = primary.geometry.boundingBox.clone();
         this.filter(Infinity, false); this.reset();
     }
+    setModel(data) {
+        this.clear();
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(data.positions, 3));
+        geometry.setAttribute('normal', new THREE.BufferAttribute(data.normals, 3));
+        geometry.computeBoundingBox();
+        const center = geometry.boundingBox.getCenter(new THREE.Vector3());
+        const mesh = new THREE.Mesh(geometry, new THREE.MeshNormalMaterial({side: THREE.DoubleSide}));
+        // Display-only placement, not a model transform exported to the slicer.
+        mesh.position.set(-center.x, -center.y, -geometry.boundingBox.min.z);
+        mesh.userData.kind = 'model'; this.paths.push(mesh); this.scene.add(mesh);
+        this.bounds = geometry.boundingBox.clone().translate(mesh.position); this.reset();
+    }
+    wireframe(enabled) {
+        for (const path of this.paths) if (path.userData.kind === 'model') path.material.wireframe = enabled;
+        this.render();
+    }
     filter(height, showTravel) {
         this.maximum = height; this.showTravel = showTravel;
         for (const path of this.paths) {
+            if (path.userData.kind === 'model') continue;
             path.visible = path.userData.kind !== 1 || showTravel;
             path.material.uniforms.maximumHeight.value = Number.isFinite(height) ? height : 1e9;
         }

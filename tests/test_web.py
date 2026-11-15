@@ -39,6 +39,8 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
         if method == "POST":
             base.update({"Content-Type": "application/json", "Origin": "http://" + self.server.authority,
                          "X-Finder-Token": self.server.token})
+        if path == "/api/model":
+            base["X-Finder-Token"] = self.server.token
         if getattr(self, "authorization", None):
             base["Authorization"] = self.authorization
         base.update(headers or {})
@@ -281,7 +283,7 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
         with patch("finderlab.web.FinderClient") as connect:
             for path in ("/", "/app.js", "/manual.js", "/style.css", "/preview.js", "/toolpath-worker.js",
                          "/toolpath-view.js", "/vendor/three/three.module.min.js", "/vendor/three/OrbitControls.js",
-                         "/vendor/three/LICENSE", "/api/config", "/api/state",
+                         "/vendor/three/LICENSE", "/model-preview.js", "/model-worker.js", "/api/model", "/api/config", "/api/state",
                          "/api/printer-status", "/api/manual-state", "/api/artifact"):
                 code, body = await self.request("GET", path, headers={"Authorization": ""})
                 self.assertEqual(code, 401, path)
@@ -746,6 +748,86 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             client.assert_not_called()
         self.assertTrue(state["sliced"])
         self.assertEqual((await self.request("GET","/api/artifact"))[1],PAYLOAD)
+
+    async def test_stl_model_preview_before_and_after_slice_keeps_original_source(self):
+        self.configure_fake_orca()
+        raw=(b"solid synthetic\nfacet normal 0 0 1\nouter loop\n"
+             b"vertex 0 0 0\nvertex 1 0 0\nvertex 0 1 0\nendloop\nendfacet\nendsolid synthetic\n")
+        with patch("finderlab.web.FinderClient") as client:
+            self.assertEqual((await self.request("GET","/api/model"))[0],404)
+            await self.file("part.stl",raw)
+            source_hash=hashlib.sha256(raw).hexdigest();tag='"'+source_hash+'"'
+            self.assertTrue(self.server.work.state["model"])
+            self.assertEqual((await self.request("GET","/api/model",headers={"X-Finder-Token":""}))[0],403)
+            code,body=await self.request("GET","/api/model",headers={"If-Match":tag})
+            self.assertEqual(code,200);self.assertEqual(body,raw)
+            self.assertEqual((await self.request("GET","/api/model",headers={"If-Match":'"old"'}))[0],412)
+            await self.post("/api/slice",{"confirm":True});state=await self.finish()
+            self.assertNotEqual(state["sha256"],source_hash)
+            self.assertEqual(state["source_sha256"],source_hash)
+            self.assertEqual((await self.request("GET","/api/model",headers={"If-Match":tag}))[1],raw)
+            self.assertEqual((await self.request("GET","/api/artifact"))[1],PAYLOAD)
+            client.assert_not_called()
+
+    async def test_3mf_model_preview_is_bounded_cached_geometry_without_native_or_printer(self):
+        from test_3mf import package
+        with patch("finderlab.web.FinderClient") as client,patch("finderlab.web.slice_model") as slicer:
+            await self.file("part.3mf",package(extra={"Metadata/preset":"start_gcode=M112"}))
+            tag='"'+self.server.work.state["source_sha256"]+'"'
+            code,body=await self.request("GET","/api/model",headers={"If-Match":tag})
+            self.assertEqual(code,200);self.assertEqual(len(body),134);self.assertNotIn(b"M112",body)
+            cached=self.server.work.model_cache[0]
+            self.assertTrue(cached.is_file())
+            with patch("asyncio.create_subprocess_exec",side_effect=AssertionError("cache should be reused")):
+                self.assertEqual((await self.request("GET","/api/model",headers={"If-Match":tag}))[1],body)
+            self.assertEqual(self.server.work.state["phase"],"model_ready")
+            self.assertFalse(self.server.work.state["busy"])
+            await self.post("/api/discard",{"confirm":True})
+            self.assertFalse(cached.exists())
+            self.assertEqual((await self.request("GET","/api/model"))[0],404)
+            client.assert_not_called();slicer.assert_not_called()
+        self.assertEqual(list(self.server.work.folder.glob("captures/*")),[])
+
+    async def test_unsupported_3mf_model_preview_does_not_break_source_slot(self):
+        await self.file("bad.3mf",b"invalid archive")
+        self.assertEqual((await self.request("GET","/api/model"))[0],422)
+        self.assertFalse(self.server.work.state["busy"])
+        self.assertEqual(self.server.work.state["phase"],"model_ready")
+        self.assertIsNone(self.server.work.model_cache)
+        self.assertFalse((self.server.work.slot/"model-preview.stl").exists())
+
+    async def test_model_preview_cleanup_io_error_still_restores_slot_state(self):
+        from test_3mf import package
+        from unittest.mock import AsyncMock
+        from types import SimpleNamespace
+        await self.file("part.3mf",package())
+        process=SimpleNamespace(returncode=1,communicate=AsyncMock(return_value=(b"{}",None)))
+        with patch("asyncio.create_subprocess_exec",new=AsyncMock(return_value=process)),patch.object(Path,"unlink",side_effect=OSError("read-only filesystem")):
+            with self.assertRaises(OSError): await self.server.work.model_geometry()
+        self.assertFalse(self.server.work.state["busy"])
+        self.assertEqual(self.server.work.state["phase"],"model_ready")
+        self.assertTrue(self.server.work.source.exists())
+
+    async def test_model_preview_cancel_reaps_converter_and_unlocks_slot(self):
+        from test_3mf import package
+        from finderlab.web import WebError
+        from unittest.mock import AsyncMock
+        from types import SimpleNamespace
+        await self.file("part.3mf",package())
+        entered=asyncio.Event()
+        async def communicate():
+            entered.set();await asyncio.Event().wait()
+        process=SimpleNamespace(pid=123456,returncode=None,communicate=communicate,wait=AsyncMock())
+        with patch("asyncio.create_subprocess_exec",new=AsyncMock(return_value=process)),patch("finderlab.web.os.killpg") as kill:
+            task=asyncio.create_task(self.server.work.model_geometry())
+            await asyncio.wait_for(entered.wait(),2)
+            self.assertTrue(self.server.work.state["busy"])
+            with self.assertRaises(WebError): self.server.work.discard()
+            task.cancel();await asyncio.gather(task,return_exceptions=True)
+            kill.assert_called_once_with(123456,signal.SIGKILL)
+            process.wait.assert_awaited_once()
+        self.assertFalse(self.server.work.state["busy"])
+        self.assertEqual(self.server.work.state["phase"],"model_ready")
 
     async def test_preview_artifact_identity_and_static_routes_are_read_only(self):
         from finderlab.web import STATIC_FILES

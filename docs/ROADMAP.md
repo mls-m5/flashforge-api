@@ -306,6 +306,16 @@ See [ORCA_FINDER_DRAFT_03.md](ORCA_FINDER_DRAFT_03.md). Host2.5/native GUI outpu
 and physical changed-startup acceptance are still pending. Active status polling
 is now implemented separately above; the next requested GUI work is manual controls.
 
+Latest user report repeats the fixed-purge overlap after the successful G-code
+preview. A stable read-only snapshot of the new temporary-named download in
+`upload/` (Orca 2.5 header, 1071336 bytes) still has draft02's fixed X−25→55/Y−20
+prime. Offline linear interpretation finds 21 first-layer extrusion segments
+whose XY centreline crosses that prime. This is nominal XY overlap, not measured
+collision/firmware behavior; the temporary filename is not completion evidence.
+No raw file/profile change or printer connection was made. The user prioritized
+input-model preview first; fixing priming is queued next, not silently promoted
+to the untested draft03 startup. Keep the draft02/draft03 experiments distinct.
+
 The user reports the current fixed purge line lies inside the footprint of some
 larger prints and asks to record this for the next change, not interrupt current
 status work. The present draft02 uses holder-derived fixed priming geometry;
@@ -435,8 +445,22 @@ printer file discovery/fetch, model arrangement, volume simulation, sequence
 playback, image export or GX generator. Backend/CLI confirmations and operation
 policies remain; browser button clicks now initiate directly without popups.
 See PREVIEW.md for license/provenance, parser/resource limits and tests.
-Rendered-browser/WebGL/LAN module acceptance is pending; automated HTTP/parser /
-controller checks and private offline file parses are not GPU/physical evidence.
+The user reports the basic G-code view is useful; broader WebGL/control/LAN
+acceptance remains pending. Agent automated HTTP/parser/controller checks and
+private offline file parses are not rendered-GPU/physical evidence.
+
+## Input-model preview implemented before future arrangement
+
+The user liked G-code preview but clarified that original STL geometry should
+be viewable before Slice. A separate STL/core3MF mesh view now provides camera
+orbit/zoom/pan, dimensions, wireframe and visual-only centered/on-bed placement.
+It preserves original source identity through Slice and retains the G-code view
+for comparison. Token-protected model GETs stream STL or prepare a bounded
+private geometry-only 3MF cache in an isolated/reaped Python worker; no Orca,
+printer/client, source/profile edit or new capture. Workspace/job guards remain.
+See MODEL_PREVIEW.md for tests and actual ephemeral HTTP 3MF trial. Browser/GPU
+acceptance is pending. Model editing/scale/rotation/face-to-bed/multiple models
+remain future work; the repeated fixed-purge issue is queued above, not changed.
 
 ## Deferred work
 

@@ -1,5 +1,14 @@
 # Local toolpath preview — linear paths, not print approval
 
+## Input mesh view added separately
+
+The page now also previews the original STL/supported3MF before Slice, with
+solid mesh/wireframe and camera controls. Source identity remains independent
+of generated G-code. See MODEL_PREVIEW.md for the token-protected model endpoint,
+bounded isolated 3MF derivative/cache and limits. The descriptions below concern
+the existing read-only toolpath view. The user reports that view is useful;
+new model-view/browser/GPU/second-device acceptance remains pending.
+
 ## Current milestone
 
 The web page now has a modular read-only Three.js view of the **current server
@@ -12,8 +21,8 @@ Restart the web backend when no Slice/Save is active and reload the browser.
 Use the same launchers and LAN password as before. No npm install, CDN, online
 font or external model service is involved. Three.js requires a browser with
 WebGL2; if initialization/parsing fails the error is visible and file/slicer /
-printer controls remain independent. Actual rendered-browser/GPU/second-device
-acceptance is pending: tests here use Node and fresh loopback HTTP only.
+printer controls remain independent. The user reports the G-code view is useful; the agent's tests still use Node
+and fresh loopback HTTP only, not rendered-browser/GPU acceptance.
 
 ## View controls
 
@@ -115,6 +124,8 @@ node tests/test_manual_ui.js
 node tests/test_toolpath_worker.js
 node tests/test_preview_ui.js
 node tests/test_toolpath_view.js
+node tests/test_model_worker.js
+node tests/test_model_preview_ui.js
 ```
 
 Worker tests cover modes/E resets/retraction, unknown origins, inch conversion,

@@ -34,7 +34,7 @@ MODEL_LIMIT = 64 * 1024 * 1024
 CAPTURE_LIMIT = 64 * 1024 * 1024
 STORAGE_LIMIT = 256 * 1024 * 1024
 STATIC_FILES = {"/": ("index.html", "text/html; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
-for _name in ("app.js", "manual.js", "preview.js", "toolpath-view.js", "toolpath-worker.js",
+for _name in ("app.js", "manual.js", "preview.js", "toolpath-view.js", "toolpath-worker.js", "model-preview.js", "model-worker.js",
               "vendor/three/three.module.min.js", "vendor/three/OrbitControls.js"):
     STATIC_FILES["/" + _name] = (_name, "text/javascript; charset=utf-8")
 STATIC_FILES["/vendor/three/LICENSE"] = ("vendor/three/LICENSE", "text/plain; charset=utf-8")
@@ -121,6 +121,7 @@ class Workbench:
         self.manual_controls = None
         self.owned_printer = None
         self.manual_capture = ""
+        self.model_cache = None
         self.state = self.empty()
         # Do not let two servers operate the same workspace at once.
         import fcntl
@@ -137,7 +138,7 @@ class Workbench:
                 "size": 0, "name": "", "error": "", "warning": "", "capture": "",
                 "sha256": "", "sliced": False, "artifact": False, "slicer_log": "",
                 "suggested_name": "", "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested", "slicer_stage": "", "slice_settings": None,
-                "effective_quality": None}
+                "effective_quality": None, "model": False, "source_sha256": ""}
 
     def capacity(self, reserve):
         if self.monitor and self.monitor.capture and not self.monitor.capture.closed:
@@ -191,7 +192,8 @@ class Workbench:
             self.source = path
             self.artifact = path if suffix not in (".stl", ".3mf") else None
             self.state.update(phase="model_ready" if suffix in (".stl", ".3mf") else "file_ready",
-                              size=length, sha256=digest.hexdigest(), artifact=self.artifact is not None,
+                              size=length, sha256=digest.hexdigest(), source_sha256=digest.hexdigest(),
+                              model=suffix in (".stl", ".3mf"), artifact=self.artifact is not None,
                               suggested_name=suggested_name(name))
         except BaseException:
             shutil.rmtree(self.slot, ignore_errors=True)
@@ -206,7 +208,51 @@ class Workbench:
         if self.slot:
             shutil.rmtree(self.slot)
         self.source = self.artifact = self.slot = None
+        self.model_cache = None
         self.state = self.empty()
+
+    async def model_geometry(self):
+        """Input geometry only; never a slicer/client. Source identity survives Slice."""
+        self.idle()
+        if not self.source or not self.state["model"]:
+            raise WebError(404, "No STL/3MF source model")
+        if self.source.suffix == ".stl":
+            return self.source, 0
+        if self.model_cache and self.model_cache[0].is_file():
+            return self.model_cache
+        self.model_cache = None
+        from .model_3mf import MAX_TRIANGLES
+        max_derived = min(MODEL_LIMIT, 84 + MAX_TRIANGLES * 50)
+        self.capacity(max_derived + 4096)
+        previous = self.state["phase"]
+        self.state.update(busy=True, phase="model_preview")
+        destination = self.slot / "model-preview.stl"
+        process = None
+        try:
+            import sys
+            process = await asyncio.create_subprocess_exec(
+                sys.executable, "-m", "finderlab.model_3mf", str(self.source), str(destination),
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL, start_new_session=True,
+                cwd=Path(__file__).resolve().parents[1])
+            async with asyncio.timeout(20):
+                output, _ = await process.communicate()
+            if process.returncode != 0 or len(output) > 512 * 1024:
+                raise WebError(422, "3MF model preview failed or exceeded resources; export mesh-only STL if unsupported")
+            info = json.loads(output)
+            if not destination.is_file() or not 0 < destination.stat().st_size <= max_derived:
+                raise WebError(422, "Invalid geometry preview output")
+            self.model_cache = destination, info["zero_area_facets_skipped"]
+            return self.model_cache
+        finally:
+            try:
+                if process is not None and process.returncode is None:
+                    try: os.killpg(process.pid, signal.SIGKILL)
+                    except ProcessLookupError: pass
+                    await process.wait()
+                if self.model_cache is None:
+                    destination.unlink(missing_ok=True)
+            finally:
+                self.state.update(busy=False, phase=previous)
 
     def start(self, operation, data):
         self.idle()
@@ -551,6 +597,22 @@ class WebServer:
                     await self.reply(writer, 200, self.work.manual_snapshot())
                 elif uri.path == "/api/state":
                     await self.reply(writer, 200, self.work.state)
+                elif uri.path == "/api/model":
+                    # This read can prepare a bounded private 3MF derivative: require
+                    # the per-run token to prevent cross-site image/GET work triggers.
+                    if not secrets.compare_digest(headers.get("x-finder-token", ""), self.token):
+                        raise WebError(403, "Reload the page before requesting model preview")
+                    self.work.idle()
+                    tag = '"' + self.work.state["source_sha256"] + '"'
+                    if "if-match" in headers and headers["if-match"] != tag:
+                        raise WebError(412, "Source model changed; reload model preview")
+                    path, skipped = await self.work.model_geometry()
+                    with path.open("rb") as file:
+                        async with asyncio.timeout(30):
+                            await self.head(writer, 200, "application/octet-stream", path.stat().st_size,
+                                            'ETag: ' + tag + '\r\nX-Skipped-Facets: ' + str(skipped) + '\r\n')
+                            while chunk := file.read(65536):
+                                writer.write(chunk); await writer.drain()
                 elif uri.path == "/api/artifact":
                     self.work.idle()
                     if not self.work.artifact:

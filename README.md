@@ -71,6 +71,17 @@ Verify the proxy target and close FlashPrint/other clients first. Use
 cancel a print; the offline launcher and passive watcher remain disconnected. The proxy is not a safety
 filter and the new candidate's physical startup remains unverified.
 
+## Inspect the model before slicing
+
+After selecting STL/supported3MF, the input model now appears in a separate
+3D mesh view **before Slice**. Orbit/zoom/pan the camera, inspect dimensions or
+switch wireframe. Display centering/on-bed translation is visual only; it does
+not edit the file or choose Orca's placement. The original mesh stays available
+after slicing, separately from the G-code result below. Model rotation, scale,
+face-to-bed and multi-model arrangement are still future work. See
+[docs/MODEL_PREVIEW.md](docs/MODEL_PREVIEW.md). Restart backend/reload browsers;
+new model-view rendered-browser/GPU acceptance remains pending.
+
 ## Inspect the current toolpath
 
 After Slice or selecting a server-side print file, a local Three.js view now
@@ -236,6 +247,8 @@ node tests/test_manual_ui.js
 node tests/test_toolpath_worker.js
 node tests/test_preview_ui.js
 node tests/test_toolpath_view.js
+node tests/test_model_worker.js
+node tests/test_model_preview_ui.js
 ```
 
 Tests use ephemeral loopback ports and never connect to a physical printer. Generated test files use the ignored project-local `.tmp/` directory and are cleaned up; do not use the system temporary directory for project work. No third-party dependencies are required. One integration test retains the uploader's existing three-second pause.

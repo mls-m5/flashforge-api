@@ -20,5 +20,13 @@ async function main(){
  assert(v.camera.near>0 && v.camera.far>v.camera.near);
  let disposed=0;for(const p of v.paths){p.geometry.addEventListener('dispose',()=>disposed++);p.material.addEventListener('dispose',()=>disposed++);}
  v.clear();assert.equal(v.paths.length,0);assert.equal(disposed,6);
+ const vertices=new Float32Array([10,20,30,11,20,30,10,21,30]);
+ v.setModel({positions:vertices,normals:new Float32Array([0,0,1,0,0,1,0,0,1])});
+ assert.equal(v.paths.length,1);assert.equal(v.paths[0].isMesh,true);
+ assert.deepEqual(v.paths[0].position.toArray(),[-10.5,-20.5,-30]);
+ assert.deepEqual(v.bounds.min.toArray(),[-.5,-.5,0]);
+ assert.equal(vertices[0],10,'display-only placement never modifies source vertices');
+ v.wireframe(true);assert.equal(v.paths[0].material.wireframe,true);
+ v.filter(.2,false);assert.equal(v.paths[0].visible,true);
  console.log('Vendored Three geometry batching, height uniforms, camera and disposal checks passed (no GPU).');
 }main().catch(e=>{console.error(e);process.exitCode=1;});

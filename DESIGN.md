@@ -134,6 +134,19 @@ Browser popups are removed by explicit user request. The initiating button click
 is consent; API confirm fields, backend locks/policies/identity/READY gates and
 no-auto-start/no-retry remain. Persistent labels replace modal reminders.
 
+### Independent source-model mesh preview
+
+The source hash/model identity is retained separately from the generated print
+artifact. `model-preview.js` uses fixed config/state/model GETs; the model read
+requires a token because 3MF may prepare a local derived STL cache. Conversion
+runs in a bounded/reaped Python worker, never Orca/client, reserves workspace
+capacity, blocks overlapping local operations and restores state on failure.
+STL streams unchanged. Discard removes its cache. Browser geometry parsing is
+bounded/off-thread; the shared Three scene accepts a shaded mesh/wireframe with
+visual-only centered/on-bed translation, without mutating source/slicer input.
+No model editing/arranging/face selection yet. See MODEL_PREVIEW.md for limits,
+source/artifact generation guards, lifecycle tests and browser acceptance gaps.
+
 ### Optional private-LAN access
 
 `web_access.py` validates explicit specific-interface LAN opt-in, restricts

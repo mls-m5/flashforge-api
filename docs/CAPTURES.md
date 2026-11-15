@@ -123,7 +123,7 @@ server profile/effective-setting hashes remain independent. Private scratch
 conversion is cleaned up, not source-modified. Reports/bounds can reveal model
 geometry and must remain private. See 3MF.md for importer limits and native trial.
 
-## Browser preview is derived in-memory only
+## Browser toolpath preview is derived in-memory only
 
 Preview GETs read cached state and the bounded current artifact, not printer
 storage/status. Worker geometry stays in browser memory; no new capture/event,
@@ -132,6 +132,17 @@ state hash; it is not remote-printer readback. Parser warnings and rendering
 never certify protocol/physical behavior. See PREVIEW.md for limits and local
 MIT dependency provenance. LAN authentication covers modules, worker and vendor
 assets; no credentials/model data are sent to a CDN.
+
+## Source model preview cache (not a raw capture)
+
+The separate model view streams original STL, or prepares one bounded private
+3MF geometry STL in the current slot using an isolated stdlib worker. It creates
+no capture, native Orca call or printer session. The derivative counts toward
+workspace quota and is removed on discard. Source SHA survives slicing and
+serves as the model ETag/If-Match identity, not the derivative's byte hash.
+Token protection is required even on model GETs because these may prepare a
+cache; LAN authentication/Host/peer guards remain. No raw recording or input is
+edited. See MODEL_PREVIEW.md for subprocess/resource/cancellation limits.
 
 ## Offline numerical review reports
 

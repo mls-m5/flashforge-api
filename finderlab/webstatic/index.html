@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Finder · local workbench</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/manual.js" defer></script><script type="module" src="/preview.js"></script></head>
+<title>Finder · local workbench</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/manual.js" defer></script><script type="module" src="/preview.js"></script><script type="module" src="/model-preview.js"></script></head>
 <body><main>
 <header><p class="eyebrow">LOCAL · EXPERIMENTAL · FINDER V1.5</p><h1>Prepare. Save. You decide.</h1>
 <p>Prepare a model, review the output, then explicitly save it to Finder. Nothing starts printing automatically.</p></header>
@@ -44,6 +44,15 @@
 <p id="selection">One file at a time. Choosing a file only stores it locally.</p>
 <label>Browser → local server <progress id="incoming" max="100" value="0"></progress></label>
 <button id="discard" disabled>Discard current file</button></section>
+<section><h2>Model preview <span>· original STL / 3MF</span></h2>
+<label><input id="model-enabled" type="checkbox" checked> Show input model before slicing</label>
+<p id="model-message" role="status">Choose an STL/3MF.</p><div id="model-canvas" aria-label="3D input model view"></div>
+<p id="model-dimensions"></p>
+<label><input id="model-wireframe" type="checkbox"> Wireframe</label>
+<button id="model-fit">Fit camera</button><button id="model-reload">Reload model · no slicing</button>
+<p>Drag to orbit the camera, scroll/pinch to zoom, right-drag/two-finger drag to pan. Only the display is centered and placed on the nominal plate; source bytes and slicer placement are unchanged. STL units are assumed mm; 3MF units/build transforms are imported.</p>
+<p>This is original geometry, not the compensated/sliced result below. No model rotation, scaling, face-to-bed selection, multi-part arrangement or collision validation yet. 3MF components/extensions unsupported by our geometry importer still fail explicitly.</p>
+</section>
 <section><h2>2 <span>Slice and review</span></h2>
 <p id="orca">Orca configuration loading…</p><p id="slice-status" role="status">Choose an STL/3MF, then click Slice.</p>
 <p class="warning">No print-ready Finder Orca profile ships here. The original Sailfish draft is rejected; a separate experimental Marlin-emission draft now slices offline but is NOT approved for printing. Successful slicing is not proof of safe toolpaths. No silent Marlin substitution or disabled validity checks.</p>

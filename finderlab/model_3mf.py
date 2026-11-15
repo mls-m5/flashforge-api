@@ -181,3 +181,21 @@ def _convert(source, destination, max_output):
     return {"source_model_part": model_name, "triangles": count, "zero_area_facets_skipped": skipped, "bounds_mm": dict(zip("XYZ",bounds)),
             "size": 84+count*50, "sha256": digest.hexdigest(), "embedded_settings_loaded": False,
             "note": "Geometry-only flattened STL; project presets/modifiers/material assignments are not imported. Orca arranges/ensures on bed as before."}
+
+
+if __name__ == "__main__":
+    # Isolated web geometry-preview worker, never a slicer or printer client.
+    import json
+    from pathlib import Path
+    import resource
+    import sys
+    resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024,) * 2)
+    resource.setrlimit(resource.RLIMIT_CPU, (15, 15))
+    resource.setrlimit(resource.RLIMIT_FSIZE, (64 * 1024 * 1024,) * 2)
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    try:
+        result = geometry_to_stl(Path(sys.argv[1]), Path(sys.argv[2]))
+        print(json.dumps(result))
+    except Exception as exc:
+        print(json.dumps({"error": (str(exc) or type(exc).__name__)[:2000]}))
+        sys.exit(1)
