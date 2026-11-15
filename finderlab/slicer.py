@@ -140,7 +140,7 @@ def _work_size(work, limit):
 
 
 async def _run(executable, arguments, work, config, capture, *, stage, timeout):
-    label = {"geometry_transform":"Geometry transform", "priming_review":"Priming review"}.get(stage, f"Orca {stage}")
+    label = {"geometry_transform":"Geometry transform", "priming_review":"Priming review", "gx_export":"GX export"}.get(stage, f"Orca {stage}")
     command = [executable, *map(str, arguments)]
     capture.event("slicer_command", stage=stage, argv=command)
     wrapper = Path(__file__).with_name("_slicer_worker.py")
@@ -349,6 +349,15 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
                 raise SliceError("Output changed during priming review; refusing publication")
             if report["candidate_issues"]:
                 raise SliceError("Priming review rejected candidate: " + "; ".join(report["candidate_issues"]))
+        # Export metadata belongs to these exact snapshots/output, not later edits
+        # to server profiles. Unsupported estimates disable GX, never fail Slice.
+        from .gx import metadata_from_orca
+        try:
+            gx_metadata = metadata_from_orca(data,effective_process,json.loads((work / 'filament.json').read_bytes()))
+            gx_error = ''
+        except (ValueError,TypeError,KeyError,OverflowError) as exc:
+            gx_metadata = None;gx_error = str(exc)
+        capture.manifest['metadata'].update(gx_metadata=gx_metadata,gx_unavailable=gx_error)
         result = SliceResult(output, len(data), hashlib.sha256(data).hexdigest())
         capture.event("slicer_result", output=str(output), size=result.size, sha256=result.sha256,
                       toolpaths_validated=False)

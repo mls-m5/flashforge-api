@@ -4,7 +4,7 @@
     let config, state = {busy: false, phase: "empty"}, pending = false, uncertain = false;
     let timer = null, polling = false, modelPreparing = false, modelDraft = null;
     function adoptState(next) {
-        if (next.source_id !== state.source_id) el('remote').value = next.suggested_name || '';
+        if (next.source_id !== state.source_id || next.suggested_name !== state.suggested_name) el('remote').value = next.suggested_name || '';
         state = next;
     }
     if (document.addEventListener) document.addEventListener('finder-state-observed', event => {
@@ -99,6 +99,16 @@
         el('save').textContent = startAfter ? `Save + start ${el('remote').value || 'selected file'} on ${endpoint} · may heat/move` : `Save to ${endpoint} · no start`;
         if (state.phase === "empty") el("incoming").value = 0;
         el("download").hidden = !state.artifact || busy;
+        el('create-gx').disabled = Boolean(busy || !state.sliced || !state.artifact || state.saved || state.gx_generated || !state.gx_metadata || state.phase === 'unknown');
+        el('gx-thumbnail').hidden = !state.gx_generated || busy;
+        const thumbnail = state.gx_generated && !busy ? '/api/gx-thumbnail?v='+state.sha256 : '';
+        if (el('gx-thumbnail').getAttribute) {
+            if (thumbnail && el('gx-thumbnail').getAttribute('src') !== thumbnail) el('gx-thumbnail').src = thumbnail;
+            if (!thumbnail) el('gx-thumbnail').removeAttribute('src');
+        }
+        text('gx-status',state.gx_generated ? 'GX ready: shaded source-mesh thumbnail, unchanged G-code body. Experimental printer-display compatibility; not print-safety validation.' :
+            state.busy && state.phase === 'gx_export' ? 'Rendering the 3D thumbnail and packaging GX locally…' :
+            state.gx_metadata ? 'Optional GX export available. Separate click; no upload or start.' : (state.gx_unavailable || 'Slice a model first; standalone print files are not repackaged here.'));
         text("selection", state.name || "One file at a time. Choosing a file only stores it locally.");
         text("phase", uncertain ? "HTTP response unknown — refresh before continuing" : state.phase);
         text("hash", state.sha256);
@@ -162,9 +172,9 @@
         pending = true; clearTimeout(timer); text("error", ""); render();
         let accepted = false;
         try {
-            state = await request("/api/" + operation, {method: "POST", headers: {
+            adoptState(await request("/api/" + operation, {method: "POST", headers: {
                 "Content-Type": "application/json", "X-Finder-Token": config.token
-            }, body: JSON.stringify(body)});
+            }, body: JSON.stringify(body)}));
             accepted = true;
         } catch (error) {
             uncertain = true;
@@ -254,6 +264,7 @@
         }
         action("slice", body);
     });
+    el('create-gx').addEventListener('click',()=>action('gx',{confirm:true,artifact_sha256:state.sha256,source_id:state.source_id}));
     el('start-after-upload').addEventListener('change', render);
     el('remote').addEventListener('input', render);
     el("save").addEventListener("click", () => {

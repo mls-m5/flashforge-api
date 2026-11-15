@@ -431,7 +431,7 @@ Plan:
 
 ## Slicing and GX/thumbnail production: remaining validation
 
-The optional Orca CLI adapter foundation is now implemented (see above); native/profile validation and GX generation remain outstanding. Keep independent stages: model → CLI slicer → reviewed Finder-compatible G-code → optional GX container/thumbnail → explicit upload → optional separately confirmed start.
+The optional Orca CLI adapter foundation is now implemented (see above); native/profile validation remains outstanding. Experimental GX/CPU-thumbnail export was subsequently implemented below; physical container/display acceptance remains pending. Keep independent stages: model → CLI slicer → reviewed Finder-compatible G-code → optional GX container/thumbnail → explicit upload → optional separately confirmed start.
 
 - Candidate slicers include Slic3r-derived CLI tools such as PrusaSlicer; choose after checking the actual binary/version and Finder profile compatibility, not merely CLI availability. [PrusaSlicer CLI documentation](https://github.com/prusa3d/PrusaSlicer/wiki/Command-Line-Interface) is a starting reference, not an installed/verified integration.
 - The user reports Prusa-generated files colliding with build-surface borders and completed prints. Treat coordinate system, build envelope, homing, extrusion mode, start/end commands and safe end-of-job behavior as **hardware-test blockers** until compared with known-working FlashPrint output/settings for this printer. No generic start/end script or guessed safe parking move should be shipped.
@@ -534,6 +534,26 @@ unchanged; no agent hardware contact. New browser/WebGL controls, host2.5 and
 physical placement remain user-run acceptance. Face picker, mouse gizmos,
 nonuniform scale and multiple-model editor remain future work; fixed priming is
 still separately queued, not promoted to the offline draft03 by this work.
+
+## Experimental GX export and CPU 3D miniature implemented
+
+The user requested generation of GX with a 3D-rendered miniature. After a second
+local ffslicer1.30.0 Finder envelope inspection and externally labelled format
+notes, a separate web action now renders a source-mesh grayscale80×60 BMP and
+packages unchanged G-code bytes. Unknown header constants are scoped to the two
+local files, not universal firmware fields. Slice stores optional exact-output/
+effective-profile metadata; missing estimates disable GX rather than inventing
+time/usage or failing Slice. Source/artifact/receipt identity, bounded process,
+complete export capture, generated-output permissions and real extension checks
+protect the staged workflow; no automatic export/Save/Start or printer connection.
+The page shows the embedded bitmap; an offline create_gx.py tool is also provided.
+
+See GX_GENERATION.md for header/resource/mathematical limits, capture provenance
+and native2.3 ephemeral HTTP3MF→Slice→GX trial20261115T134620Z-857b24dab220 with
+exact body equality/unchanged profiles and zero printer sessions. Source mesh
+miniature does not reproduce auto-arrangement/support/compensation or validate
+safety. Physical Finder image/header, host2.5 metadata variants and rendered
+browser/LAN image acceptance remain pending; no agent hardware approval.
 
 ## Deferred work
 

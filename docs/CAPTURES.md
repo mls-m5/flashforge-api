@@ -128,6 +128,25 @@ capture improves reproducibility, not print safety.
 
 Generated `sliced.gcode` is retained under the run directory by default, or at standalone slice's explicit `--output`. It has a **separate** size bound (`--max-file-size`) and is outside `--max-capture-bytes`; original profiles/model snapshots and native temporary data are cleaned from project-local `.tmp/`. Raw slicer log chunks are bounded independently and count toward the existing event/log quota. Full details and trust limits: [SLICING.md](SLICING.md).
 
+## GX export provenance
+
+Successful Slice now retains optional `gx_metadata` and `gx_unavailable` in
+manifest metadata, derived from exact effective snapshots and output estimates.
+Unsupported metadata disables export, not Slice. Explicit POST gx uses a separate
+mode`gx`/operation`gx` recording: original code/model snapshot hashes, typed
+metadata/transform, helper commands/logs and `gx_result` size/SHA, exact code and
+BMP SHA, rendering method/bounds/count, auto-arrangement mismatch marker and
+`firmware_validated:false`. Complete capture is required before new file
+publication; a recorded candidate does not itself prove publication or print
+safety. Finalized slice/export/raw captures are never amended by later Save.
+Web export reserves8MiB output plus capture space; export record1MiB, worker
+512MiB/30s or smaller caps, raster12M-work limit. Scratch snapshots/3MF-derived
+STL/report are cleaned; selected GX and original G-code remain private until
+discard, capture remains retained. Exports create no printer sessions; they
+cannot bypass generated-output controls. Raw model/image/metadata can identify
+private geometry and must not be committed. See GX_GENERATION.md for scope,
+actual native/HTTP capture ID and header evidence/unknown fields.
+
 ## Geometry-only 3MF provenance
 
 3MF slicing keeps the original archive hash/size in `slicing_inputs.model`.
@@ -218,6 +237,7 @@ Event types currently emitted:
 - `status_snapshot`: optional active-monitor parsed status batch with completion timestamp (raw stream still authoritative);
 - `manual_virtual_intent`: synthetic owned-dummy control intent/before/candidate, no wire command and not physical-motion evidence;
 - `slicer_settings`, `slicer_command`, `slicer_output`, `slicer_exit`, `slicer_result`: optional Orca/helper stages described above;
+- `gx_result`: optional offline container/CPU-thumbnail candidate evidence, no firmware/safety assertion;
 - `geometry_import`, `geometry_transform`, `priming_review`: optional geometry-only3MF import, manual-layout and first-layer review metadata; no printer session or safety certification.
 
 Each event includes `v`, monotonically increasing `seq`, `session_id` (or null for run-level events), UTC timestamp and `monotonic_ns` elapsed since capture start. Sequence order is logging order, not proof of causality between simultaneous directions.

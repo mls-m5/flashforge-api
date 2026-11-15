@@ -75,6 +75,17 @@ default; the adapter's optional `settings` argument is independently validated.
 Native2.3 cube trial verifies actual Brim paths/0.12mm layers with5mm outer brim,
 not physical adhesion performance or every model's fit/clearance.
 
+## Optional subsequent GX export
+
+Slice still produces plain G-code without rewriting its bytes. It now retains
+optional `gx_metadata` from exact effective snapshots and supported output time/
+filament estimates, or a `gx_unavailable` reason. This does not affect successful
+slicing. A separate explicit web action/offline tool renders a CPU source-mesh
+miniature and packages experimental GX, with independent identity/resource /
+recording checks. CLI `slice`/`upload --slice` remain unchanged and do not export
+GX implicitly. See GX_GENERATION.md for the observed envelope, header unknowns,
+no automatic-arrangement reproduction and pending physical compatibility.
+
 ## Opt-in native-skirt candidate guard
 
 `--check-priming` / `SliceConfig.check_priming=True` now runs a bounded stdlib

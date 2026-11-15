@@ -141,7 +141,7 @@ class Workbench:
                 "sha256": "", "sliced": False, "artifact": False, "slicer_log": "",
                 "suggested_name": "", "saved_name": "", "save_id": "", "start_attempted": False, "job_result": "not_requested", "slicer_stage": "", "slice_settings": None,
                 "effective_quality": None, "model": False, "source_sha256": "", "source_id": "", "model_transform": None, "start_after_upload": False,
-                "save_capture": "", "start_capture": ""}
+                "save_capture": "", "start_capture": "", "gx_metadata": None, "gx_unavailable": "Slice a model first", "gx_generated": False}
 
     def capacity(self, reserve):
         if self.monitor and self.monitor.capture and not self.monitor.capture.closed:
@@ -259,10 +259,11 @@ class Workbench:
 
     def start(self, operation, data):
         self.idle()
-        if operation not in ("slice", "save", "start", "stop"):
+        if operation not in ("slice", "save", "start", "stop", "gx"):
             raise WebError(400, "Unknown operation")
         allowed = ({"confirm", "remote_name", "start_after_upload", "artifact_sha256", "source_id"} if operation == "save" else {"confirm", "save_id"} if operation == "start"
-                   else {"confirm", "settings", "transform", "source_sha256", "source_id"} if operation == "slice" else {"confirm"})
+                   else {"confirm", "settings", "transform", "source_sha256", "source_id"} if operation == "slice"
+                   else {"confirm", "artifact_sha256", "source_id"} if operation == "gx" else {"confirm"})
         if set(data) - allowed or data.get("confirm") is not True:
             raise WebError(400, "Explicit confirmation and only documented fields are required")
         if operation in ("start", "stop"):
@@ -283,6 +284,15 @@ class Workbench:
             return
         if self.source is None:
             raise WebError(409, "Choose a file first")
+        if operation == 'gx':
+            if (not self.config.slicing or not self.state['sliced'] or not self.artifact or self.state['saved']
+                    or self.state['phase'] == 'unknown' or self.state['gx_generated'] or not self.state['gx_metadata']):
+                raise WebError(409,'GX needs an unsaved successful model Slice with supported metadata; existing print files cannot be repackaged here')
+            if data.get('artifact_sha256') != self.state['sha256'] or data.get('source_id') != self.state['source_id']:
+                raise WebError(409,'Artifact/slot changed; refresh before creating GX')
+            self.capacity(PRINT_LIMIT + 2*1024*1024)
+            self.state.update(busy=True,phase='gx_export',error='',warning='')
+            self.task=asyncio.create_task(self._operation(operation,data));return
         if operation == "slice":
             if not self.config.slicing:
                 raise WebError(409, "Orca is not configured; no validated Finder profile ships with this page")
@@ -324,8 +334,9 @@ class Workbench:
                 remote_path(name)
             except ValueError as exc:
                 raise WebError(400, str(exc)) from exc
-            if self.state["sliced"] and Path(name).suffix.lower() not in (".gcode", ".g"):
-                raise WebError(400, "Plain sliced G-code cannot be renamed to GX")
+            if self.state["sliced"] and ((self.state['gx_generated'] and Path(name).suffix.lower() != '.gx')
+                                         or (not self.state['gx_generated'] and Path(name).suffix.lower() not in ('.gcode','.g'))):
+                raise WebError(400, "Selected generated format requires its actual extension; renaming is not conversion")
         self.capacity(CAPTURE_LIMIT + PRINT_LIMIT + (JOB_CAPTURE_LIMIT if data.get("start_after_upload") else 0) + 1024 * 1024)
         self.state.update(busy=True, phase="slicing" if operation == "slice" else "connecting", error="", warning="", capture="")
         if operation == "save":
@@ -408,8 +419,8 @@ class Workbench:
         confirmed = None
         follow_start = False
         try:
-            capture = WebCapture(self.folder / "captures", "slice" if operation == "slice" else "client", state=self.state,
-                              max_bytes=JOB_CAPTURE_LIMIT if operation in ("start", "stop") else CAPTURE_LIMIT, max_sessions=1,
+            capture = WebCapture(self.folder / "captures", "slice" if operation == "slice" else "gx" if operation == 'gx' else "client", state=self.state,
+                              max_bytes=JOB_CAPTURE_LIMIT if operation in ("start", "stop", "gx") else CAPTURE_LIMIT, max_sessions=1,
                               metadata={"operation": operation, "start_requested": operation == "start" or combined,
                                         "start_after_upload": combined or data.get("_after_upload", False),
                                         "source_id": self.state["source_id"], "expected_artifact_sha256": data.get("artifact_sha256"),
@@ -421,12 +432,24 @@ class Workbench:
             if operation == "start":
                 capture.manifest["metadata"].update(saved_name=self.state["saved_name"], save_id=self.state["save_id"],
                                                        save_capture=self.state["save_capture"], saved_sha256=self.state["sha256"])
-            if operation == "slice":
+            if operation == 'gx':
+                from .gx_export import export_gx
+                destination=self.artifact.with_suffix('.gx')
+                info=await export_gx(self.artifact,self.source,destination,self.config.slicing,capture=capture,
+                                     metadata=self.state['gx_metadata'],transform=self.state['model_transform'],
+                                     expected_gcode_sha256=data['artifact_sha256'],expected_model_sha256=self.state['source_sha256'])
+                self.artifact=destination
+                self.state.update(phase='review',gx_generated=True,size=info['size'],sha256=info['sha256'],
+                                  suggested_name=Path(self.state['suggested_name']).with_suffix('.gx').name,
+                                  warning='Experimental GX envelope/thumbnail; printer display/firmware acceptance not verified. G-code body unchanged.')
+            elif operation == "slice":
                 result = await slice_model(self.source, self.slot / self.state["suggested_name"], self.config.slicing,
                                            capture=capture, settings=self.state["slice_settings"], transform=self.state["model_transform"])
                 self.artifact = result.path
                 self.state.update(phase="review", sliced=True, artifact=True, size=result.size, sha256=result.sha256,
-                                  effective_quality=capture.manifest["metadata"].get("effective_quality"))
+                                  effective_quality=capture.manifest["metadata"].get("effective_quality"),
+                                  gx_metadata=capture.manifest['metadata'].get('gx_metadata'),
+                                  gx_unavailable=capture.manifest['metadata'].get('gx_unavailable','Unsupported metadata'))
                 capture.manifest["metadata"]["slicing_confirmed"] = True
             else:
                 network = True
@@ -463,7 +486,7 @@ class Workbench:
             self.state.update(phase="unknown" if network else "failed", error=str(exc) or type(exc).__name__)
             if operation in ("start", "stop"):
                 self.state["job_result"] = operation + "_unknown" if network else "not_sent"
-            if capture and not capture.failed:
+            if capture and not capture.failed and not capture.closed:
                 try:
                     capture.event("error", phase=self.state["phase"], error_type=type(exc).__name__, message=str(exc))
                 except OSError:
@@ -622,13 +645,13 @@ class WebServer:
                         return
                     if uri.path == "/api/discard" and set(data) == {"confirm"} and data["confirm"] is True:
                         self.work.discard()
-                    elif uri.path in ("/api/slice", "/api/save", "/api/start", "/api/stop"):
+                    elif uri.path in ("/api/slice", "/api/save", "/api/start", "/api/stop", "/api/gx"):
                         self.work.start(uri.path.removeprefix("/api/"), data)
                     else:
                         raise WebError(404, "Unknown operation")
                 await self.reply(writer, 200, self.work.state)
             else:
-                if uri.query or int(headers.get("content-length", "0")) != 0:
+                if (uri.query and uri.path != '/api/gx-thumbnail') or int(headers.get("content-length", "0")) != 0:
                     raise WebError(400, "Unexpected query/body")
                 if uri.path == "/api/config":
                     await self.reply(writer, 200, {"token": self.token, "target": f"{self.config.client.host}:{self.config.client.port}",
@@ -663,6 +686,18 @@ class WebServer:
                                             'ETag: ' + tag + '\r\nX-Skipped-Facets: ' + str(skipped) + '\r\n')
                             while chunk := file.read(65536):
                                 writer.write(chunk); await writer.drain()
+                elif uri.path == '/api/gx-thumbnail':
+                    self.work.idle()
+                    if not self.work.artifact or not self.work.state['gx_generated']:
+                        raise WebError(404,'No generated GX thumbnail')
+                    # Hash-bound URL avoids showing an older slot during another tab's edits.
+                    if uri.query != 'v='+self.work.state['sha256']:
+                        raise WebError(412,'GX identity changed; refresh before viewing thumbnail')
+                    with self.work.artifact.open('rb') as source:
+                        prefix=source.read(14512)
+                    if len(prefix)!=14512 or prefix[:12]!=b'xgcode 1.0\n\0' or prefix[58:60]!=b'BM':
+                        raise WebError(422,'Generated thumbnail is unavailable')
+                    await self.reply(writer,200,prefix[58:14512],'image/bmp')
                 elif uri.path == "/api/artifact":
                     self.work.idle()
                     if not self.work.artifact:
@@ -712,7 +747,7 @@ class WebServer:
         writer.write((f"HTTP/1.1 {status} Response\r\nContent-Type: {kind}\r\nContent-Length: {length}\r\n"
                       "Connection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n"
                       "Referrer-Policy: no-referrer\r\n"
-                      "Content-Security-Policy: default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'\r\n"
+                      "Content-Security-Policy: default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'\r\n"
                       + extra + "\r\n").encode("ascii"))
         await asyncio.wait_for(writer.drain(), 10)
 

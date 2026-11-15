@@ -85,7 +85,7 @@
 </fieldset><p id="applied-quality"></p>
 <button id="slice" disabled>Slice model offline</button> <a id="download" href="/api/artifact" hidden>Download print file for review</a>
 <p>3MF imports core mesh geometry only. Embedded printer, filament, layer settings and start/end code are not loaded. Components/advanced extensions are rejected; export STL if unsupported. Orca arranges the imported geometry as before.</p>
-<p>Buttons act immediately without confirmation popups. Slice remains separate. Save can request start afterward; standalone Start remains available. No GX generation or toolpath safety validator is implemented.</p>
+<p>Buttons act immediately without confirmation popups. Slice remains separate. Save can request start afterward; standalone Start remains available. Optional GX packaging below creates a thumbnail, not a toolpath safety validation.</p>
 <details><summary>Latest Orca diagnostic excerpt (private)</summary><pre id="slicer-log">No Orca output recorded yet.</pre></details></section>
 <section><h2>Toolpath preview <span>· current server artifact</span></h2>
 <label><input id="preview-enabled" type="checkbox" checked> Load preview automatically after slicing / selecting a print file</label>
@@ -100,6 +100,11 @@
 <pre id="preview-warnings"></pre>
 <p class="warning">Linear command-coordinate lines only, not solid printed material or physical simulation. Homing/offset paths, unsupported commands and unknown origins are omitted; warnings matter. Grid is a nominal centered 140 mm reference, not measured clearance. Preview does not authorize printing or prove collision safety.</p>
 </section>
+<section><h2>GX export <span>· optional after Slice</span></h2>
+<p>Create an experimental Finder GX with a locally rendered 80×60 shaded 3D mesh miniature. The G-code body stays byte-for-byte unchanged. Uses the sliced model/transform and captured estimates, not your current camera. In automatic-arrange mode the miniature need not reproduce Orca’s rotation/placement. No browser/GPU service or external upload is needed.</p>
+<button id="create-gx" disabled>Create GX + 3D thumbnail · no upload/start</button><p id="gx-status" role="status">Slice a model first.</p>
+<img id="gx-thumbnail" width="160" height="120" hidden alt="Generated grayscale GX miniature of source mesh">
+<p class="warning">Generated GX display/firmware acceptance is not yet verified on the physical Finder. Wrapping cannot make unsafe G-code safe. Creating GX selects it for Download and later explicit Save; original G-code stays retained. Existing saved/unknown files cannot be converted.</p></section>
 <section><h2>3 <span>Save · optionally start after upload</span></h2>
 <label for="remote">Remote ASCII basename (may overwrite an existing file)</label><input id="remote" type="text" maxlength="128" placeholder="sample.gx" autocomplete="off">
 <label><input id="start-after-upload" type="checkbox" checked disabled> Start print when upload completes · may heat/move</label>

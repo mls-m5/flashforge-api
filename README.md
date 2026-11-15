@@ -99,6 +99,18 @@ initial mesh view; new editor/browser/host2.5 acceptance remains pending.
 Restart backend/reload browsers. Standard launchers now use native skirt that follows the first-layer footprint;
 custom startup/homing still needs review. Inspect G-code before Save/Start.
 
+## Create GX with a 3D miniature
+
+After a supported Slice, click **Create GX + 3D thumbnail · no upload/start**.
+The local CPU renderer generates an80×60 grayscale mesh miniature and a real
+experimental GX envelope; **G-code body bytes remain unchanged**. The page shows
+the bitmap and selects `.gx` for Download/later explicit Save. Generation itself
+never uploads/starts, and generated-output/server job gates still apply. Restart
+backend/reload browsers. Physical Finder screen/header acceptance remains
+unverified; source-mesh miniature does not simulate supports/brim or print safety.
+See [docs/GX_GENERATION.md](docs/GX_GENERATION.md) for header evidence, metadata,
+limits, standalone tool and actual offline native/HTTP trial.
+
 ## Inspect the current toolpath
 
 After Slice or selecting a server-side print file, a local Three.js view now
@@ -151,7 +163,7 @@ python3 -m finderlab upload "upload/example.gcode" --start
 
 Test against the dummy first. This flag may heat/move a real printer or a printer behind a proxy. It starts only after successful save and READY validation, never after a failed/uncertain upload, and never appends an automatic stop. Format support is **not** conversion, G-code safety validation or proof of physical firmware support for every extension.
 
-Read [docs/CLIENT.md](docs/CLIENT.md) for proxy/direct hardware trials, safety confirmations, status/start/stop commands, errors and persistent client logs. A hardware trial requires physical supervision and explicit approval; non-loopback targets also require `--allow-hardware`. Orca slicing integration is optional and requires separately installed Orca plus explicit profiles; verified Finder-profile and GX/thumbnail generation remain deferred—use a known-working FlashPrint file for initial hardware trials. The old `upload.py` remains unchanged and is not the new client.
+Read [docs/CLIENT.md](docs/CLIENT.md) for proxy/direct hardware trials, safety confirmations, status/start/stop commands, errors and persistent client logs. A hardware trial requires physical supervision and explicit approval; non-loopback targets also require `--allow-hardware`. Orca slicing integration is optional and requires separately installed Orca plus explicit profiles; verified Finder-profile and physical generated-GX acceptance remain outstanding—use a known-working FlashPrint file for initial hardware trials. The old `upload.py` remains unchanged and is not the new client.
 
 ## Slice STL with Orca (offline first)
 
@@ -166,7 +178,7 @@ python3 -m finderlab slice upload/model.stl \
   --output upload/model-review.gcode
 ```
 
-For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native Orca 2.3.0 help/capability probing succeeds after approved runtime installation. A copied/edited local Finder draft now passes structural checks but native slicing is blocked by rejected Sailfish flavor; see [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md). A separate user-approved [draft 02](docs/ORCA_FINDER_DRAFT_02.md) now slices a generated cube and the supplied holder natively with 2.3.0, including an explicit slow Z layer-change step after detecting mixed-XYZ overspeed. These are offline review artifacts, **not approved for printing**; original profiles remain unchanged. Physical/motion/profile validation is still outstanding; automated orchestration tests continue using a fake CLI. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation, the probe reference and the newer 2.5.0 build's ABI blocker. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The standalone page exposes the same optional adapter with separate slice/review/save steps; GX/thumbnail creation and a validated Finder profile are not implemented.
+For a combined workflow, use `upload upload/model.stl --slice` with those same profile/executable options and your dummy's `--port`. Slicer failure prevents all printer connections; printing is still opt-in. No reviewed Finder 2 Orca profile ships yet. Native Orca 2.3.0 help/capability probing succeeds after approved runtime installation. A copied/edited local Finder draft now passes structural checks but native slicing is blocked by rejected Sailfish flavor; see [docs/ORCA_FINDER_DRAFT_01.md](docs/ORCA_FINDER_DRAFT_01.md). A separate user-approved [draft 02](docs/ORCA_FINDER_DRAFT_02.md) now slices a generated cube and the supplied holder natively with 2.3.0, including an explicit slow Z layer-change step after detecting mixed-XYZ overspeed. These are offline review artifacts, **not approved for printing**; original profiles remain unchanged. Physical/motion/profile validation is still outstanding; automated orchestration tests continue using a fake CLI. See [docs/ORCA_INSTALL.md](docs/ORCA_INSTALL.md) for host installation, the probe reference and the newer 2.5.0 build's ABI blocker. See [docs/SLICING.md](docs/SLICING.md) for profile/inheritance requirements, logs, resource limits and remaining host validation. The standalone page exposes the same optional adapter with separate slice/review/save steps; a separate experimental GX/CPU-thumbnail export now follows a supported Slice (see docs/GX_GENERATION.md), but a validated Finder profile is not provided.
 
 For offline review of placement-aware priming, `./tools/start_skirt_test.sh`
 selects separate draft03 with a native skirt instead of the fixed purge line.
@@ -279,6 +291,7 @@ node tests/test_model_preview_ui.js
 node tests/test_model_transform.js
 node tests/test_model_editor_integration.js
 node tests/test_start_after_upload_ui.js
+node tests/test_gx_ui.js
 ```
 
 Tests use ephemeral loopback ports and never connect to a physical printer. Generated test files use the ignored project-local `.tmp/` directory and are cleaned up; do not use the system temporary directory for project work. No third-party dependencies are required. One integration test retains the uploader's existing three-second pause.

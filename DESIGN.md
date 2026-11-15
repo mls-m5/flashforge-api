@@ -111,7 +111,7 @@ Implemented client contract: `.gx`/`.gcode`/`.g` byte-preserving transfer (no co
 
 ### Optional slicing stage
 
-`finderlab/slicer.py` exposes a separate async STL → plain G-code adapter. `slice` invokes it offline; upload's `--slice` invokes it before opening a printer session. Trusted self-contained JSON profiles, isolated datadir/workspace, capability probing, bounded output/logs/time/address space, process-group cleanup and a per-workspace single-job lock prevent accidental fallback to arbitrary shell options or unbounded concurrent jobs. These are resource/orchestration boundaries, not a native-code security sandbox or motion-safety check. Logs/hash provenance share the capture lifecycle; generated output is separately size-bounded. No fallback guessed Finder profile, G-code rewriting, GX wrapping, thumbnail generation or automatic start is introduced. See [docs/SLICING.md](docs/SLICING.md). Native Orca 2.3.0 now generates geometry for the separately authorized offline draft 02. It is not a validated motion profile; the original Sailfish draft still fails. See [docs/ORCA_FINDER_DRAFT_02.md](docs/ORCA_FINDER_DRAFT_02.md) for actual trials, E/reset ownership and the layer-change Z split. Tests use a fake CLI and dummy printers; no reviewed Finder profile is available.
+`finderlab/slicer.py` exposes a separate async STL → plain G-code adapter. `slice` invokes it offline; upload's `--slice` invokes it before opening a printer session. Trusted self-contained JSON profiles, isolated datadir/workspace, capability probing, bounded output/logs/time/address space, process-group cleanup and a per-workspace single-job lock prevent accidental fallback to arbitrary shell options or unbounded concurrent jobs. These are resource/orchestration boundaries, not a native-code security sandbox or motion-safety check. Logs/hash provenance share the capture lifecycle; generated output is separately size-bounded. No fallback guessed Finder profile, G-code rewriting or automatic start is introduced by slicing. GX wrapping/thumbnail generation now exists as a separate explicit offline export stage described below. See [docs/SLICING.md](docs/SLICING.md). Native Orca 2.3.0 now generates geometry for the separately authorized offline draft 02. It is not a validated motion profile; the original Sailfish draft still fails. See [docs/ORCA_FINDER_DRAFT_02.md](docs/ORCA_FINDER_DRAFT_02.md) for actual trials, E/reset ownership and the layer-change Z split. Tests use a fake CLI and dummy printers; no reviewed Finder profile is available.
 
 ### Standalone web workbench
 
@@ -154,6 +154,22 @@ at Slice. Native2.3 coordinate-preservation trials passed; new browser/host2.5
 acceptance remains pending. Gizmos/face picking/multiple models remain future.
 See MODEL_PREVIEW.md and MODEL_TRANSFORMS.md for limits, mathematical contract,
 source/artifact generation guards, tests and fixed-purge/clearance limitations.
+
+### Explicit experimental GX packaging and CPU miniature
+
+After a successful supported model Slice, the page offers a separate GX action.
+The slicer retains optional header metadata from exact effective snapshots/output
+estimates (failure disables export, not Slice). A bounded stdlib helper renders
+80×60 grayscale mesh/BMP and the observed two-sample Finder envelope, retaining
+G-code bytes exactly. Source/artifact/receipt hashes, snapshot transforms and
+complete export capture gate new artifact selection. No printer call or auto
+Slice/Save/Start; generated GX keeps sliced provenance and upload capability
+restrictions. Existing print files are not repackaged by the web API. Local
+CPU rendering avoids browser/GPU/external dependency; source mesh fits the
+camera but auto-arrangement/support/compensation are not reproduced. Separate
+GET serves only the current hash-bound bitmap under LAN auth and self-only img
+CSP. See GX_GENERATION.md for unknown constants, external-vs-local evidence,
+resource/process limits, native offline trial and pending physical acceptance.
 
 ### Optional private-LAN access
 

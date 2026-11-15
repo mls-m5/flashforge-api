@@ -286,6 +286,22 @@ agent hardware actions. No new physical/host2.5 evidence is inferred. Earlier
 native03 observations remain the scoped evidence; current tests inspect launcher
 argv without native/printer execution. See PRIMING_REVIEW.md.
 
+## GX-EXPORT-025 — Observed envelope, software-rendered miniature, no hardware trial
+
+A second local provided file `cube-20x20x5.gx` reports ffslicer1.30.0/Finder and
+matches the earlier holder's 58-byte envelope constants/80×60 BMP offsets,
+including unknown final u16=1 (different from some external descriptions).
+External GuiderII/other-device notes support estimated metadata interpretation,
+not Finder2 validation. The experimental writer uses scoped observed constants,
+current job estimates/effective snapshots and exact original G-code bytes; no
+copied job-specific metadata or code rewriting. Local stdlib z-buffer rendering
+produces the embedded grayscale source-mesh miniature. Physical generated-file
+header/image acceptance remains unknown. See GX_GENERATION.md for offset facts,
+external citations, resource limits and native2.3 HTTP trial
+20261115T134620Z-857b24dab220 (zero printer sessions/body bytes identical).
+No CRC/framing/start/end/firmware or hardware command was changed/tested. A new
+web export is an explicit offline action, not Save/start or print-safety evidence.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.
