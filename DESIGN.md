@@ -226,6 +226,19 @@ Original input hash and derived geometry hash/bounds/count/skipped zero-area
 facets are captured separately. See 3MF.md for limits and native user-tool trial.
 No printer/network operations occur during import or slicing.
 
+### Opt-in nominal priming review before publication
+
+The independent03 experiment now has a bounded stdlib first-layer diagnostic /
+pre-publication guard (`priming_review.py`, trusted `--check-priming` option).
+It checks declared tagged linear deposition, first native skirt, no fixed XY
+startup extrusion, centreline intersections/gaps and conservative nominal±69mm
+bounds. A native exit0 edge counterexample motivated the guard; failure leaves
+no artifact for Save + start. No rewriting, physical/swept-volume simulation or
+new protocol behavior. Source/report SHA, helper resource limits, private
+capture metadata and full raw outputs remain separate. Normal02 selection is
+unchanged; the03 offline/owned-dummy launcher enables the guard and still refuses
+proxy mode pending changed-startup acceptance. See PRIMING_REVIEW.md.
+
 ### Per-slice quality settings
 
 `slice_settings.py` validates only layer height, brim mode/width and bounded

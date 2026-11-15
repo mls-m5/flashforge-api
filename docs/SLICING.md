@@ -75,6 +75,20 @@ default; the adapter's optional `settings` argument is independently validated.
 Native2.3 cube trial verifies actual Brim paths/0.12mm layers with5mm outer brim,
 not physical adhesion performance or every model's fit/clearance.
 
+## Opt-in native-skirt candidate guard
+
+`--check-priming` / `SliceConfig.check_priming=True` now runs a bounded stdlib
+first-layer review after native output and before publication. It requires a
+matching nominal centred140mm profile, native Skirt first, no startup XY
+extrusion/intersection and first-layer deposition within a conservative±69mm
+margin. Unsupported/ambiguous/large data fails without an artifact. This is
+experimental nominal-path review, **not** a physical or whole-job safety gate.
+No generated G-code rewriting, disabled validity checks or printer query. See
+PRIMING_REVIEW.md for limits/metadata, exact-tool trials and the native exit0
+edge counterexample. Draft03's offline/owned-dummy launcher enables it; normal
+02/raw CLI defaults are unchanged. The flag requires slicing, cannot be toggled
+by HTTP, and does not approve the changed startup for hardware.
+
 ## Offline first
 
 From the repository root, using your own reviewed profile files:

@@ -105,12 +105,13 @@
         text("capture", state.capture);
         text("warning", state.warning);
         text("slice-status", state.busy && state.phase === "slicing" ?
-            (state.slicer_stage === "geometry_transform" ? "Applying model transforms…" : state.slicer_stage === "slice" ? "Slicing model…" : "Checking the Orca CLI…") :
+            (state.slicer_stage === 'priming_review' ? 'Checking first-layer priming and nominal margin…' : state.slicer_stage === "geometry_transform" ? "Applying model transforms…" : state.slicer_stage === "slice" ? "Slicing model…" : "Checking the Orca CLI…") :
             state.sliced && state.artifact ? `Slice completed: ${state.size} bytes. Download below for offline review; this is not print approval.` :
             state.phase === "failed" && state.slicer_stage ? "Slice failed. See the diagnostic excerpt below." :
             state.artifact ? "Existing print file ready; no slicing needed." : "Choose an STL/3MF, then click Slice. No slicing starts automatically.");
         const excerpt = state.slicer_log || (state.sliced && state.artifact ?
             "Orca finished successfully without additional slice output. Download and review the generated file." : "No Orca output recorded yet.");
+        if (config && config.priming_review_enabled) text('priming-notice','Experimental native-skirt candidate: first-layer overlap/nominal margin checks enabled before artifact publication. Changed startup is not physically validated; homing, head/clip clearance and bead behavior remain unmodeled.');
         text("slicer-log", (state.error ? "Operation error: " + state.error + "\n\n" : "") + excerpt);
         text("bytes", `${state.acknowledged || 0} / ${state.size || 0} bytes acknowledged`);
         el("outgoing").value = state.size ? 100 * (state.acknowledged || 0) / state.size : 0;

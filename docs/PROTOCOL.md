@@ -261,6 +261,19 @@ commands and no repeat; UI tests cover changed default and explicit save-only.
 This is orchestration policy, not new Finder hardware/protocol evidence or
 agent hardware authorization. See START_AFTER_UPLOAD.md.
 
+## SLICER-PRIMING-023 — Offline exact-tool comparison and exit0 edge counterexample
+
+Native Orca2.3.0/unchanged private02 vs03, no printer sessions: the supplied tool
+at manual centre reproduces21 fixed-prime/first-layer XY pair intersections with02;
+03 native skirt first/no startup extrusion yields no skirt/object/brim crossings,
+also with brim and moved/rotated layout. An unguarded mesh-fitting edge placement
+nevertheless exited0 with skirt X72.105. The new opt-in pre-publication diagnostic
+guard rejects that output; its nominal±69mm margin/intersection criteria are not
+hardware or whole-job clearance validation. Actual captures/metrics are in
+PRIMING_REVIEW.md. No CRC/framing/firmware/parser timing inferred or changed,
+no physical connection/print or profile-default promotion.03 changes startup and
+still needs a separate informed host/physical acceptance decision.
+
 ## FP-M650-001 — User-reported FlashPrint connection attempt
 
 - **Evidence:** user-provided mock log, dated `2026-11-12 14:29:22` (timezone unknown). No raw capture, FlashPrint version, OS or real-printer firmware was supplied.

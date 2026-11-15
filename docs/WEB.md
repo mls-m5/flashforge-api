@@ -62,6 +62,18 @@ Our server profiles and typed web overrides still own those settings. No direct
 guessed; export STL if unsupported. See [3MF.md](3MF.md) for bounds and the
 supplied tool's successful native offline trial (no printer sessions).
 
+## Experimental placement-aware priming review
+
+The separate `./tools/start_skirt_test.sh` now enables `--check-priming` with
+private03: native skirt replaces fixed purge around the first-layer footprint,
+also with brim/manual layout. The bounded helper refuses crossing/missing skirt
+and out-of-nominal-margin deposition before exposing a downloadable/saveable
+artifact. Native exit0 alone was observed allowing an out-of-bounds skirt; see
+PRIMING_REVIEW.md for proof and limits. This is not whole-job/physical clearance
+validation.03 still changes startup, stays offline/owned-dummy in this launcher
+and refuses proxy mode; normal/proxy/LAN remains02 pending an informed changed-
+startup decision and host/physical acceptance. HTTP cannot disable the guard.
+
 ## Printer status
 
 **Changed default:** `./tools/start_proxy_web.sh` starts active status polling

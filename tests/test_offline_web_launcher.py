@@ -54,6 +54,7 @@ class LauncherTests(unittest.TestCase):
             (separate / (kind + ".json")).write_text('{}')
         with patch.object(launcher, "SKIRT_PROFILE", separate):
             command = launcher.build_command(native_skirt_test=True)
+            self.assertIn('--check-priming',command)
             self.assertEqual(command[command.index("--machine")+1], str(separate / "machine.json"))
             for flag in ("--enable-upload", "--enable-job-controls", "--allow-sliced-upload"):
                 self.assertNotIn(flag, command)

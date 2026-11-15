@@ -49,8 +49,11 @@ class SliceConfig:
     max_work_bytes: int = 256 * MIB
     max_log_bytes: int = MIB
     memory_mib: int = 4096
+    check_priming: bool = False
 
     def __post_init__(self):
+        if type(self.check_priming) is not bool:
+            raise SliceError("check_priming must be boolean")
         if not math.isfinite(self.timeout) or self.timeout <= 0:
             raise SliceError("slice-timeout must be positive and finite")
         for key in ("max_model_size", "max_output_size", "max_work_bytes", "max_log_bytes", "memory_mib"):
@@ -137,7 +140,7 @@ def _work_size(work, limit):
 
 
 async def _run(executable, arguments, work, config, capture, *, stage, timeout):
-    label = "Geometry transform" if stage == "geometry_transform" else f"Orca {stage}"
+    label = {"geometry_transform":"Geometry transform", "priming_review":"Priming review"}.get(stage, f"Orca {stage}")
     command = [executable, *map(str, arguments)]
     capture.event("slicer_command", stage=stage, argv=command)
     wrapper = Path(__file__).with_name("_slicer_worker.py")
@@ -306,7 +309,7 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
         capture.manifest["metadata"]["orca_executable"] = executable
         capture.manifest["metadata"]["slicing_limits"] = {
             key: getattr(config, key) for key in ("timeout", "max_model_size", "max_output_size",
-                                                 "max_work_bytes", "max_log_bytes", "memory_mib")
+                                                 "max_work_bytes", "max_log_bytes", "memory_mib", "check_priming")
         }
         _work_size(work, config.max_work_bytes)
         help_data = await _run(executable, ["--help", "--datadir", work / "data"], work, config, capture,
@@ -331,6 +334,21 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
             data = reader.read(config.max_output_size + 1)
         if not data or len(data) > config.max_output_size or b"\x00" in data or data.startswith(b"GCDE"):
             raise SliceError("Expected bounded plain G-code, not binary data")
+        if config.check_priming:
+            await _run(sys.executable, [Path(__file__).with_name("priming_review.py"), staged,
+                       work / "machine.json", work / "priming-review.json"], work,
+                       replace(config, memory_mib=min(512,config.memory_mib)), capture,
+                       stage="priming_review", timeout=min(15,config.timeout))
+            report_path = work / "priming-review.json"
+            if not report_path.is_file() or not 0 < report_path.stat().st_size <= 65536:
+                raise SliceError("Missing/oversized priming review report")
+            report = json.loads(report_path.read_bytes())
+            capture.manifest["metadata"]["priming_review"] = report
+            capture.event("priming_review", **report)
+            if report["sha256"] != hashlib.sha256(data).hexdigest():
+                raise SliceError("Output changed during priming review; refusing publication")
+            if report["candidate_issues"]:
+                raise SliceError("Priming review rejected candidate: " + "; ".join(report["candidate_issues"]))
         result = SliceResult(output, len(data), hashlib.sha256(data).hexdigest())
         capture.event("slicer_result", output=str(output), size=result.size, sha256=result.sha256,
                       toolpaths_validated=False)

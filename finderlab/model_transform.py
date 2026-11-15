@@ -91,8 +91,8 @@ def layout(vertices, transform):
     return placed, result_bounds
 
 
-def write_transformed(source, destination, transform, machine):
-    # The current editor/grid is deliberately Finder-sized, not a generic plater.
+def require_finder_profile(machine):
+    """Nominal profile match only, not a physical clearance assertion."""
     points = machine.get("printable_area", [])
     try:
         polygon = [tuple(float(x) for x in p.split("x")) for p in points]
@@ -103,7 +103,11 @@ def write_transformed(source, destination, transform, machine):
             twice_area = sum(polygon[i][0]*polygon[(i+1)%4][1]-polygon[(i+1)%4][0]*polygon[i][1] for i in range(4))
             compatible = abs(twice_area) == 39200 and float(machine["printable_height"]) == 140
     except (AttributeError, TypeError, ValueError, KeyError): compatible = False
-    if not compatible: raise ValueError("Manual layout requires a centered 140×140×140 machine profile matching the editor")
+    if not compatible: raise ValueError("This operation requires a nominal centered 140×140×140 machine profile")
+
+
+def write_transformed(source, destination, transform, machine):
+    require_finder_profile(machine)
     vertices, bounds = layout(read_stl(source), transform)
     digest = hashlib.sha256()
     with Path(destination).open("xb") as output:

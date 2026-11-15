@@ -154,6 +154,19 @@ profiles and raw recordings are not edited. Source/derived bounds can disclose
 private geometry; do not commit them. See MODEL_TRANSFORMS.md for native offline
 capture references and the remaining browser/host2.5/physical limits.
 
+## First-layer priming review provenance
+
+Opt-in `check_priming` records a bounded `priming_review` helper stage and
+`priming_review` event/metadata containing actual candidate SHA, first feature,
+segment counts, nominal first-layer XY bounds, pair intersections/gaps and
+candidate issues. `safety_validated:false` remains explicit. Rejected candidates
+produce no `slicer_result`/published artifact; capture completion only means
+recording finalized, not that native exit0 or placement was acceptable. The
+helper is bounded512MiB/15s (or smaller limits),8MiB input/2M comparisons; report
+max64KiB, SHA checked against output bytes, cleanup/reap as other stages. Raw
+input/captures/profile originals are not edited. Reports can disclose geometry
+and stay private. See PRIMING_REVIEW.md for actual native evidence/counterexample.
+
 ## Browser toolpath preview is derived in-memory only
 
 Preview GETs read cached state and the bounded current artifact, not printer
@@ -205,7 +218,7 @@ Event types currently emitted:
 - `status_snapshot`: optional active-monitor parsed status batch with completion timestamp (raw stream still authoritative);
 - `manual_virtual_intent`: synthetic owned-dummy control intent/before/candidate, no wire command and not physical-motion evidence;
 - `slicer_settings`, `slicer_command`, `slicer_output`, `slicer_exit`, `slicer_result`: optional Orca/helper stages described above;
-- `geometry_import`, `geometry_transform`: optional geometry-only3MF import and manual-layout derivative metadata; no printer session or safety certification.
+- `geometry_import`, `geometry_transform`, `priming_review`: optional geometry-only3MF import, manual-layout and first-layer review metadata; no printer session or safety certification.
 
 Each event includes `v`, monotonically increasing `seq`, `session_id` (or null for run-level events), UTC timestamp and `monotonic_ns` elapsed since capture start. Sequence order is logging order, not proof of causality between simultaneous directions.
 

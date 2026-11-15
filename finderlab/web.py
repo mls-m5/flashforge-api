@@ -633,6 +633,7 @@ class WebServer:
                 if uri.path == "/api/config":
                     await self.reply(writer, 200, {"token": self.token, "target": f"{self.config.client.host}:{self.config.client.port}",
                         "upload_enabled": self.config.enable_upload, "job_controls_enabled": self.config.enable_job_controls, "slicing_enabled": self.config.slicing is not None,
+                        "priming_review_enabled": bool(self.config.slicing and self.config.slicing.check_priming),
                         "sliced_upload_enabled": self.config.allow_sliced_upload, "print_limit": PRINT_LIMIT,
                         "model_limit": MODEL_LIMIT, "storage_limit": STORAGE_LIMIT,
                         "passive_status_enabled": self.config.status_capture is not None,
@@ -757,6 +758,7 @@ def add_web_command(commands):
     cli.add_argument("--enable-job-controls", action="store_true", help="enable separately confirmed start/cancel (may heat/move)")
     cli.add_argument("--allow-sliced-upload", action="store_true")
     cli.add_argument("--orca")
+    cli.add_argument("--check-priming", action="store_true", help="experimental native-skirt/nominal first-layer guard; no physical safety guarantee")
     for kind in ("machine", "process", "filament"):
         cli.add_argument("--" + kind, type=Path)
 
@@ -767,8 +769,9 @@ def web_main(cli, args):
             raise ValueError("--dummy owns its endpoint; do not supply target/hardware/job-control options")
         options = [args.get(k) for k in ("machine", "process", "filament")]
         slicing = None
-        if any(options) or args.get("orca"):
-            slicing = SliceConfig(**{k: args[k] for k in ("machine", "process", "filament", "orca")})
+        if any(options) or args.get("orca") or args.get("check_priming"):
+            slicing = SliceConfig(**{k: args[k] for k in ("machine", "process", "filament", "orca")},
+                                  check_priming=args.get("check_priming", False))
         config = WebConfig(host=args["listen_host"], port=args["listen_port"], data_dir=args["data_dir"],
                            lan=args["lan"], lan_network=args["lan_network"],
                            client=ClientConfig(host=args["target_host"], port=args["target_port"], allow_hardware=args["allow_hardware"]),

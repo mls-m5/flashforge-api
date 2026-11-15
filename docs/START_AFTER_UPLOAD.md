@@ -77,4 +77,5 @@ Browser/host acceptance remains user-run. Existing profile/priming/clearance and
 remote overwrite/concurrency limitations are not fixed by this checkbox. It
 is not permission to print unreviewed generated G-code or an agent hardware
 trial. In particular the existing fixed prime can still cross some models;
-placement-aware skirt review is a separate next step.
+placement-aware skirt/edge review now exists separately in PRIMING_REVIEW.md,
+but changed startup has not been promoted to the normal printer profile.

@@ -982,6 +982,25 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             client.assert_not_called()
         self.assertEqual(list(self.server.work.folder.glob("captures/*")),[])
 
+    async def test_priming_guard_failure_exposes_no_artifact_or_combined_save(self):
+        import re
+        from test_model_transform import ASCII,MACHINE
+        from test_priming_review import SKIRT
+        self.configure_fake_orca()
+        config=self.server.work.config.slicing
+        machine=json.loads(config.machine.read_bytes())|MACHINE;config.machine.write_text(json.dumps(machine))
+        bad=re.sub(r'X([+-]?\d+)',lambda m:'X'+str(int(m[1])+68),SKIRT).encode()
+        fake=Path(config.orca);fake.write_text(fake.read_text().replace(f'PAYLOAD={PAYLOAD!r}',f'PAYLOAD={bad!r}'))
+        self.server.work.config=replace(self.server.work.config,slicing=replace(config,check_priming=True),enable_job_controls=True,allow_sliced_upload=True)
+        await self.file('source.stl',ASCII)
+        with patch('finderlab.web.FinderClient') as client:
+            await self.post('/api/slice',{'confirm':True});state=await self.finish()
+            self.assertEqual(state['phase'],'failed');self.assertIn('margin',state['error'])
+            self.assertFalse(state['artifact']);self.assertEqual((await self.request('GET','/api/artifact'))[0],404)
+            self.assertEqual((await self.post('/api/save',{'confirm':True,'remote_name':'never.gcode','start_after_upload':True,
+                             'artifact_sha256':state['sha256'],'source_id':state['source_id']}))[0],409)
+            client.assert_not_called()
+
     async def test_fake_slice_then_separate_review_and_save_gate(self):
         self.configure_fake_orca()
         await self.file("model.stl", b"solid synthetic\nendsolid synthetic")

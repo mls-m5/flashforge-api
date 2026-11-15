@@ -160,7 +160,11 @@ For a combined workflow, use `upload upload/model.stl --slice` with those same p
 For offline review of placement-aware priming, `./tools/start_skirt_test.sh`
 selects separate draft03 with a native skirt instead of the fixed purge line.
 This changes startup paths; it is offline/owned-dummy only in the launcher and
-not physical-print approval. Ordinary/proxy startup remains draft02. See
+not physical-print approval. It now enables `--check-priming`, rejecting
+unsupported/overlapping/out-of-nominal-margin first-layer candidates before they
+become artifacts. Ordinary/proxy startup remains draft02 pending the changed
+physical-startup decision. See [docs/PRIMING_REVIEW.md](docs/PRIMING_REVIEW.md) for
+the exact tool/manual-placement comparisons and newly found edge failure; see
 [docs/ORCA_FINDER_DRAFT_03.md](docs/ORCA_FINDER_DRAFT_03.md).
 
 ## Observe printer status without another printer connection
@@ -186,6 +190,11 @@ python3 -m finderlab review path/to/reference.gx --assume-absolute-e
 ```
 
 Reads only: reports declared coordinates, E deltas, nominal resolved Z components, unmodeled homing and warnings. It diagnoses the old copied +363 mm E-only end step, but **does not certify collision safety or firmware compatibility**. See [docs/ORCA_FINDER_DRAFT_02.md](docs/ORCA_FINDER_DRAFT_02.md) for native output findings and the private, read-only web slicing setup. Use a new output file for review reports; never overwrite your source.
+
+For read-only first-layer priming diagnostics (tagged linear Orca subset):
+`python3 tools/check_priming.py path/to/file.gcode`. It reports nominal XY
+intersections/gaps, not collision/firmware/material safety; never connects or
+rewrites the file. See [docs/PRIMING_REVIEW.md](docs/PRIMING_REVIEW.md).
 
 ## Paused OctoPrint experiment
 

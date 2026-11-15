@@ -165,6 +165,37 @@ assert struct.unpack_from('<3f', raw, 108) == (34., -12., 0.)
         commands=[e for e in events(self.capture) if e['type']=='slicer_command']
         self.assertEqual([e['stage'] for e in commands],['geometry_transform'])
 
+    async def test_check_priming_cli_requires_slicing(self):
+        options=self.options('upload')
+        options['slice']=False;options['check_priming']=True
+        for key in ('machine','process','filament','orca'):options[key]=None
+        path=self.root/'plain.gcode';path.write_bytes(PAYLOAD);options['file']=path
+        with patch('finderlab.cli_client.FinderClient') as client:
+            with self.assertRaises(PreflightError):await self.invoke(ClientConfig(), 'upload', options)
+            client.assert_not_called()
+
+    async def test_opt_in_priming_guard_publishes_only_reviewed_candidate(self):
+        from test_priming_review import SKIRT
+        fake=self.fake.read_text().replace(f'PAYLOAD = {PAYLOAD!r}',f'PAYLOAD = {SKIRT.encode()!r}')
+        self.fake.write_text(fake)
+        await self.slice(replace(self.config,check_priming=True))
+        report=self.capture.manifest['metadata']['priming_review']
+        self.assertEqual(report['candidate_issues'],[]);self.assertFalse(report['safety_validated'])
+        self.assertEqual(self.output.read_bytes(),SKIRT.encode())
+        self.assertEqual(report['sha256'],hashlib.sha256(self.output.read_bytes()).hexdigest())
+        self.assertTrue(any(e['type']=='priming_review' for e in events(self.capture)))
+
+    async def test_opt_in_priming_guard_rejects_expanded_edge_and_fixed_prime_before_publication(self):
+        from test_priming_review import FIXED,SKIRT
+        import re
+        for payload in (FIXED,re.sub(r'X([+-]?\d+)',lambda m:'X'+str(int(m[1])+68),SKIRT)):
+            self.set_behavior('ok')
+            self.fake.write_text(self.fake.read_text().replace(f'PAYLOAD = {PAYLOAD!r}',f'PAYLOAD = {payload.encode()!r}'))
+            with self.assertRaisesRegex(SliceError,'Priming review rejected'):
+                await self.slice(replace(self.config,check_priming=True))
+            self.assertFalse(self.output.exists())
+            self.assertTrue(self.capture.manifest['metadata']['priming_review']['candidate_issues'])
+
     async def test_quality_options_only_change_private_process_snapshot(self):
         originals = {kind: getattr(self.config, kind).read_bytes() for kind in ("machine", "process", "filament")}
         check = '''

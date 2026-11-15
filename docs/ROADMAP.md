@@ -334,6 +334,23 @@ trial. The original request added no immediate motion/profile change; the separa
 candidate03 above now provides an opt-in offline experiment without touching02
 or connecting to hardware.
 
+### Exact-tool skirt/priming investigation and guard added
+
+After the checkbox implementation, the user asked to address the line under the
+model. Native2.3 comparisons reproduced21 fixed02 prime/first-layer intersections
+and zero skirt/object/brim intersections with03, also after manual scale/rotation/
+move and with brim. No profiles were edited or hardware contacted. The existing
+03 startup is still distinct from the physically observed02 startup.
+
+An important manual edge case **exited0** and produced skirt X72.105 despite mesh
+fit. New `--check-priming` trusted config now diagnoses first-layer paths and
+rejects missing/crossing skirt or deposition outside nominal±69mm before output
+publication; actual guarded rerun rejected the edge candidate with no artifact.
+The03 offline/owned-dummy launcher enables it, still refuses proxy mode; normal
+02/proxy/LAN stays unchanged pending explicit changed-startup adoption/host review
+and separately supervised physical acceptance. See PRIMING_REVIEW.md for exact
+capture IDs, limits and non-safety scope; no whole-job/firmware clearance claim.
+
 ## Web quality controls: brim/layer-height foundation
 
 User-requested GUI controls now allow profile/default, Off/Outer brim (bounded

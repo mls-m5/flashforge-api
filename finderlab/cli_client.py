@@ -15,6 +15,7 @@ SLICE_LIMITS = {"slice_timeout": "timeout", "max_model_size": "max_model_size",
 
 
 def add_slice_options(parser, *, required=False):
+    parser.add_argument("--check-priming", action="store_true", help="experimental tagged native-skirt/nominal first-layer guard before publishing output")
     parser.add_argument("--orca", help="trusted Orca CLI executable (auto-detected if omitted)")
     for kind in ("machine", "process", "filament"):
         parser.add_argument("--" + kind, type=Path, required=required,
@@ -86,7 +87,7 @@ async def run_client(config, mode, options):
             if slicing:
                 slice_config = SliceConfig(
                     machine=options.get("machine"), process=options.get("process"), filament=options.get("filament"),
-                    orca=options.get("orca"), max_output_size=config.max_file_size,
+                    orca=options.get("orca"), max_output_size=config.max_file_size, check_priming=options.get("check_priming", False),
                     **{field: options[option] for option, field in SLICE_LIMITS.items() if options.get(option) is not None},
                 )
                 if mode == "upload":
@@ -95,7 +96,7 @@ async def run_client(config, mode, options):
                     if Path(remote_name).suffix.lower() not in (".gcode", ".g"):
                         raise ValueError("Model slicing produces plain G-code; use a .gcode/.g remote name, not GX")
             elif mode == "upload":
-                if any(options.get(key) is not None for key in ("orca", "machine", "process", "filament", *SLICE_LIMITS)):
+                if options.get("check_priming") or any(options.get(key) is not None for key in ("orca", "machine", "process", "filament", *SLICE_LIMITS)):
                     raise ValueError("Slicing options require --slice on upload")
                 validate_file(upload_file, config.max_file_size)
                 remote_path(remote_name if remote_name is not None else upload_file.name)

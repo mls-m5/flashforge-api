@@ -70,6 +70,23 @@ root. Original draft02 source hashes were recorded before copying and not
 modified. Native2.5 on the user's host and rendered GUI need a separate retry;
 2.3 behavior is not silently generalized to a new build.
 
+## Updated exact-tool/manual-placement review and edge guard
+
+See [PRIMING_REVIEW.md](PRIMING_REVIEW.md) for new native2.3 comparisons on the
+supplied tool, including manual scale/rotation/translation and optional brim.
+The fixed02 prime reproduces21 first-layer XY segment intersections;03 gives
+Skirt first, no startup XY deposition and no skirt/object/brim intersections.
+These refer to first-layer paths, not the full upper-model projection.
+
+**New counterexample:** an unguarded manual edge placement produced skirt X72.105
+with native exit0 although the mesh fit±70. The earlier136mm exit206 observation
+is not a universal edge guarantee. The test launcher now automatically adds
+`--check-priming`: a bounded diagnostic helper rejects missing/overlapping skirt
+or first-layer extrusion beyond a conservative nominal±69mm margin before
+artifact publication. Native-generated G-code is not rewritten to fit. This
+check is not physical/swept-volume/firmware safety approval; normal/proxy presets
+remain02 pending a separate informed changed-startup decision.
+
 ## Short offline test script
 
 Stop only the old web page when no local save/slice is active; do not interrupt

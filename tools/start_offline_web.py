@@ -100,6 +100,8 @@ def build_command(port=8000, orca=None, *, dummy_upload_test=False, proxy_port=N
         "web-data/proxy-test" if proxy_port is not None else "web-data/dummy-upload-test" if dummy_upload_test else "web-data/offline-test")
     command = [sys.executable, "-m", "finderlab", "web", "--listen-host", str(address) if lan_host is not None else "127.0.0.1",
                "--listen-port", str(port), "--data-dir", str(ROOT / workspace), "--orca", str(selected.resolve())]
+    if native_skirt_test:
+        command += ["--check-priming"]
     if lan_host is not None:
         command += ["--lan", "--lan-network", str(subnet)]
     if proxy_port is not None:
