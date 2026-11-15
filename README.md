@@ -42,6 +42,11 @@ warm-nozzle flag are toy state, not hardware feedback. Physical/proxy manual
 controls remain locked pending verified small-step/thermal/mode behavior. See
 [docs/MANUAL_CONTROLS.md](docs/MANUAL_CONTROLS.md).
 
+**3MF models are now accepted** alongside STL: core meshes are imported as
+geometry only, never project printer/filament/start-code settings. Unsupported
+assemblies/extensions fail explicitly. Slice, Save and Start remain separate.
+See [docs/3MF.md](docs/3MF.md) for limits and the supplied tool's offline trial.
+
 The Slice section has **layer-height, brim and independent XY hole/contour controls**.
 Layer/brim default to the server profile; hole compensation starts at0mm (off).
 For holes about0.4mm too small in diameter, +0.2mm per edge is a calibration

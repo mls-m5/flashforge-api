@@ -55,7 +55,7 @@ async function main() {
     await flush();
     assert.equal(posts.length, 0, "initial configuration/state reads must not save or slice");
     assert.equal(element("hole-compensation").value, "0", "new UI default disables hole compensation");
-    choose("bad.3mf", 10); assert.equal(xhrs.length, 0);
+    choose("bad.obj", 10); assert.equal(xhrs.length, 0);
     choose("sample.gx", 5129);
     assert.equal(xhrs.length, 1);
     assert.equal(posts.length, 0, "file selection only posts file bytes");
@@ -183,7 +183,7 @@ async function main() {
     click("stop"); await flush();
     assert.match(element("job-result").textContent, /Virtual cancel acknowledged/);
     click("discard"); await flush();
-    choose("profile-hole.stl", 100);
+    choose("profile-hole.3mf", 100);
     xhrs.at(-1).finish({phase: "model_ready", busy: false, name: "profile-hole.stl", suggested_name: "profile-hole.gcode", artifact: false});
     element("hole-compensation").value = "";
     element("contour-compensation").value = "";

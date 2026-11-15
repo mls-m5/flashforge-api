@@ -75,10 +75,10 @@
         text("capture", state.capture);
         text("warning", state.warning);
         text("slice-status", state.busy && state.phase === "slicing" ?
-            (state.slicer_stage === "slice" ? "Slicing STL…" : "Checking the Orca CLI…") :
+            (state.slicer_stage === "slice" ? "Slicing model…" : "Checking the Orca CLI…") :
             state.sliced && state.artifact ? `Slice completed: ${state.size} bytes. Download below for offline review; this is not print approval.` :
             state.phase === "failed" && state.slicer_stage ? "Slice failed. See the diagnostic excerpt below." :
-            state.artifact ? "Existing print file ready; no slicing needed." : "Choose an STL, then click Slice. No slicing starts automatically.");
+            state.artifact ? "Existing print file ready; no slicing needed." : "Choose an STL/3MF, then click Slice. No slicing starts automatically.");
         const excerpt = state.slicer_log || (state.sliced && state.artifact ?
             "Orca finished successfully without additional slice output. Download and review the generated file." : "No Orca output recorded yet.");
         text("slicer-log", (state.error ? "Operation error: " + state.error + "\n\n" : "") + excerpt);
@@ -141,9 +141,9 @@
     }
     function receive(file) {
         if (!config || pending || polling || monitorPending || state.busy || uncertain || state.phase !== "empty" || !file) return;
-        const stl = /\.stl$/i.test(file.name);
-        if (!/\.(stl|gx|gcode|g)$/i.test(file.name) || !file.size || file.size > (stl ? config.model_limit : config.print_limit)) {
-            text("error", "Choose a nonempty STL (up to 64 MiB) or GX/G-code/G (up to 8 MiB)."); return;
+        const stl = /\.(stl|3mf)$/i.test(file.name);
+        if (!/\.(stl|3mf|gx|gcode|g)$/i.test(file.name) || !file.size || file.size > (stl ? config.model_limit : config.print_limit)) {
+            text("error", "Choose a nonempty STL/3MF (up to 64 MiB) or GX/G-code/G (up to 8 MiB)."); return;
         }
         pending = true; clearTimeout(timer); text("error", ""); el("incoming").value = 0; render();
         const xhr = new XMLHttpRequest();

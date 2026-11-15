@@ -227,8 +227,8 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
     chosen_settings = normalize_settings(settings)
     overrides = process_overrides(chosen_settings)
     source, output = Path(source), Path(output)
-    if source.suffix.lower() != ".stl":
-        raise SliceError("Slicing accepts STL (.stl) only, interpreted as millimetres")
+    if source.suffix.lower() not in (".stl", ".3mf"):
+        raise SliceError("Slicing accepts STL or geometry-only core mesh 3MF")
     if output.suffix.lower() not in (".gcode", ".g"):
         raise SliceError("Slicing output must be .gcode or .g, not GX (no container conversion)")
     if output.exists() or output.is_symlink():
@@ -246,8 +246,17 @@ async def slice_model(source, output, config: SliceConfig, *, capture, settings=
             raise SliceError("Orca settings paths cannot contain semicolons")
         for name in ("tmp", "data", "output", "cache", "config"):
             (work / name).mkdir()
-        inputs = {"model": _copy_bounded(source, work / "model.stl", config.max_model_size)}
+        model_snapshot = work / ("source.3mf" if source.suffix.lower() == ".3mf" else "model.stl")
+        inputs = {"model": _copy_bounded(source, model_snapshot, config.max_model_size)}
         capture.manifest["metadata"]["slicing_inputs"] = inputs
+        if source.suffix.lower() == ".3mf":
+            from .model_3mf import geometry_to_stl
+            try:
+                geometry = geometry_to_stl(model_snapshot, work / "model.stl", max_output=config.max_model_size)
+            except ValueError as exc:
+                raise SliceError(str(exc)) from exc
+            capture.manifest["metadata"]["geometry_import"] = geometry
+            capture.event("geometry_import", **geometry)
         for kind in ("machine", "process", "filament"):
             path = work / (kind + ".json")
             inputs[kind] = _copy_bounded(getattr(config, kind), path, MIB)

@@ -194,6 +194,23 @@ assert "machine_start_gcode" not in effective and "retraction_length" not in eff
             self.assertEqual(self.capture.manifest["metadata"]["process_overrides"], overrides)
             for kind, raw in originals.items(): self.assertEqual(getattr(self.config, kind).read_bytes(), raw)
 
+    async def test_3mf_import_passes_only_geometry_to_orca_with_server_profiles(self):
+        from test_3mf import package
+        source = self.root / "model.3mf"
+        source.write_bytes(package(extra={"Metadata/Slic3r_PE.config": "layer_height=99\nstart_gcode=M112"}))
+        check = '''
+assert pathlib.Path(args[-1]).suffix == ".stl"
+assert not pathlib.Path(args[-1]).read_bytes().startswith(b"PK")
+assert json.loads(pathlib.Path(settings[1]).read_text())["layer_height"] == "0.12"
+assert json.loads(pathlib.Path(value("--load-filaments")).read_text())["nozzle_temperature"] == ["220"]
+'''
+        self.fake.write_text(self.fake.read_text().replace('print("READY "',check+'\nprint("READY "'))
+        await slice_model(source, self.output, self.config, capture=self.capture, settings={"layer_height": .12})
+        metadata = self.capture.manifest["metadata"]
+        self.assertEqual(metadata["slicing_inputs"]["model"]["sha256"], hashlib.sha256(source.read_bytes()).hexdigest())
+        self.assertFalse(metadata["geometry_import"]["embedded_settings_loaded"])
+        self.assertEqual(self.output.read_bytes(), PAYLOAD)
+
     async def test_default_quality_options_preserve_profile_bytes(self):
         await self.slice()
         metadata = self.capture.manifest["metadata"]
@@ -363,7 +380,7 @@ assert "machine_start_gcode" not in effective and "retraction_length" not in eff
             with self.assertRaises(SliceError):
                 replace(self.config, **kwargs)
         with self.assertRaisesRegex(SliceError, "STL"):
-            await slice_model(self.root / "model.3mf", self.output, self.config, capture=self.capture)
+            await slice_model(self.root / "model.obj", self.output, self.config, capture=self.capture)
         for with_profiles in (False, True):
             options = self.options("upload")
             options["slice"] = False

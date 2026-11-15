@@ -8,7 +8,10 @@ Implemented: `slice MODEL.stl` for offline export, and `upload MODEL.stl --slice
 
 A user-requested local Finder draft has since been copied/edited, but its native offline trial is blocked by Orca rejecting `gcode_flavor=sailfish`. See [ORCA_FINDER_DRAFT_01.md](ORCA_FINDER_DRAFT_01.md) for the private artifact paths, source attribution, exact changes, failed trial captures and the next dialect decision. The earlier internal Sailfish enum observation was not evidence of an accepted Orca profile option.
 
-The CLI/library is also used by the new [standalone local page](WEB.md). The page accepts an STL into a bounded local slot, requires an explicit offline Slice, offers output download/review, and requires a separate confirmed Save. Generated-output saving is server-disabled by default, independently of ordinary GX upload. Orca executable/profiles remain trusted server configuration, not HTTP parameters. The user request's “sdl” is interpreted as **STL**. 3MF/OBJ/SDL inputs are not accepted in this first adapter. STL coordinates are interpreted as millimetres: no automatic unit conversion, scaling, repair or auto-orientation. Orca is asked to arrange the object and ensure it is on the bed, using the supplied machine profile.
+The CLI/library is also used by the new [standalone local page](WEB.md). The page accepts an STL into a bounded local slot, requires an explicit offline Slice, offers output download/review, and requires a separate confirmed Save. Generated-output saving is server-disabled by default, independently of ordinary GX upload. Orca executable/profiles remain trusted server configuration, not HTTP parameters. The user request's “sdl” is interpreted as **STL**. Core mesh 3MF is now accepted through a bounded **geometry-only STL derivative**;
+embedded project settings never reach Orca. See [3MF.md](3MF.md) for supported
+transforms/units, rejected assemblies/extensions, provenance and the actual
+user-tool native trial. OBJ/SDL inputs remain unsupported. STL coordinates are interpreted as millimetres: no automatic unit conversion, scaling, repair or auto-orientation. Orca is asked to arrange the object and ensure it is on the bed, using the supplied machine profile.
 
 The user's official Finder download page is now under a separate read-only
 review: [FLASHFORGE_PROFILE_REVIEW.md](FLASHFORGE_PROFILE_REVIEW.md). The exact

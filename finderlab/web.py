@@ -37,7 +37,7 @@ STORAGE_LIMIT = 256 * 1024 * 1024
 
 def suggested_name(name):
     """Safe bounded ASCII basename derived from display name, never a path."""
-    suffix = ".gcode" if Path(name).suffix.lower() == ".stl" else Path(name).suffix.lower()
+    suffix = ".gcode" if Path(name).suffix.lower() in (".stl", ".3mf") else Path(name).suffix.lower()
     stem = unicodedata.normalize("NFKD", Path(name).stem).encode("ascii", "ignore").decode()
     stem = re.sub(r"[^A-Za-z0-9_. -]", "_", stem)
     stem = re.sub(r"\.{2,}", "_", stem).strip(" .-_") or "model"
@@ -161,9 +161,9 @@ class Workbench:
                 or any(ord(c) < 32 or ord(c) == 127 for c in name)):
             raise WebError(400, "Use a plain filename, not a path or control characters")
         suffix = Path(name).suffix.lower()
-        if suffix not in (".stl", ".gx", ".gcode", ".g"):
-            raise WebError(400, "Choose STL, GX, G-code or G")
-        limit = MODEL_LIMIT if suffix == ".stl" else PRINT_LIMIT
+        if suffix not in (".stl", ".3mf", ".gx", ".gcode", ".g"):
+            raise WebError(400, "Choose STL, 3MF, GX, G-code or G")
+        limit = MODEL_LIMIT if suffix in (".stl", ".3mf") else PRINT_LIMIT
         if not 0 < length <= limit:
             raise WebError(413, f"File must contain 1–{limit} bytes")
         self.capacity(length + 4096)
@@ -184,8 +184,8 @@ class Workbench:
                         digest.update(chunk)
                         remaining -= len(chunk)
             self.source = path
-            self.artifact = path if suffix != ".stl" else None
-            self.state.update(phase="model_ready" if suffix == ".stl" else "file_ready",
+            self.artifact = path if suffix not in (".stl", ".3mf") else None
+            self.state.update(phase="model_ready" if suffix in (".stl", ".3mf") else "file_ready",
                               size=length, sha256=digest.hexdigest(), artifact=self.artifact is not None,
                               suggested_name=suggested_name(name))
         except BaseException:
@@ -232,8 +232,8 @@ class Workbench:
         if operation == "slice":
             if not self.config.slicing:
                 raise WebError(409, "Orca is not configured; no validated Finder profile ships with this page")
-            if self.source.suffix != ".stl" or self.artifact:
-                raise WebError(409, "Slicing needs a new STL; discard before slicing another version")
+            if self.source.suffix not in (".stl", ".3mf") or self.artifact:
+                raise WebError(409, "Slicing needs a new STL/3MF; discard before slicing another version")
             try:
                 settings = normalize_settings(data.get("settings"))
             except ValueError as exc:

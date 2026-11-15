@@ -39,13 +39,13 @@
 <p id="manual-error" role="alert"></p><button id="manual-refresh">Refresh control state · no commands</button>
 </section>
 <section><h2>1 <span>Choose a file</span></h2>
-<div id="drop" tabindex="0"><strong>Drop an STL or print file here</strong><p>STL up to 64 MiB · GX / G-code / G up to 8 MiB</p>
-<label for="file">or choose a file</label><input id="file" type="file" accept=".stl,.gx,.gcode,.g"></div>
+<div id="drop" tabindex="0"><strong>Drop an STL, 3MF or print file here</strong><p>STL / 3MF up to 64 MiB · GX / G-code / G up to 8 MiB</p>
+<label for="file">or choose a file</label><input id="file" type="file" accept=".stl,.3mf,.gx,.gcode,.g"></div>
 <p id="selection">One file at a time. Choosing a file only stores it locally.</p>
 <label>Browser → local server <progress id="incoming" max="100" value="0"></progress></label>
 <button id="discard" disabled>Discard current file</button></section>
 <section><h2>2 <span>Slice and review</span></h2>
-<p id="orca">Orca configuration loading…</p><p id="slice-status" role="status">Choose an STL, then click Slice.</p>
+<p id="orca">Orca configuration loading…</p><p id="slice-status" role="status">Choose an STL/3MF, then click Slice.</p>
 <p class="warning">No print-ready Finder Orca profile ships here. The original Sailfish draft is rejected; a separate experimental Marlin-emission draft now slices offline but is NOT approved for printing. Successful slicing is not proof of safe toolpaths. No silent Marlin substitution or disabled validity checks.</p>
 <fieldset id="quality-settings" disabled><legend>Quality settings · next slice only</legend>
 <label for="layer-height">Layer height (mm)</label>
@@ -62,7 +62,8 @@
 <p>Try a 5 mm outer brim for lifting corners. Extra material must be removed and can mark the bottom edge. Keep the bed clean/level and avoid drafts. Brim needs additional space around the model; Orca may reject a plate that no longer fits.</p>
 <p>First-layer height and brim separation use the server profile; temperature, start/end code and retraction are unchanged. These controls do not change an already sliced file or running print. To change a completed slice, discard/reselect and slice again.</p>
 </fieldset><p id="applied-quality"></p>
-<button id="slice" disabled>Slice STL offline</button> <a id="download" href="/api/artifact" hidden>Download print file for review</a>
+<button id="slice" disabled>Slice model offline</button> <a id="download" href="/api/artifact" hidden>Download print file for review</a>
+<p>3MF imports core mesh geometry only. Embedded printer, filament, layer settings and start/end code are not loaded. Components/advanced extensions are rejected; export STL if unsupported. Orca arranges the imported geometry as before.</p>
 <p>No 3D preview, GX thumbnail generation or toolpath safety validator is implemented yet.</p>
 <details><summary>Latest Orca diagnostic excerpt (private)</summary><pre id="slicer-log">No Orca output recorded yet.</pre></details></section>
 <section><h2>3 <span>Save, without starting</span></h2>

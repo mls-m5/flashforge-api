@@ -113,6 +113,16 @@ capture improves reproducibility, not print safety.
 
 Generated `sliced.gcode` is retained under the run directory by default, or at standalone slice's explicit `--output`. It has a **separate** size bound (`--max-file-size`) and is outside `--max-capture-bytes`; original profiles/model snapshots and native temporary data are cleaned from project-local `.tmp/`. Raw slicer log chunks are bounded independently and count toward the existing event/log quota. Full details and trust limits: [SLICING.md](SLICING.md).
 
+## Geometry-only 3MF provenance
+
+3MF slicing keeps the original archive hash/size in `slicing_inputs.model`.
+A separate `geometry_import` event and manifest field record the derived STL
+hash/size, transformed bounds, facet count, skipped zero-area facets and
+`embedded_settings_loaded:false`. The original archive is never given to Orca;
+server profile/effective-setting hashes remain independent. Private scratch
+conversion is cleaned up, not source-modified. Reports/bounds can reveal model
+geometry and must remain private. See 3MF.md for importer limits and native trial.
+
 ## Offline numerical review reports
 
 `python3 -m finderlab review FILE` reads a bounded regular G-code file (or the

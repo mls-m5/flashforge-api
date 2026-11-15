@@ -30,9 +30,9 @@ class PreflightError(ValueError):
 def add_client_commands(commands):
     upload = commands.add_parser("upload", help="send .gx/.gcode/.g; upload-only unless --start is specified")
     upload.add_argument("file", type=Path)
-    upload.add_argument("--slice", action="store_true", help="slice an STL with Orca before any printer connection")
+    upload.add_argument("--slice", action="store_true", help="slice STL/geometry-only 3MF with Orca before any printer connection")
     add_slice_options(upload)
-    slicing = commands.add_parser("slice", help="offline STL -> plain G-code with trusted Orca profiles; no printer connection")
+    slicing = commands.add_parser("slice", help="offline STL/mesh 3MF -> plain G-code with trusted Orca profiles; no printer connection")
     slicing.add_argument("file", type=Path)
     slicing.add_argument("--output", type=Path, help="new .gcode/.g file; default: capture directory/sliced.gcode")
     slicing.add_argument("--max-file-size", type=int, default=ClientConfig().max_file_size)
@@ -93,7 +93,7 @@ async def run_client(config, mode, options):
                     remote_name = remote_name if remote_name is not None else upload_file.stem + ".gcode"
                     remote_path(remote_name)
                     if Path(remote_name).suffix.lower() not in (".gcode", ".g"):
-                        raise ValueError("STL slicing produces plain G-code; use a .gcode/.g remote name, not GX")
+                        raise ValueError("Model slicing produces plain G-code; use a .gcode/.g remote name, not GX")
             elif mode == "upload":
                 if any(options.get(key) is not None for key in ("orca", "machine", "process", "filament", *SLICE_LIMITS)):
                     raise ValueError("Slicing options require --slice on upload")

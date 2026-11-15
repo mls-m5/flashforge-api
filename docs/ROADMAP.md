@@ -411,6 +411,19 @@ The user will paste a documented candidate into a copy of the Prusa profile and 
 
 This is **offline only**, not an approved printer profile. M118 omission/semantics, the changed end transition, physical clearances, slicer-added commands/hooks and actual nozzle/material still need review. The current uploader now also permits plain G-code transfer, but that does not validate this candidate or create a GX container. GX generation is not implemented; renaming Prusa G-code is not conversion. Prusa CLI integration remains proposed; the separate Orca adapter now probes its selected executable with --help, but no native Orca binary is available here. No new slicer install or hardware command was performed here.
 
+## Urgent 3MF mesh workflow implemented; preview paused
+
+The supplied user tool has now sliced offline with native2.3 after geometry-only
+core-mesh import. Web/CLI accept3MF as a model, never a direct printer file.
+Build transforms/units flatten into private STL; no project preset/start code
+reaches Orca. Server JSON/typed overrides remain authoritative. Components /
+external/required-extension geometry is rejected. Zero-area facets are counted
+and skipped, not a topology repair promise. See 3MF.md for bounded importer,
+original/derived provenance and capture20261115T080521Z-1bf3ef0465bd (zero printer
+sessions, unchanged profiles). Host2.5/browser/physical tool suitability remain
+acceptance checks; no agent upload/Start. The separate local Three.js preview
+work is unfinished/paused and not part of this milestone.
+
 ## Deferred work
 
 Virtual print-progress simulation, additional firmware/client profiles, richer fault injection, exportable reports and optional separate print controls can follow. Print controls require a new safety/design decision rather than being added as a side effect of upload support.

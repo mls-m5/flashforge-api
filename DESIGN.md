@@ -177,6 +177,17 @@ still need separate reviewed evidence before implementing physical controls.
 See MANUAL_CONTROLS.md; the existing shared network lock is not claimed tested
 for physical manual motion by a counter-only rehearsal.
 
+### Geometry-only 3MF import
+
+The initial 3MF path deliberately does not load a project into Orca. A bounded
+stdlib ZIP/XML importer (`model_3mf.py`) flattens supported core mesh build items
+with units/transforms into private STL. Project presets, scripts, modifiers and
+start code never reach the native slicer; server JSON and typed overrides stay
+authoritative. Components/external/required-extension geometry is rejected.
+Original input hash and derived geometry hash/bounds/count/skipped zero-area
+facets are captured separately. See 3MF.md for limits and native user-tool trial.
+No printer/network operations occur during import or slicing.
+
 ### Per-slice quality settings
 
 `slice_settings.py` validates only layer height, brim mode/width and bounded

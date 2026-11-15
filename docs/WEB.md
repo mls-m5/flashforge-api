@@ -16,6 +16,16 @@ network only, never router port forwarding/public tunnels. See [LAN.md](LAN.md)
 for automatic local address selection, login, narrower subnet, firewall and acceptance limits. Nothing
 is opened automatically by installing this change; the operator starts it.
 
+## 3MF models (geometry only)
+
+Drop `.3mf` and explicitly Slice just like STL. Core mesh geometry/build
+transforms/units are converted to a bounded private STL derivative; embedded
+project printer/filament/layer/start-code settings are **not passed to Orca**.
+Our server profiles and typed web overrides still own those settings. No direct
+3MF-to-printer Save. Assemblies/required extensions are rejected rather than
+guessed; export STL if unsupported. See [3MF.md](3MF.md) for bounds and the
+supplied tool's successful native offline trial (no printer sessions).
+
 ## Printer status
 
 **Changed default:** `./tools/start_proxy_web.sh` starts active status polling

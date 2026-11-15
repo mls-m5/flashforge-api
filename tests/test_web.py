@@ -480,7 +480,7 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(code, 409)
 
     async def test_receive_limits_early_eof_and_single_slot(self):
-        for name in ("../escape.gx", "wrong.3mf", "bad%00.gx"):
+        for name in ("../escape.gx", "wrong.obj", "bad%00.gx"):
             code, _ = await self.file(name)
             self.assertEqual(code, 400)
         for name, size in (("big.gx", PRINT_LIMIT+1), ("big.stl", MODEL_LIMIT+1), ("empty.gx", 0)):
@@ -729,6 +729,21 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.server.work.state["slice_settings"], settings)
         await self.post("/api/discard", {"confirm": True})
         self.assertIsNone(self.server.work.state["slice_settings"])
+
+    async def test_3mf_file_is_a_model_not_direct_upload_then_offline_slice(self):
+        from test_3mf import package
+        self.configure_fake_orca()
+        self.assertEqual((await self.file("tool.3mf",package()))[0],200)
+        self.assertEqual(self.server.work.state["phase"],"model_ready")
+        self.assertEqual(self.server.work.state["suggested_name"],"tool.gcode")
+        self.assertFalse(self.server.work.state["artifact"])
+        with patch("finderlab.web.FinderClient") as client:
+            self.assertEqual((await self.post("/api/save",{"confirm":True,"remote_name":"tool.gcode"}))[0],409)
+            self.assertEqual((await self.post("/api/slice",{"confirm":True}))[0],200)
+            state=await self.finish()
+            client.assert_not_called()
+        self.assertTrue(state["sliced"])
+        self.assertEqual((await self.request("GET","/api/artifact"))[1],PAYLOAD)
 
     async def test_fake_slice_then_separate_review_and_save_gate(self):
         self.configure_fake_orca()
