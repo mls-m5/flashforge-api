@@ -636,15 +636,20 @@ review findings and unchanged behavioral/safety invariants. R1 is complete:
 named container configuration functions, all65 original HTTP/config scenarios
 grouped by feature with unchanged method ASTs, and a Python/Node/trace runner.
 All291 Python tests,16 Node checks and trace integrity passed;383 pre-refactor
-container argv/error outcomes and tracked profile hashes were preserved. Production HTTP/workbench state,
-save/start orchestration and parsers stay unchanged. Next is R2's bounded HTTP /
-route/workbench separation, not a broad rewrite or new framework. Commit each
+container argv/error outcomes and tracked profile hashes were preserved. R2a now
+extracts HTTP request/JSON/length reads and response bytes into web_http.py,
+retaining common access checks/routes/lifecycle on WebServer. Workbench/config /
+capture class ASTs, profile bytes, save/start and storage remain unchanged.
+All313 Python tests,16 Node checks and trace integrity passed;555 offline old/new
+HTTP wire/lifecycle comparisons were identical. Next is R2b's route separation,
+then R2c source/artifact ownership, not a broad rewrite or new framework. Commit each
 stage after full regression checks; browser/container/hardware acceptance stays
 separate. See tests/README.md for test ownership and tools/check.sh for checks.
 A new-session handoff is now recorded near the top of REFACTORING.md, including
-checkpoint0d9454c, required reads, test baseline and R2a/b/c acceptance. Begin with
-R2a's HTTP parser/response boundary only; do not combine state/storage/process /
-frontend changes in that first implementation. No R2 code has been started.
+required reads, checkpoint history, test baseline and R2a/b/c acceptance. R2a is
+complete; continue with R2b without combining state/process/frontend changes.
+The user's preference for available worker-agent delegation is in AGENTS.md;
+no launch tool was exposed in R2a and no worker ran.
 
 ## Deferred work
 

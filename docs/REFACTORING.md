@@ -12,19 +12,24 @@ remaining work. Do not combine a structural move with a protocol/policy change.
 
 ### Checkpoint and authorization
 
-- Latest implementation checkpoint: **`0d9454c`** (R1 complete). Earlier relevant
+- R1 implementation checkpoint: **`0d9454c`**. **R2a is now complete** (see its
+  progress log below); the next bounded milestone is **R2b route separation**.
+  Use current Git HEAD/status rather than assuming the older handoff commit.
+  Earlier relevant
   commits: `b4b7145` (tracked Finder2 profiles/default slicer Compose) and
-  `74b6f21` (container packaging). This handoff is documentation only.
+  `74b6f21` (container packaging). The original handoff was documentation only;
+  the later R2a implementation and its limits are recorded below.
 - The user approved continuing the incremental refactoring plan, not replacing
-  the application or adding functionality. **Start with R2a below**, commit and
+  the application or adding functionality. **Continue with R2b below**, commit and
   report that bounded milestone, then continue through the checklist.
 - At handoff, tracked working tree was clean; unrelated untracked `result.json`
   remained. Recheck Git status first; never overwrite another agent/user's work.
   No push was performed in this session. Do not assume the remote includes these
   local commits; verify availability before using a different machine/clone.
-- R1's production changes were confined to the container argv builder. The
-  production `finderlab/web.py` is still the pre-refactor implementation. No
-  R2–R6 code has been started or hidden in scratch files.
+- R1's production changes were confined to the container argv builder. R2a now
+  extracts HTTP wire primitives into `finderlab/web_http.py`, keeping common
+  access gates, routes, file streams and lifecycle on WebServer. Workbench/state /
+  operation/storage code is unchanged. R2b/R2c and R3–R6 are not implemented.
 
 ### Read before implementation
 
@@ -38,7 +43,7 @@ Then inspect `finderlab/web.py`, `finderlab/web_access.py`,
 `tests/web_helpers.py`, `tests/README.md` and the relevant `test_web*.py` families.
 The plan's review metrics describe the original checkpoint, not a target size.
 
-### R2a — recommended first bounded implementation
+### R2a — completed first bounded implementation (acceptance retained)
 
 1. Run `./tools/check.sh` for a fresh baseline. R1 reported291 Python tests and16
    Node scripts plus trace integrity. Preserve every existing scenario; additional
@@ -86,8 +91,10 @@ The plan's review metrics describe the original checkpoint, not a target size.
 
 ### If worker agents are available in the next session
 
-Worker availability is harness/session-dependent; none were available in the
-handoff session. Useful independent assignments are **read-only** parser/access
+The user explicitly requested using workers for suitable writing/review work
+when available; this preference is also recorded in AGENTS.md. Worker availability
+is harness/session-dependent. In the handoff and R2a sessions no subagent launch
+tool was exposed (R2a could read the skill documentation only); no worker ran. Useful independent assignments are **read-only** parser/access
 contract review and test-gap review, while one owner performs the extraction.
 Agree file ownership before parallel edits; R2/R3 both touching web.py are not
 independent tasks. Run the integrated suite after merging/reviewing results.
@@ -153,7 +160,9 @@ production workbench state or HTTP behavior changes in R1.
 ### R2 — Separate HTTP from workbench behavior
 
 - [ ] Separate bounded request parsing/response writing and shared access checks
-  from route dispatch. All routes, including assets/model/thumbnail, must retain
+  from route dispatch. **Partial: R2a extracted parsing/response primitives;
+  common access checks and routes remain in WebServer until R2b.** All routes,
+  including assets/model/thumbnail, must retain
   the same peer/Host/Basic/Origin/token/body/deadline/CSP checks and error behavior.
 - [ ] Leave `finderlab.web` as the public CLI/server entry point where practical;
   use explicit imports and update patch points deliberately, not a broad registry
@@ -228,7 +237,7 @@ Baseline before R1:280 Python tests,16 Node checks and reviewed trace integrity
 passed at the prior milestone. Actual container builds, browser/GPU and physical
 acceptance are not supplied by this refactoring's automated checks.
 
-### R1 completed — next implementation stage is R2
+### R1 completed
 
 - Split the65 existing HTTP/config scenarios into feature modules plus a shared
   test-free fixture. The old1247-line test_web.py is now156 lines; largest moved
@@ -257,5 +266,38 @@ acceptance are not supplied by this refactoring's automated checks.
 - Container build/browser/GPU/hardware acceptance remains unverified here. No
   agent printer/proxy/LAN listener or native Orca trial was performed in R1.
 
-Continue with R2's HTTP/workbench boundary in a separate coherent milestone;
-do not silently expand this commit into state-machine/process/frontend changes.
+### R2a completed — next implementation stage is R2b
+
+- `finderlab/web_http.py` now owns Request header data, bounded CRLF/ASCII header
+  parsing, strict POST Content-Length, bounded JSON object reads, shared WebError
+  and exact head/reply/problem wire writing. WebError remains available through
+  an explicit import from finderlab.web; there is no cyclic workbench import.
+- WebServer retains common peer/Host/Basic/method/Origin/token gates, URL/route
+  interpretation, model/artifact/thumbnail streaming, connection/task cleanup
+  and explicit response entry methods. Its response entry points delegate to
+  wire helpers, not a dynamic compatibility registry or forwarding object.
+  Body reads remain after access/type/query validation; URL/method checks have
+  not been moved ahead of authentication.
+- Workbench, WebConfig and WebCapture class ASTs match pre-R2a exactly; all tracked
+  profile JSON bytes are unchanged. Client/protocol/monitor/source/cache/storage /
+  slicer/frontend code and existing test methods were not changed.
+- Added18 direct in-memory request/response tests and4 owned-loopback integration
+  tests: split CRLF/surplus, malformed/incomplete/duplicate/oversized headers,
+  exact size limits, strict POST length, JSON object errors, deadlines, response
+  bytes/CSP/Basic challenge, write failure/cancellation and access-validation
+  ordering before side effects. No test uses configured targets/native Orca.
+- An offline old/new comparison exercised555 synthetic raw HTTP responses and
+  writer close/abort outcomes with identical bytes/results; no sockets/targets
+  were opened by that comparison. Its script is an ignored scratch aid, not a
+  new deployment/test prerequisite. Existing authenticated-all-routes, saved
+  identity/start failure, archive and model-preview integration tests remain.
+- Baseline `./tools/check.sh`:291 Python tests +16 Node + trace integrity passed.
+  After extraction:313 Python tests +16 Node + trace integrity passed; focused
+  HTTP tests22/22 passed. Full diff whitespace check passed. A fresh staged
+  git checkout-index copy without ignored local profiles/tools also passed all
+  313 Python tests +16 Node scripts + trace integrity.
+- No worker agent was launched because no launch tool was exposed; no hardware,
+  LAN listener, service restart, native or container trial was performed.
+
+Continue R2b (routes) and R2c (source/artifact owner) as separate milestones.
+Do not mark all R2 complete or expand into state/process/frontend changes.

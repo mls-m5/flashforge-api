@@ -476,6 +476,17 @@ starts an owned dummy and loopback UI with Orca/Finder2 slicing, not hardware.
 Configure proxy mode/capabilities explicitly for a real workflow. The paused OctoPrint example
 stays `compose.octoprint.yml` and is not part of this deployment.
 
+## HTTP implementation boundary (refactoring R2a)
+
+`finderlab/web_http.py` contains the narrow bounded request/header and JSON reads,
+strict POST length parsing, WebError and wire response helpers. `finderlab.web`
+explicitly re-exports WebError and keeps the public WebServer/CLI entry points.
+WebServer still owns peer/Host/Basic/Origin/token validation, URL/route handling,
+file streaming and socket/task cleanup. All gates remain before side effects;
+validation order, deadlines/limits, JSON/API and response/security header bytes
+are unchanged. Workbench operations/state/storage were not refactored in R2a.
+Route separation/source ownership remain later R2 steps; see REFACTORING.md.
+
 ## Storage, HTTP and failure boundaries
 
 - `web-data/` is private and Git-ignored. Use a dedicated folder; `--data-dir`

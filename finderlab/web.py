@@ -31,6 +31,11 @@ from .passive_status import status_from_capture
 from .active_status import ActiveMonitor
 from .manual_controls import VirtualControls, StaleControls
 from .web_access import WebAccess, validate_listener
+from .web_http import (
+    HEADER_LIMIT, SLICE_JSON_LIMIT, WebError,
+    post_content_length, read_json_body, read_request,
+    write_head, write_problem, write_reply,
+)
 
 STATIC = Path(__file__).with_name("webstatic")
 PRINT_LIMIT = 8 * 1024 * 1024
@@ -55,12 +60,6 @@ def suggested_name(name):
     result = stem + suffix
     remote_path(result)
     return result
-
-
-class WebError(ValueError):
-    def __init__(self, status, message):
-        self.status = status
-        super().__init__(message)
 
 
 class WebCapture(Capture):
@@ -622,7 +621,7 @@ class WebServer:
         if self.owned_dummy is not None:
             self.work.manual_controls = VirtualControls()
         try:
-            self.server = await asyncio.start_server(self.handle, self.config.host, self.config.port, limit=16384)
+            self.server = await asyncio.start_server(self.handle, self.config.host, self.config.port, limit=HEADER_LIMIT)
             self.address = self.server.sockets[0].getsockname()[:2]
             if self.config.auto_monitor:
                 try:
@@ -660,19 +659,8 @@ class WebServer:
             # Only socket peer identity counts. Never trust Forwarded/X-Forwarded-For.
             if not self.access.allows_peer(writer.get_extra_info("peername")):
                 raise WebError(403, "Client address is not allowed")
-            async with asyncio.timeout(10):
-                raw = await reader.readuntil(b"\r\n\r\n")
-            lines = raw.decode("ascii").split("\r\n")
-            method, target, version = lines[0].split(" ")
-            if version != "HTTP/1.1" or len(raw) > 16384:
-                raise WebError(400, "Expected bounded HTTP/1.1 headers")
-            headers = {}
-            for line in lines[1:-2]:
-                key, value = line.split(":", 1)
-                key = key.lower()
-                if not key or key in headers or key.strip() != key:
-                    raise WebError(400, "Duplicate/invalid HTTP header")
-                headers[key] = value.strip()
+            request = await read_request(reader)
+            method, target, headers = request.method, request.target, request.headers
             if headers.get("host") != self.authority:
                 raise WebError(403, "Use the exact IP URL printed by the server")
             if not self.access.authenticated(headers.get("authorization", "")):
@@ -689,10 +677,7 @@ class WebServer:
             if method == "POST":
                 if headers.get("origin") != "http://" + self.authority or not secrets.compare_digest(headers.get("x-finder-token", ""), self.token):
                     raise WebError(403, "Same-origin request and session token required; reload the page if the server restarted")
-                length_text = headers.get("content-length", "")
-                if not length_text.isascii() or not length_text.isdecimal() or len(length_text) > 10:
-                    raise WebError(411, "A valid Content-Length is required")
-                length = int(length_text)
+                length = post_content_length(headers)
                 if uri.path == "/api/file":
                     if headers.get("content-type") != "application/octet-stream":
                         raise WebError(415, "Expected raw file bytes")
@@ -705,12 +690,10 @@ class WebServer:
                         raise WebError(400, "Unexpected query")
                     if headers.get("content-type") != "application/json":
                         raise WebError(415, "Expected JSON")
-                    if length > (8192 if uri.path=='/api/slice' else 2048):
-                        raise WebError(413, "JSON body is too large")
-                    async with asyncio.timeout(10):
-                        data = json.loads(await reader.readexactly(length))
-                    if not isinstance(data, dict):
-                        raise WebError(400, "Expected a JSON object")
+                    if uri.path == "/api/slice":
+                        data = await read_json_body(reader, length, limit=SLICE_JSON_LIMIT)
+                    else:
+                        data = await read_json_body(reader, length)
                     if uri.path == "/api/manual":
                         await self.reply(writer, 200, self.work.manual_action(data))
                         return
@@ -820,26 +803,16 @@ class WebServer:
             finally:
                 self.clients.discard(task)
 
+    # Explicit response entry points stay on WebServer; wire encoding belongs to
+    # web_http. Connection close/abort/task ownership remains in handle().
     async def problem(self, writer, status, message):
-        try:
-            await self.reply(writer, status, {"error": message})
-        except (OSError, TimeoutError):
-            writer.transport.abort()
+        await write_problem(writer, status, message)
 
     async def head(self, writer, status, kind, length, extra=""):
-        writer.write((f"HTTP/1.1 {status} Response\r\nContent-Type: {kind}\r\nContent-Length: {length}\r\n"
-                      "Connection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n"
-                      "Referrer-Policy: no-referrer\r\n"
-                      "Content-Security-Policy: default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'\r\n"
-                      + extra + "\r\n").encode("ascii"))
-        await asyncio.wait_for(writer.drain(), 10)
+        await write_head(writer, status, kind, length, extra)
 
     async def reply(self, writer, status, data, kind="application/json", *, extra=""):
-        if not isinstance(data, bytes):
-            data = json.dumps(data, ensure_ascii=True).encode()
-        await self.head(writer, status, kind, len(data), extra)
-        writer.write(data)
-        await asyncio.wait_for(writer.drain(), 10)
+        await write_reply(writer, status, data, kind, extra=extra)
 
 
 @asynccontextmanager

@@ -208,8 +208,12 @@ See [docs/REFACTORING.md](docs/REFACTORING.md) for the user-approved staged plan
 R1 improves container argv construction with named helpers, groups unchanged
 HTTP/workbench scenarios by feature, and supplies one Python/Node/trace check
 command. Production HTTP/workbench state and operation orchestration are not
-moved in that stage. The next boundary is HTTP parsing/access/dispatch versus
-workbench behavior, then explicit internal state and shared process primitives.
+moved in that stage. R2a now extracts named request/header/JSON/length reads and
+wire response writing into `finderlab/web_http.py`, without workbench imports.
+WebServer still owns common access gates, URL/route dispatch, file streams and
+connection/task lifecycle; Workbench state/operation code is unchanged. Next is
+R2b's route boundary, then R2c source/artifact ownership, explicit internal state
+and shared process primitives.
 Public API, wire/capture semantics, profile bytes and no-retry/identity/priming
 policy must remain stable; do not weaken tests or unify unlike parsers merely
 to reduce duplication. No framework/dependency migration or hardware trial.
