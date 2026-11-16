@@ -67,6 +67,53 @@ class ContainerConfigTests(unittest.TestCase):
                     {'FINDER_MODE':'proxy','FINDER_ALLOW_SLICED_UPLOAD':'true'}):
             with self.assertRaises(ValueError):entry.command(env)
 
+    def test_boolean_spellings_and_ascii_integer_bounds_are_explicit(self):
+        for value in ("1", "true", "TRUE", " yes ", "on"):
+            with self.subTest(boolean=value):
+                self.assertTrue(entry.boolean({"FLAG": value}, "FLAG"))
+        for value in ("0", "false", "FALSE", " no ", "off", ""):
+            with self.subTest(boolean=value):
+                self.assertFalse(entry.boolean({"FLAG": value}, "FLAG", True))
+        self.assertTrue(entry.boolean({}, "FLAG", True))
+        with self.assertRaises(ValueError):
+            entry.boolean({"FLAG": "maybe"}, "FLAG")
+        self.assertEqual(entry.integer({}, "PORT", 8000, 1, 65535), 8000)
+        for value in ("1", "65535"):
+            self.assertEqual(entry.integer({"PORT": value}, "PORT", 8000, 1, 65535), int(value))
+        for value in ("", "0", "65536", "-1", " 8000 ", "１２", "12345678901"):
+            with self.subTest(integer=value), self.assertRaises(ValueError):
+                entry.integer({"PORT": value}, "PORT", 8000, 1, 65535)
+
+    def test_extra_container_arguments_fail_before_exec(self):
+        from unittest.mock import patch
+        with (
+            patch.object(entry.sys, "argv", ["entrypoint.py", "--allow-hardware"]),
+            patch.object(entry.os, "execv") as execute,
+            patch.object(entry.os, "chdir") as change_directory,
+        ):
+            with self.assertRaisesRegex(SystemExit, "override the entrypoint explicitly"):
+                entry.main()
+        execute.assert_not_called()
+        change_directory.assert_not_called()
+
+    def test_main_executes_only_validated_cli_argv_without_dumping_environment(self):
+        from contextlib import redirect_stdout
+        import io
+        from unittest.mock import patch
+        env = {"FINDER_MODE": "offline", "UNRELATED_SECRET": "not-for-console"}
+        output = io.StringIO()
+        with (
+            patch.object(entry.sys, "argv", ["entrypoint.py"]),
+            patch.object(entry.os, "environ", env),
+            patch.object(entry.os, "execv") as execute,
+            patch.object(entry.os, "chdir") as change_directory,
+            redirect_stdout(output),
+        ):
+            entry.main()
+        change_directory.assert_called_once_with(ROOT)
+        execute.assert_called_once_with(entry.sys.executable, [entry.sys.executable, *entry.command(env)])
+        self.assertNotIn("not-for-console", output.getvalue())
+
     def test_compose_bundles_native_and_reviewed_profiles_but_excludes_private_inputs(self):
         base=(ROOT/'docker-compose.yml').read_text();extra=(ROOT/'compose.slicing.yml').read_text()
         image=(ROOT/'docker/web.Dockerfile').read_text();ignore=(ROOT/'.dockerignore').read_text()

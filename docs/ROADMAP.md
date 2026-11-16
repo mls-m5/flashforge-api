@@ -628,6 +628,20 @@ in DEPLOYMENT.md. Tests parse generated argv with real CLI and check safe modes 
 privacy/contracts, not a container/native/hardware trial. Docker/Podman unavailable
 here; host config/build/small offline Slice/browser/LAN acceptance is still needed.
 
+## Maintainability track — incremental refactoring
+
+User approved the review and requested a written plan and the first priority
+milestone. See [REFACTORING.md](REFACTORING.md) for the ordered R1–R6 checklist,
+review findings and unchanged behavioral/safety invariants. R1 is complete:
+named container configuration functions, all65 original HTTP/config scenarios
+grouped by feature with unchanged method ASTs, and a Python/Node/trace runner.
+All291 Python tests,16 Node checks and trace integrity passed;383 pre-refactor
+container argv/error outcomes and tracked profile hashes were preserved. Production HTTP/workbench state,
+save/start orchestration and parsers stay unchanged. Next is R2's bounded HTTP /
+route/workbench separation, not a broad rewrite or new framework. Commit each
+stage after full regression checks; browser/container/hardware acceptance stays
+separate. See tests/README.md for test ownership and tools/check.sh for checks.
+
 ## Deferred work
 
 Virtual print-progress simulation, additional firmware/client profiles, richer fault injection, exportable reports and optional separate print controls can follow. Print controls require a new safety/design decision rather than being added as a side effect of upload support.

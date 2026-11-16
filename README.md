@@ -331,27 +331,27 @@ index/retention limits and confirmed507 recovery. Deleting `.tmp/` is unrelated.
 ## Run tests
 
 ```sh
+# Full checks: Python suite + all tests/test_*.js (Node.js 18+) + trace integrity:
+./tools/check.sh
+# Equivalent without Bash:
+python3 tools/check.py
+# Without Node: explicitly skip UI checks, still run Python + trace integrity:
+./tools/check.sh --python-only
+
+# Focused checks remain available:
 python3 -m unittest discover -s tests -v
-# Optional Node.js 18+ UI-logic checks (no npm dependencies):
+python3 -m unittest discover -s tests -p 'test_web*.py' -v
 node tests/test_web_ui.js
-node tests/test_passive_status_ui.js
-node tests/test_active_status_ui.js
-node tests/test_manual_ui.js
-node tests/test_toolpath_worker.js
-node tests/test_preview_ui.js
-node tests/test_toolpath_view.js
-node tests/test_model_worker.js
-node tests/test_model_preview_ui.js
-node tests/test_model_transform.js
-node tests/test_model_editor_integration.js
-node tests/test_start_after_upload_ui.js
-node tests/test_gx_ui.js
-node tests/test_web_rejection_ui.js
-node tests/test_plate_ui.js
-node tests/test_plate_upload_ui.js
 ```
 
 Tests use ephemeral loopback ports and never connect to a physical printer. Generated test files use the ignored project-local `.tmp/` directory and are cleaned up; do not use the system temporary directory for project work. No third-party dependencies are required. One integration test retains the uploader's existing three-second pause.
+
+Web HTTP/workflow tests are grouped by feature in `tests/test_web*.py`, sharing
+only a test-free ephemeral-loopback/fake-Orca fixture in `tests/web_helpers.py`.
+Full checks fail visibly if Node is missing/older than18; no npm dependencies,
+container build, native slicing or hardware action is added by the runner.
+See [tests/README.md](tests/README.md) for test ownership and
+[docs/REFACTORING.md](docs/REFACTORING.md) for the ordered maintenance plan/status.
 
 ## Components and next steps
 

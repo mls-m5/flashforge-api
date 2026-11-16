@@ -202,6 +202,18 @@ GET serves only the current hash-bound bitmap under LAN auth and self-only img
 CSP. See GX_GENERATION.md for unknown constants, external-vs-local evidence,
 resource/process limits, native offline trial and pending physical acceptance.
 
+### Incremental maintainability track
+
+See [docs/REFACTORING.md](docs/REFACTORING.md) for the user-approved staged plan.
+R1 improves container argv construction with named helpers, groups unchanged
+HTTP/workbench scenarios by feature, and supplies one Python/Node/trace check
+command. Production HTTP/workbench state and operation orchestration are not
+moved in that stage. The next boundary is HTTP parsing/access/dispatch versus
+workbench behavior, then explicit internal state and shared process primitives.
+Public API, wire/capture semantics, profile bytes and no-retry/identity/priming
+policy must remain stable; do not weaken tests or unify unlike parsers merely
+to reduce duplication. No framework/dependency migration or hardware trial.
+
 ### Compose packaging for a trusted Linux server
 
 Default Compose owns a fresh dummy/loopback page with the native `slicer`
