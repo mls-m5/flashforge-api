@@ -641,6 +641,10 @@ save/start orchestration and parsers stay unchanged. Next is R2's bounded HTTP /
 route/workbench separation, not a broad rewrite or new framework. Commit each
 stage after full regression checks; browser/container/hardware acceptance stays
 separate. See tests/README.md for test ownership and tools/check.sh for checks.
+A new-session handoff is now recorded near the top of REFACTORING.md, including
+checkpoint0d9454c, required reads, test baseline and R2a/b/c acceptance. Begin with
+R2a's HTTP parser/response boundary only; do not combine state/storage/process /
+frontend changes in that first implementation. No R2 code has been started.
 
 ## Deferred work
 
