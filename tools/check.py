@@ -27,11 +27,12 @@ def node_runtime(env):
     return executable
 
 
-def checks(root, node=None):
+def checks(root, node=None, jobs=1):
     """Discover UI checks by filename, not a second manually maintained list."""
-    commands = [
-        ("Python unittest suite", [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]),
-    ]
+    python = [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
+    if jobs > 1:
+        python = [sys.executable, "tools/test_python.py", "--jobs", str(jobs)]
+    commands = [("Python unittest suite", python)]
     if node is not None:
         scripts = sorted((root / "tests").glob("test_*.js"))
         if not scripts:
@@ -50,6 +51,8 @@ def main(argv=None):
         "--python-only", action="store_true",
         help="run Python suite and trace integrity only; explicitly skip Node/UI checks",
     )
+    parser.add_argument("--jobs", type=int, choices=range(1, 9), default=1,
+                        help="Python test processes (1–8, default1); isolate each test file")
     args = parser.parse_args(argv)
 
     try:
@@ -57,7 +60,7 @@ def main(argv=None):
         scratch.mkdir(mode=0o700, exist_ok=True)
         env = {**os.environ, "TMPDIR": str(scratch)}
         node = None if args.python_only else node_runtime(env)
-        commands = checks(ROOT, node)
+        commands = checks(ROOT, node, args.jobs)
         if args.python_only:
             print("Node/UI checks SKIPPED by explicit --python-only request.", flush=True)
         for number, (label, command) in enumerate(commands, start=1):

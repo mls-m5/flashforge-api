@@ -105,6 +105,17 @@ network only, never router port forwarding/public tunnels. See [LAN.md](LAN.md)
 for automatic local address selection, login, narrower subnet, firewall and acceptance limits. Nothing
 is opened automatically by installing this change; the operator starts it.
 
+## Shutdown ordering across Python versions
+
+The listener stops accepting before owned HTTP handlers are cancelled/joined;
+only then does WebServer await listener closure and close Workbench. Python3.12
+waits for accepted connections in Server.wait_closed, so waiting before cancelling
+handlers can stall until request deadlines. A bounded incomplete-request regression
+requires immediate client EOF, drained tasks and no FinderClient calls. Existing
+Workbench job/process/monitor cleanup and unknown-outcome rules stay unchanged;
+this fix is not automatic print cancel, retry or resumable shutdown. Native3.12
+acceptance is host-run; portable ordering checks also run on3.11.
+
 ## Persistent LAN password settings
 
 The shared finder login now persists as a private salted PBKDF2-HMAC-SHA256

@@ -606,10 +606,13 @@ class WebServer:
 
     async def __aexit__(self, *_):
         self.server.close()
-        await self.server.wait_closed()
-        for task in list(self.clients):
+        # Python3.12+ waits for active transports, so cancel/join their handlers
+        # before waiting for the listener. Workbench still owns job cleanup.
+        clients = list(self.clients)
+        for task in clients:
             task.cancel()
-        await asyncio.gather(*self.clients, return_exceptions=True)
+        await asyncio.gather(*clients, return_exceptions=True)
+        await self.server.wait_closed()
         await self.work.close()
 
     @property

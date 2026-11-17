@@ -108,16 +108,19 @@ class MockPrinter:
         task.add_done_callback(self._tasks.discard)
 
     async def close(self):
-        if self._server is not None:
-            self._server.close()
-            await self._server.wait_closed()
+        server = self._server
+        if server is not None:
+            server.close()
             self._server = None
+        # Accepted connections must finish before Python3.12+ wait_closed.
         tasks = list(self._tasks)
         for writer in list(self._writers):
             writer.close()
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+        if server is not None:
+            await server.wait_closed()
 
     async def __aenter__(self):
         return await self.start()

@@ -75,16 +75,20 @@ class RecordingProxy:
         await self.close()
 
     async def close(self):
-        if self._server is not None:
-            self._server.close()
-            await self._server.wait_closed()
+        server = self._server
+        if server is not None:
+            server.close()
             self._server = None
+        # Python3.12+ wait_closed also waits for accepted transports. Drain owned
+        # sessions first, otherwise shutdown waits for their idle timeouts.
         for writer in list(self._writers):
             writer.close()
         tasks = list(self._tasks)
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+        if server is not None:
+            await server.wait_closed()
 
     def _accept(self, reader, writer):
         if self.capture.failed or len(self._tasks) >= self.config.max_clients:

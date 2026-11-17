@@ -199,8 +199,8 @@ class ProxyTests(unittest.IsolatedAsyncioTestCase):
             await reader.read()
         await self.start(handler)
         reader, _ = await self.connect()
-        self.assertEqual(await reader.readexactly(5), b"ready")
-        await self.proxy.close()
+        self.assertEqual(await asyncio.wait_for(reader.readexactly(5), 2), b"ready")
+        await asyncio.wait_for(self.proxy.close(), 2)
         self.assertEqual(await asyncio.wait_for(reader.read(), 2), b"")
         self.assertEqual(self.capture.sessions[0].summary["reason"], "server_shutdown")
 

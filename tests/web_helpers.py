@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 from finderlab.client import ClientConfig
 from finderlab.simulator import MockConfig, MockPrinter
@@ -21,6 +22,8 @@ class WebTestCase(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.temp = workspace_tempdir()
         self.root = Path(self.temp.name)
+        # Keep the real slicer mutex, but give each fixture its own workspace.
+        self.enterContext(patch("finderlab.slicer.ROOT", self.root))
         self.mock = await MockPrinter(MockConfig(port=0)).__aenter__()
         self.config = WebConfig(port=0, data_dir=self.root / "web-data", enable_upload=True,
                                 client=ClientConfig(port=self.mock.address[1]))

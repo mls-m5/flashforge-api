@@ -96,6 +96,11 @@ Storage quota counts the old version while receiving its replacement. Python/tra
 
 Files and jobs are memory-only and disappear with the process. **Capture files persist uploaded bytes on disk.** Each CLI run prints its private capture directory under `captures/`, containing `traffic.log`, `events.jsonl`, manifest and per-session binary streams. Ctrl+C finalizes it. See [CAPTURES.md](CAPTURES.md) for privacy/quotas. `--verbose` also prints requests/replies on the console.
 
+Shutdown stops accepting and cancels/joins owned sessions before waiting for
+listener closure, matching Python3.12's active-connection drain semantics without
+waiting for the30-second idle timeout. Portable loopback tests require client EOF
+and server_shutdown; no virtual start/cancel command or G-code execution is added.
+
 Embedding is opt-in for recording: pass a `Capture` to `MockPrinter` and close it after the server. `MockPrinter.files` is read-only; `active_file` identifies only the virtual job. No general replay tool is implemented yet.
 
 ## Tests and next steps

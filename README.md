@@ -50,6 +50,20 @@ It runs `podman compose up --build -d` from the project directory. It refuses a
 missing `.env` rather than selecting a dummy or guessing network settings. Run
 only when no upload/Slice/start operation is active.
 
+## Package source for an upgrade
+
+```sh
+./tools/package_release.sh                  # Fast archive only; tests NOT RUN
+./tools/package_release.sh --check --jobs 4 # Alternative: full checks, then archive
+```
+
+Exports reviewed, committed HEAD to `dist/releases/finderlab-COMMIT/` with SHA256
+and metadata explicitly saying whether tests ran. Requires clean tracked files;
+private `.env`, passwords, models and captures are excluded. Ordinary packaging
+needs no Node/container tools and never starts services. Same-commit output is
+not overwritten. Preserve your private `.env`, Compose project name and volumes
+when upgrading, and wait until no job is active. See [docs/RELEASES.md](docs/RELEASES.md).
+
 ## Clone and run a simulator rehearsal with Docker Compose
 
 Linux x86_64 server/local machine, including Orca and the Finder2 profiles;
@@ -367,6 +381,8 @@ index/retention limits and confirmed507 recovery. Deleting `.tmp/` is unrelated.
 ```sh
 # Full checks: Python suite + all tests/test_*.js (Node.js 18+) + trace integrity:
 ./tools/check.sh
+# Faster Python tests in four isolated processes (same checks, more CPU/RAM):
+./tools/check.sh --jobs 4
 # Equivalent without Bash:
 python3 tools/check.py
 # Without Node: explicitly skip UI checks, still run Python + trace integrity:

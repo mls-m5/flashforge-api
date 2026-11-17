@@ -83,7 +83,12 @@ Stop with Ctrl+C before asking for final hashes/summaries. Keep the run director
 - `--connect-timeout` defaults to 8 seconds.
 - `--idle-timeout` defaults to 60 seconds of inactivity **across both directions**. A one-way but active upload does not expire merely because the printer is silent. Individual blocked writes also have this timeout.
 - Refusal, timeout and connection errors are recorded; the proxy closes the client without injecting a fake printer reply.
-- Shutdown cancels sessions and closes both endpoints. Recording errors stop forwarding and cause CLI failure, not silent log loss.
+- Shutdown stops accepting, cancels/joins sessions and closes both endpoints **before** awaiting listener closure. Python3.12+ `Server.wait_closed()` also waits for accepted connections; waiting first incorrectly left shutdown to the60-second idle watchdog. Portable drain-order regressions enforce this without sleeps/timeouts being lengthened. Recording errors stop forwarding and cause CLI failure, not silent log loss.
+
+Python API reference: [Server.wait_closed (Python3.12)](https://docs.python.org/3.12/library/asyncio-eventloop.html#asyncio.Server.wait_closed).
+The reported host failure was on Python3.12; agent validation uses Python3.11
+plus explicit active-handler ordering assertions, not a claimed native3.12 run.
+No protocol framing/CRC/status parser/retry change or hardware test follows.
 
 The proxy preserves byte order/content per direction, not packet boundaries or precise timing. If a connection differs from a direct FlashPrint connection, compare bytes and host packet captures before changing protocol behavior.
 

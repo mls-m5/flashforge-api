@@ -116,6 +116,18 @@ class CheckRunnerTests(unittest.TestCase):
             self.assertEqual(self.invoke([]), 1)
         self.assertNotIn("Completed", self.output.getvalue())
 
+    def test_parallel_plan_and_cli_forward_explicit_bounded_worker_count(self):
+        commands = check.checks(self.root, jobs=4)
+        self.assertEqual(commands[0][1], [sys.executable, "tools/test_python.py", "--jobs", "4"])
+        with patch.object(check.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as run:
+            self.assertEqual(self.invoke(["--python-only", "--jobs", "2"]), 0)
+        self.assertEqual(run.call_args_list[0].args[0], [sys.executable, "tools/test_python.py", "--jobs", "2"])
+        with patch.object(check.subprocess, "run") as run:
+            for count in ("0", "9", "oops"):
+                with self.subTest(count=count), self.assertRaises(SystemExit):
+                    self.invoke(["--jobs", count])
+            run.assert_not_called()
+
     def test_runner_does_not_modify_parent_environment(self):
         before = dict(os.environ)
         with patch.object(check.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)):

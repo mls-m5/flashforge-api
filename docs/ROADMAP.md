@@ -695,6 +695,24 @@ Clean-checkout validation passed360 Python tests,17 Node scripts and trace
 integrity, including14 password/storage/HTTP/reset/cancel checks and a Node form
 check. No real browser/container/hardware acceptance is inferred.
 
+## Fast source packaging, optional parallel checks and Python3.12 shutdown
+
+User reported slow packaging plus proxy shutdown recorded as timeout instead of
+server_shutdown on Python3.12. The proxy/mock/web listener wait incorrectly
+preceded active handler cancellation; they now drain owned sessions before
+Server.wait_closed, retaining wire/job/recording policy. Portable regressions fail
+on the old order even under3.11; no native3.12/hardware acceptance is claimed.
+The three other reported ERROR tracebacks were not supplied and remain unknown.
+
+`tools/package_release.sh` now defaults to quick committed-HEAD source export,
+privacy/size/required-file/hash review and checks.result=not_run metadata. Full
+validation is explicit: `--check --jobs 4`; ordinary packaging
+needs no Node/container runtime and never launches services. `tools/check.sh --jobs 4`
+shards the same flat tests into bounded isolated processes. Each file
+runs once; no retries, dropped assertions or shared mock state. Fake-slicer tests
+now use independent scratch roots while real mutex exclusion remains tested.
+See RELEASES.md and tests/README.md. R3/R4/R5 maintenance remains separate.
+
 ## Deferred work
 
 Virtual print-progress simulation, additional firmware/client profiles, richer fault injection, exportable reports and optional separate print controls can follow. Print controls require a new safety/design decision rather than being added as a side effect of upload support.

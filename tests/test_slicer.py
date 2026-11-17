@@ -75,6 +75,7 @@ class SlicerTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.temp = workspace_tempdir()
         self.root = Path(self.temp.name)
+        self.enterContext(patch("finderlab.slicer.ROOT", self.root))
         self.source = self.root / "model ; with spaces.STL"
         self.source.write_text("solid synthetic\nendsolid synthetic\n")
         self.output = self.root / "result.gcode"
@@ -359,6 +360,20 @@ assert json.loads(pathlib.Path(value("--load-filaments")).read_text())["nozzle_t
             await self.slice(replace(self.config, max_model_size=1))
         with self.assertRaisesRegex(SliceError, "not found"):
             await self.slice(replace(self.config, orca=str(self.root / "absent")))
+
+    def test_real_workspace_lock_excludes_overlap_but_not_independent_workspaces(self):
+        from finderlab.slicer import _slice_slot
+        first, second = self.root / "workspace-a", self.root / "workspace-b"
+        first.mkdir()
+        second.mkdir()
+        with _slice_slot(first):
+            with self.assertRaisesRegex(SliceError, "Another Orca job"):
+                with _slice_slot(first):
+                    self.fail("same workspace admitted an overlapping job")
+            with _slice_slot(second):
+                self.assertTrue((second / "orca.lock").is_file())
+        with _slice_slot(first):
+            self.assertTrue((first / "orca.lock").is_file())
 
     async def test_resource_and_capture_limits_prevent_output(self):
         with self.assertRaisesRegex(SliceError, "workspace"):

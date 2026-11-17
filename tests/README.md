@@ -72,6 +72,22 @@ routes. Salted record/reset tests use project-local private files; reset CLI use
 only the existing workspace lock. No actual credential or hardware target is a
 fixture. Browser Basic-auth caching/reauthentication remains host acceptance.
 
+## Optional parallel Python checks
+
+`./tools/check.sh --jobs 4` shards the same49 flat test files across isolated
+subprocesses (bounded1–8); serial remains default. Each module runs once, full
+failure output is retained and failures are never retried. Mock state is not
+shared between threads. Web and slicer fixtures patch only the slicer scratch
+root into their private temporary directories; actual mutex/resource/job guards
+remain enabled. The lock test proves same-workspace exclusion and separate-root
+independence. No new native/container/LAN/hardware launch is introduced.
+`test_parallel_checks.py` tests worker overlap, distinct PIDs/local TMPDIR,
+complete failure reports, bounded workers and refusal to omit nested tests.
+`test_server_shutdown.py` verifies active handler drain before listener wait for
+proxy/mock/web, client/upstream EOF and server_shutdown without a watchdog wait.
+The Python3.12 listener-drain contract is enforced portably on Python3.11 too.
+Quick source packaging runs no tests and records not_run; `--check` is explicit.
+
 Node fixture consolidation, internal state and shared process refactors remain
 later stages in
 [docs/REFACTORING.md](../docs/REFACTORING.md), not already complete.
