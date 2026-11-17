@@ -17,6 +17,27 @@ from helpers import workspace_tempdir
 from test_slicer import FAKE, PAYLOAD
 
 
+async def read_http_response(reader):
+    """Read one bounded Content-Length response, not TCP EOF after its body.
+
+    Negative access gates can close with unread request bytes, producing a TCP
+    reset after a complete HTTP reply. Resets before a complete frame still fail.
+    """
+    async with asyncio.timeout(4):
+        raw = await reader.readuntil(b"\r\n\r\n")
+        if len(raw) > 16384:
+            raise ValueError("Oversized test HTTP response headers")
+        head = raw[:-4]
+        lengths = [line.split(b":", 1)[1].strip() for line in head.split(b"\r\n")[1:]
+                   if line.lower().startswith(b"content-length:")]
+        if len(lengths) != 1 or not lengths[0].isdigit():
+            raise ValueError("Expected exactly one decimal HTTP Content-Length")
+        length = int(lengths[0])
+        if length > 64 * 1024 * 1024:
+            raise ValueError("Oversized test HTTP response body")
+        return head, await reader.readexactly(length)
+
+
 async def close_http_writer(writer):
     """A rejected request may reset TCP during close (notably on Python3.12).
 
@@ -67,10 +88,9 @@ class WebTestCase(unittest.IsolatedAsyncioTestCase):
             await writer.drain()
             if early_eof:
                 writer.write_eof()
-            response = await asyncio.wait_for(reader.read(), 4)
+            head, content = await read_http_response(reader)
         finally:
             await close_http_writer(writer)
-        head, content = response.split(b"\r\n\r\n", 1)
         status = int(head.split(b" ")[1])
         self.last_headers = head
         return status, content

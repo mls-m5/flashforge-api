@@ -71,11 +71,23 @@ choose a new filename to retain an earlier one. Logs are private support data,
 not included in Git/source archives. Review before sharing. A previous terminal
 run cannot be reconstructed unless its output was saved elsewhere.
 
-The host still reports Python3.12 reset failures after the narrow HTTP cleanup
-change. Do not claim the host issue resolved based on3.11 tests. A traceback
-ending in wait_closed can involve an exception shared with the response reader;
-full diagnostics are needed before changing response handling. Do not suppress
-read failures or remove access/status/body assertions to get a green suite.
+The user's22:20UTC log at7a5fe12 now identifies all four failures on Python3.12.3:
+three peer-rejection HTTP tests plus incomplete-request shutdown. Cleanup-only
+handling did not fix the EOF-based reader; a shared reset exception can acquire a
+wait_closed traceback while still propagating from the original response read.
+The old reader was reproduced locally with real Linux SO_LINGER TCP reset, not
+just a mocked close exception. Both fixtures now read bounded Content-Length
+frames (4s/16KiB headers/64MiB body), preserving status/body/access assertions and
+rejecting truncated messages or resets before completion. The shutdown test
+accepts EOF or RST for an explicitly aborted incomplete request, still requiring
+handler drain and no printer client. Production networking/security is unchanged.
+Validation on3.11:388 Python tests,17 Node scripts and trace integrity passed,
+including a clean staged-source checkout. Separately, all four user-failing test
+methods passed with SO_LINGER reset forced on every owned web connection. Eight
+fixture contracts include real complete/incomplete reset responses and framing
+bounds. Do not claim native3.12 acceptance from these3.11 tests; host rerun remains
+needed. No release archive was precreated for this follow-up, allowing the user's
+first checked packaging of its new commit rather than blocking on existing output.
 
 ## Copy, verify, unpack and start
 

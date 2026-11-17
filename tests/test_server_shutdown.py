@@ -10,6 +10,7 @@ from finderlab.proxy import ProxyConfig, RecordingProxy
 from finderlab.simulator import MockConfig, MockPrinter
 from finderlab.web import WebConfig, WebServer
 from helpers import workspace_tempdir
+from web_helpers import close_http_writer
 
 
 class ServerShutdownTests(unittest.IsolatedAsyncioTestCase):
@@ -90,9 +91,13 @@ class ServerShutdownTests(unittest.IsolatedAsyncioTestCase):
                     await self.assert_drained_before_wait(
                         server.server, server.clients, lambda: server.__aexit__(None, None, None),
                     )
-                    self.assertEqual(await asyncio.wait_for(reader.read(), 2), b"")
+                    # An incomplete HTTP request is aborted, not a promised
+                    # graceful FIN. Both EOF and RST mean the socket is closed.
+                    try:
+                        self.assertEqual(await asyncio.wait_for(reader.read(), 2), b"")
+                    except ConnectionResetError:
+                        pass
                     client.assert_not_called()
                 finally:
-                    writer.close()
-                    await writer.wait_closed()
+                    await close_http_writer(writer)
                     await server.__aexit__(None, None, None)

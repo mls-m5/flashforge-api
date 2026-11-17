@@ -84,18 +84,24 @@ independence. No new native/container/LAN/hardware launch is introduced.
 `test_parallel_checks.py` tests worker overlap, distinct PIDs/local TMPDIR,
 complete failure reports, bounded workers and refusal to omit nested tests.
 `test_server_shutdown.py` verifies active handler drain before listener wait for
-proxy/mock/web, client/upstream EOF and server_shutdown without a watchdog wait.
+proxy/mock/web, client/upstream closure and server_shutdown without a watchdog wait.
+An intentionally aborted incomplete web request may close with either EOF or RST;
+handler-drain ordering and no-FinderClient assertions remain required.
 The Python3.12 listener-drain contract is enforced portably on Python3.11 too.
 Quick source packaging runs no tests and records not_run; `--check` is explicit.
 
 HTTP negative-access tests must keep their status/body and route/client assertions.
-A peer rejection before consuming a request can reset TCP; Python3.12 may report
-that reset from writer.wait_closed after the response has already been read.
-Both HTTP fixtures use close_http_writer, which ignores only ConnectionResetError
-from final cleanup. Request/response I/O, malformed responses and other close
-errors still fail. Four injected contracts in test_web_helpers.py verify these
-boundaries without needing a particular kernel/runtime to produce a reset.
-Production access/HTTP/wire code is unchanged. Native3.12 acceptance is host-run.
+A peer rejection before consuming a request can reset TCP. The user's full3.12.3
+log showed that ignoring cleanup alone is insufficient: the EOF-based response
+read can raise the same reset, whose traceback is then extended by wait_closed.
+Both fixtures now read one Content-Length message (4s total,16KiB headers/64MiB
+body), not TCP EOF. Missing/duplicate/invalid/oversized lengths, truncated bodies
+and resets before completion still fail; close_http_writer tolerates only reset
+from cleanup. No response-read exception is blindly swallowed. Existing status /
+body/auth/no-route/no-client assertions remain. Linux SO_LINGER tests reproduce
+an actual reset after a complete403 in both helpers and reject a reset before the
+body completes, with separate header/body writes and no timing sleeps. Production
+access/HTTP/wire code is unchanged. Native3.12 acceptance remains host-run.
 
 Node fixture consolidation, internal state and shared process refactors remain
 later stages in
