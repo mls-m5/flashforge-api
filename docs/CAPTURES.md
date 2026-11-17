@@ -128,6 +128,18 @@ capture improves reproducibility, not print safety.
 
 Generated `sliced.gcode` is retained under the run directory by default, or at standalone slice's explicit `--output`. It has a **separate** size bound (`--max-file-size`) and is outside `--max-capture-bytes`; original profiles/model snapshots and native temporary data are cleaned from project-local `.tmp/`. Raw slicer log chunks are bounded independently and count toward the existing event/log quota. Full details and trust limits: [SLICING.md](SLICING.md).
 
+## File-slot owner versus recording history (refactoring R2c)
+
+`web_files.py::SlotFiles` owns only the current private slot's sources, selected
+artifact, model paths, preview cache and retained compound geometry. It has no
+capture/archival/client object and creates no record for receipt or preview.
+Workbench keeps the single public state, identity hashes/receipt IDs, admission
+reservations and exact Slice/GX/save/start capture sequencing. Artifact selection
+is not a new confirmation/finalization event. Discard/partial-file cleanup never
+prunes capture history, and preview GET admission remains archive=False. Raw
+format/events/metadata/hashes and saved-versus-unknown facts are unchanged.
+See WEB.md and REFACTORING.md; internal ownership is not new physical evidence.
+
 ## Multi-model plate provenance
 
 One unsliced slot may now retain up to8 original STL inputs. Explicit Slice's

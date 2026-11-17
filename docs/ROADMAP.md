@@ -645,15 +645,21 @@ HTTP wire/lifecycle comparisons were identical. R2b is now complete: per-request
 web_routes.py dispatch/named file handlers, common access/error/lifecycle on
 WebServer, unchanged Workbench/config/capture ASTs/profile bytes/static allowlist.
 All326 Python tests +16 Node + trace integrity passed;960 in-memory old/new HTTP
-response/action/close/abort outcomes matched. Next is R2c source/artifact ownership,
-not a broad rewrite or new framework. Commit each
+response/action/close/abort outcomes matched. R2c now gives slot/file paths,
+byte receipt/registration/cleanup and bounded preview cache one SlotFiles owner,
+with no shadow state dict. Workbench retains policy/identity/admission/busy and
+job/capture sequencing; exact file/API/guard behavior is preserved. All54 offline
+old/new lifecycle snapshots/file bytes matched, critical gates/operation logic
+were structurally compared. All338 Python +16 Node + trace integrity checks,
+including12 new owner tests, passed. Next is R3 explicit
+internal state, not a broad rewrite or new framework. Commit each
 stage after full regression checks; browser/container/hardware acceptance stays
 separate. See tests/README.md for test ownership and tools/check.sh for checks.
 A new-session handoff is now recorded near the top of REFACTORING.md, including
 required reads, checkpoint history, test baseline and R2a/b/c acceptance. R2a/R2b
-are complete; continue R2c without combining state/process/frontend changes.
+and R2c are complete; continue R3 without combining process/frontend changes.
 The user's preference for available worker-agent delegation is in AGENTS.md;
-no launch tool was exposed in R2a/R2b and no worker ran.
+no launch tool was exposed in R2a/R2b/R2c and no worker ran.
 
 ## Deferred work
 

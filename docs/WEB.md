@@ -489,9 +489,27 @@ config/token/owned-dummy and response dependencies. Model token/identity/busy
 checks stay before geometry/cache/stream work; streaming retains30s/64KiB bounds
 and backpressure. Shared upload bounds live in web_limits.py; old web.py imports
 remain available via explicit re-exports. Validation order, limits, JSON/API and
-response/security header bytes are unchanged. Workbench operations/state/source
-ownership were not refactored in R2a/R2b. Source ownership is R2c, still pending;
-see REFACTORING.md.
+response/security header bytes are unchanged. R2c now extracts source/artifact
+file ownership as described below; state transitions remain future R3 work.
+See REFACTORING.md.
+
+## File-slot ownership (refactoring R2c)
+
+`web_files.py::SlotFiles` owns the private slot directory, primary source,
+selected print artifact, registered model paths, 3MF preview cache and retained
+compound mesh for GX. It performs byte receipt/file cleanup/preview conversion,
+with no printer client, capture, archival policy or workbench state dictionary.
+Workbench remains responsible for input/capability/identity validation, quota
+admission, metadata, phase/busy and all operation/capture/save/start sequencing.
+Its explicit inspection properties read the one file owner, not mirrored paths.
+
+The public JSON/API and file layout/limits remain unchanged. Additional STL
+failure removes only its new partial file; Discard removes the slot but not
+history, and failed deletion does not clear references/state. Preview admission
+still uses archive=False; worker/cache failure or cancellation restores the
+previous phase/busy even if local cleanup itself raises. Slice/GX select only
+already-produced files, leaving source and original code immutable. No automatic
+reload/resume/retry or new job intent follows from this internal ownership move.
 
 ## Storage, HTTP and failure boundaries
 

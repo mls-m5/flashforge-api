@@ -217,8 +217,14 @@ common access gates, relative-URL validation, error mapping and connection/task
 lifecycle, constructing routes only after applicable gates. No duplicated state,
 startup-config cache, registry or route->web import cycle. Shared upload bounds
 live in web_limits.py; web.py explicitly re-exports them and the static allowlist.
-Workbench state/operation/source ownership is unchanged. Next is R2c source /
-artifact ownership, explicit internal state and shared process primitives.
+R2c now gives file-slot paths, byte I/O, model registration, preview cache and
+cleanup one `web_files.py::SlotFiles` owner, with no competing state dict or
+quota/client/capture object. Workbench retains policy/identity/admission/busy /
+metadata and job/capture sequencing; inspection properties expose owner references
+without storing copies. Slice/GX only select already-produced artifacts; source
+and original code remain unchanged. Preview resource/cache and no-GET-archive /
+cleanup behavior are preserved. R3 explicit state and R4 process unification
+remain separate next steps.
 Public API, wire/capture semantics, profile bytes and no-retry/identity/priming
 policy must remain stable; do not weaken tests or unify unlike parsers merely
 to reduce duplication. No framework/dependency migration or hardware trial.

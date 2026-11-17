@@ -8,14 +8,11 @@ import argparse
 import asyncio
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field, replace
-import hashlib
-import json
 import os
 import re
 import unicodedata
 from pathlib import Path
 import secrets
-import shutil
 import signal
 from urllib.parse import urlsplit
 import uuid
@@ -26,6 +23,7 @@ from .slicer import SliceConfig, slice_model
 from .model_transform import normalize_transform
 from .plate import normalize_plate, MAX_MODELS
 from .web_storage import admit, StorageError
+from .web_files import SlotFiles
 from .slice_settings import normalize_settings
 from .active_status import ActiveMonitor
 from .manual_controls import VirtualControls, StaleControls
@@ -119,9 +117,7 @@ class Workbench:
         self.config = config
         self.folder = Path(config.data_dir).resolve()
         self.folder.mkdir(mode=0o700, parents=True, exist_ok=True)
-        self.source = None
-        self.artifact = None
-        self.slot = None
+        self.files = SlotFiles(self.folder)
         self.task = None
         self.network_lock = asyncio.Lock()
         self.monitor = None
@@ -129,9 +125,6 @@ class Workbench:
         self.manual_controls = None
         self.owned_printer = None
         self.manual_capture = ""
-        self.model_cache = None
-        self.model_paths = {}
-        self.gx_geometry = None
         self.state = self.empty()
         # Do not let two servers operate the same workspace at once.
         import fcntl
@@ -141,6 +134,32 @@ class Workbench:
         except BaseException:
             self.lock.close()
             raise
+
+    # Explicit inspection accessors keep existing callers readable. SlotFiles is
+    # the sole owner of these references; no mirrored paths/state or setters.
+    @property
+    def source(self):
+        return self.files.source
+
+    @property
+    def artifact(self):
+        return self.files.artifact
+
+    @property
+    def slot(self):
+        return self.files.directory
+
+    @property
+    def model_cache(self):
+        return self.files.model_cache
+
+    @property
+    def model_paths(self):
+        return self.files.model_paths
+
+    @property
+    def gx_geometry(self):
+        return self.files.gx_geometry
 
     @staticmethod
     def empty():
@@ -195,34 +214,20 @@ class Workbench:
             raise WebError(413, f"File must contain 1–{limit} bytes")
         self.capacity(length + 4096)
         self.state = {**self.empty(), "busy": True, "phase": "receiving", "name": name}
-        self.slot = self.folder / ("file-" + uuid.uuid4().hex)
-        path = self.slot / ("source" + suffix)
-        digest = hashlib.sha256()
+        path = self.files.begin_source(suffix)
         try:
-            self.slot.mkdir(mode=0o700)
-            async with asyncio.timeout(60):
-                with path.open("xb") as writer:
-                    remaining = length
-                    while remaining:
-                        chunk = await reader.read(min(65536, remaining))
-                        if not chunk:
-                            raise WebError(400, "File body ended early")
-                        writer.write(chunk)
-                        digest.update(chunk)
-                        remaining -= len(chunk)
-            self.source = path
-            self.artifact = path if suffix not in (".stl", ".3mf") else None
+            digest = await self.files.receive_source(reader, path, length)
+            self.files.accept_source(path, model=suffix in (".stl", ".3mf"))
             self.state.update(phase="model_ready" if suffix in (".stl", ".3mf") else "file_ready",
-                              size=length, sha256=digest.hexdigest(), source_sha256=digest.hexdigest(),
+                              size=length, sha256=digest, source_sha256=digest,
                               model=suffix in (".stl", ".3mf"), source_id=uuid.uuid4().hex, artifact=self.artifact is not None,
                               suggested_name=suggested_name(name))
             if suffix in ('.stl','.3mf'):
                 identifier=uuid.uuid4().hex
-                self.model_paths={identifier:path}
-                self.state['models']=[dict(id=identifier,name=name,sha256=digest.hexdigest(),size=length)]
+                self.files.register_first_model(identifier)
+                self.state['models']=[dict(id=identifier,name=name,sha256=digest,size=length)]
         except BaseException:
-            shutil.rmtree(self.slot, ignore_errors=True)
-            self.slot = None
+            self.files.abort_source_receive()
             self.state = self.empty()
             raise
         finally:
@@ -233,21 +238,16 @@ class Workbench:
         if not 0<length<=32*1024*1024 or sum(m['size'] for m in self.state['models'])+length>MODEL_LIMIT:
             raise WebError(413,'Plate limit:32MiB per additional STL,64MiB total')
         self.capacity(length+4096)
-        identifier=uuid.uuid4().hex;path=self.slot/(identifier+'.stl');digest=hashlib.sha256()
+        identifier, path = self.files.new_model_path()
         self.state.update(busy=True)
         try:
-            async with asyncio.timeout(60):
-                with path.open('xb') as output:
-                    remaining=length
-                    while remaining:
-                        data=await reader.read(min(65536,remaining))
-                        if not data:raise WebError(400,'Additional STL body ended early; existing plate preserved')
-                        output.write(data);digest.update(data);remaining-=len(data)
-            self.model_paths[identifier]=path
-            self.state['models']=[*self.state['models'],dict(id=identifier,name=name,sha256=digest.hexdigest(),size=length)]
+            digest = await self.files.receive_model(reader, path, length)
+            self.files.register_model(identifier, path)
+            self.state['models']=[*self.state['models'],dict(id=identifier,name=name,sha256=digest,size=length)]
             self.state.update(source_id=uuid.uuid4().hex,name=f"{len(self.state['models'])} STL models",suggested_name='plate.gcode',size=sum(m['size'] for m in self.state['models']))
         except BaseException:
-            path.unlink(missing_ok=True);raise
+            self.files.abort_model_receive(path)
+            raise
         finally:self.state['busy']=False
 
     def remove_model(self,data):
@@ -259,22 +259,17 @@ class Workbench:
         if data['source_id']!=self.state['source_id']:raise WebError(409,'Plate changed; refresh')
         identifier=data['model_id']
         if not isinstance(identifier,str) or identifier not in self.model_paths:raise WebError(404,'No such model')
-        self.model_paths[identifier].unlink()
-        del self.model_paths[identifier]
+        self.files.remove_model(identifier)
         models=[m for m in self.state['models'] if m['id']!=identifier]
-        self.state['models']=models;self.source=self.model_paths[models[0]['id']]
+        self.state['models']=models
+        self.files.select_source(models[0]['id'])
         self.state.update(source_id=uuid.uuid4().hex,source_sha256=models[0]['sha256'],sha256=models[0]['sha256'],
                           name=models[0]['name'] if len(models)==1 else f'{len(models)} STL models',size=sum(m['size'] for m in models),
                           suggested_name=suggested_name(models[0]['name']) if len(models)==1 else 'plate.gcode')
 
     def discard(self):
         self.idle()
-        if self.slot:
-            shutil.rmtree(self.slot)
-        self.source = self.artifact = self.slot = None
-        self.model_cache = None
-        self.model_paths = {}
-        self.gx_geometry = None
+        self.files.discard()
         self.state = self.empty()
 
     async def model_geometry(self):
@@ -284,41 +279,18 @@ class Workbench:
             raise WebError(404, "No STL/3MF source model")
         if self.source.suffix == ".stl":
             return self.source, 0
-        if self.model_cache and self.model_cache[0].is_file():
-            return self.model_cache
-        self.model_cache = None
+        cached = self.files.cached_preview()
+        if cached:
+            return cached
         from .model_3mf import MAX_TRIANGLES
         max_derived = min(MODEL_LIMIT, 84 + MAX_TRIANGLES * 50)
         self.capacity(max_derived + 4096,archive=False)  # Preview GET must not relocate recording history.
         previous = self.state["phase"]
         self.state.update(busy=True, phase="model_preview")
-        destination = self.slot / "model-preview.stl"
-        process = None
         try:
-            import sys
-            process = await asyncio.create_subprocess_exec(
-                sys.executable, "-m", "finderlab.model_3mf", str(self.source), str(destination),
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL, start_new_session=True,
-                cwd=Path(__file__).resolve().parents[1])
-            async with asyncio.timeout(20):
-                output, _ = await process.communicate()
-            if process.returncode != 0 or len(output) > 512 * 1024:
-                raise WebError(422, "3MF model preview failed or exceeded resources; export mesh-only STL if unsupported")
-            info = json.loads(output)
-            if not destination.is_file() or not 0 < destination.stat().st_size <= max_derived:
-                raise WebError(422, "Invalid geometry preview output")
-            self.model_cache = destination, info["zero_area_facets_skipped"]
-            return self.model_cache
+            return await self.files.prepare_preview(max_derived)
         finally:
-            try:
-                if process is not None and process.returncode is None:
-                    try: os.killpg(process.pid, signal.SIGKILL)
-                    except ProcessLookupError: pass
-                    await process.wait()
-                if self.model_cache is None:
-                    destination.unlink(missing_ok=True)
-            finally:
-                self.state.update(busy=False, phase=previous)
+            self.state.update(busy=False, phase=previous)
 
     def start(self, operation, data):
         self.idle()
@@ -505,7 +477,7 @@ class Workbench:
                 info=await export_gx(self.artifact,self.gx_geometry['path'] if self.gx_geometry else self.source,destination,self.config.slicing,capture=capture,
                                      metadata=self.state['gx_metadata'],transform={} if self.gx_geometry else self.state['model_transform'],
                                      expected_gcode_sha256=data['artifact_sha256'],expected_model_sha256=self.gx_geometry['sha256'] if self.gx_geometry else self.state['source_sha256'])
-                self.artifact=destination
+                self.files.select_artifact(destination)
                 self.state.update(phase='review',gx_generated=True,size=info['size'],sha256=info['sha256'],
                                   suggested_name=Path(self.state['suggested_name']).with_suffix('.gx').name,
                                   warning='Experimental GX envelope/thumbnail; printer display/firmware acceptance not verified. G-code body unchanged.')
@@ -513,8 +485,7 @@ class Workbench:
                 result = await slice_model(self.source, self.slot / self.state["suggested_name"], self.config.slicing,
                                            capture=capture, settings=self.state["slice_settings"], transform=self.state["model_transform"],
                                            plate=[dict(e,path=str(self.model_paths[e['id']]),sha256=next(m['sha256'] for m in self.state['models'] if m['id']==e['id'])) for e in self.state['plate']] if self.state['plate'] else None)
-                self.gx_geometry=capture.manifest['metadata'].get('plate_geometry')
-                self.artifact = result.path
+                self.files.select_slice(result.path, capture.manifest['metadata'].get('plate_geometry'))
                 self.state.update(phase="review", sliced=True, artifact=True, size=result.size, sha256=result.sha256,
                                   effective_quality=capture.manifest["metadata"].get("effective_quality"),
                                   gx_metadata=capture.manifest['metadata'].get('gx_metadata'),

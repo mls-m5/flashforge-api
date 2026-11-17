@@ -175,7 +175,7 @@ class WebModelsTests(WebTestCase):
         async def communicate():
             entered.set();await asyncio.Event().wait()
         process=SimpleNamespace(pid=123456,returncode=None,communicate=communicate,wait=AsyncMock())
-        with patch("asyncio.create_subprocess_exec",new=AsyncMock(return_value=process)),patch("finderlab.web.os.killpg") as kill:
+        with patch("asyncio.create_subprocess_exec",new=AsyncMock(return_value=process)),patch("finderlab.web_files.os.killpg") as kill:
             task=asyncio.create_task(self.server.work.model_geometry())
             await asyncio.wait_for(entered.wait(),2)
             self.assertTrue(self.server.work.state["busy"])

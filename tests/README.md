@@ -38,6 +38,7 @@ Existing access/storage *unit* tests are separate from HTTP integration families
 | `test_web_cli.py` | CLI refusal and clean SIGINT/SIGTERM shutdown |
 | `test_web_jobs.py` | Exact save/start/cancel, combined intent, finalized records, unknown results/no retries |
 | `test_web_admission.py` | HTTP quota/reservation/archive/locking; no GET-triggered archive |
+| `test_web_files.py` | Slot owner byte I/O/cache/cleanup/selection and workbench owner/admission boundary |
 | `test_web_models.py` | Single/multiple source identities, transforms, bounded STL/core3MF preview and cancellation |
 | `test_web_slicing.py` | Fake Orca, quality/snapshot/guard/publication and cancellation |
 | `test_web_gx.py` | Explicit GX source/format/hash/export, errors and generated-upload gate |
@@ -60,6 +61,10 @@ R2a extracted production wire parsing/responses; R2b extracts routes/file stream
 keeping common access gates/error mapping/socket/task cleanup on WebServer. Its
 direct tests use memory writers/synthetic local files and its integration tests
 retain the same owned-loopback fixture. Existing tests/assertions are preserved.
-Node fixture consolidation, source ownership, internal state and shared process
-refactors remain later stages in
+R2c extracts file ownership/I/O/cache into SlotFiles while Workbench keeps the
+single state, identities, admission/busy and operation policy. Its direct tests
+use synthetic files/readers/fake converters. The existing preview killpg patch
+now targets web_files, the actual converter owner; assertions remain unchanged.
+Node fixture consolidation, internal state and shared process refactors remain
+later stages in
 [docs/REFACTORING.md](../docs/REFACTORING.md), not already complete.
