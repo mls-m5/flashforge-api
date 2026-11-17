@@ -6,7 +6,7 @@ import json
 from unittest.mock import patch
 
 from finderlab.web import WebServer
-from web_helpers import WebTestCase
+from web_helpers import WebTestCase, close_http_writer
 
 
 class WebHttpIntegrationTests(WebTestCase):
@@ -18,8 +18,7 @@ class WebHttpIntegrationTests(WebTestCase):
             writer.write_eof()
             data = await asyncio.wait_for(reader.read(), 4)
         finally:
-            writer.close()
-            await writer.wait_closed()
+            await close_http_writer(writer)
         head, body = data.split(b"\r\n\r\n", 1)
         self.assertIn(b"Connection: close\r\n", head)
         self.assertIn(b"Content-Security-Policy:", head)

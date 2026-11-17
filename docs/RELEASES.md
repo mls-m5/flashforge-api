@@ -120,7 +120,7 @@ from the one displayed failure. Python3.12 execution remains a host verification
 
 ## Validation
 
-Local Python3.11 validation:379 Python tests,17 Node scripts and reviewed-trace
+Packaging milestone Python3.11 validation:379 Python tests,17 Node scripts and reviewed-trace
 integrity passed both serially and with --jobs 4. Test-identity multisets matched
 exactly (379, no omissions/duplicates introduced). The same staged source passed
 all checks in a clean checkout without local tools/private profiles. Measured
@@ -128,6 +128,14 @@ full-run wall time here was about49s serial vs20s parallel; host CPU/load affect
 these numbers. All three new drain-order regressions failed on original HEAD,
 then passed with the fix. Python3.12, rendered-browser/container/hardware trials
 were not run; the supplied traceback only diagnoses the one shutdown failure.
+
+Follow-up host Python3.12 trace: the HTTP negative peer-access fixture failed at
+writer.wait_closed with ConnectionResetError during final socket cleanup. Cleanup
+now tolerates only that reset in both HTTP fixture helpers; response read failures,
+incomplete responses, status/body and no-route/no-printer assertions are unchanged.
+Four injected reset contracts plus the full383-Python/17-Node/trace suite passed
+locally on3.11. This is not native3.12 acceptance or a diagnosis of the other three
+unprovided ERROR tracebacks. No production access/parser/printer code changed.
 
 Tests use fresh project-local Git fixtures and fake check scripts, not recursive
 production suites or hardware. They cover clean/staged/untracked boundaries,

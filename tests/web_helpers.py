@@ -17,6 +17,19 @@ from helpers import workspace_tempdir
 from test_slicer import FAKE, PAYLOAD
 
 
+async def close_http_writer(writer):
+    """A rejected request may reset TCP during close (notably on Python3.12).
+
+    Ignore only this cleanup error. Request writes, response reads and all
+    status/body assertions remain outside this handler and must still fail.
+    """
+    writer.close()
+    try:
+        await writer.wait_closed()
+    except ConnectionResetError:
+        pass
+
+
 @unittest.skipUnless(os.name == "posix", "Web workspace locking currently requires POSIX")
 class WebTestCase(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -56,8 +69,7 @@ class WebTestCase(unittest.IsolatedAsyncioTestCase):
                 writer.write_eof()
             response = await asyncio.wait_for(reader.read(), 4)
         finally:
-            writer.close()
-            await writer.wait_closed()
+            await close_http_writer(writer)
         head, content = response.split(b"\r\n\r\n", 1)
         status = int(head.split(b" ")[1])
         self.last_headers = head
