@@ -30,6 +30,8 @@ Existing access/storage *unit* tests are separate from HTTP integration families
 | `test_web.py` | Core HTTP parsing/config/assets, receipt limits, owned-dummy boundary and config/names |
 | `test_web_http.py` | Direct in-memory wire parsing/body/response/deadline/error contracts |
 | `test_web_http_integration.py` | Raw HTTP/error/access ordering and body limits through owned-loopback WebServer |
+| `test_web_routes.py` | Direct route delegation/guards/file streams using memory writers and synthetic local files |
+| `test_web_route_access.py` | Common gate precedes route construction on every protected route/asset; config is request-bound |
 | `test_web_monitoring.py` | HTTP monitor lifecycle, ownership handoff, recording failures and passive reads |
 | `test_web_manual.py` | Owned-dummy counter/light rehearsal; physical controls stay locked |
 | `test_web_lan.py` | Auth/peer/Host/Origin/token and shared-workflow behavior on ephemeral loopback |
@@ -54,9 +56,10 @@ G-code is synthetic and dummy jobs execute nothing. Configured targets/native
 Orca/actual containers and browser/GPU rendering are not part of these checks.
 Do not convert a test to using an existing proxy just because it is on localhost.
 
-R2a extracted production wire parsing/responses only, keeping all common access
-gates, routes and socket/task cleanup on WebServer. Its direct tests use memory
-streams/writers; its integration tests retain the same owned-loopback fixture.
-Node fixture consolidation, route/source ownership, internal state and shared
-process refactors remain later stages in
+R2a extracted production wire parsing/responses; R2b extracts routes/file streams,
+keeping common access gates/error mapping/socket/task cleanup on WebServer. Its
+direct tests use memory writers/synthetic local files and its integration tests
+retain the same owned-loopback fixture. Existing tests/assertions are preserved.
+Node fixture consolidation, source ownership, internal state and shared process
+refactors remain later stages in
 [docs/REFACTORING.md](../docs/REFACTORING.md), not already complete.

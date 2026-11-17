@@ -476,16 +476,22 @@ starts an owned dummy and loopback UI with Orca/Finder2 slicing, not hardware.
 Configure proxy mode/capabilities explicitly for a real workflow. The paused OctoPrint example
 stays `compose.octoprint.yml` and is not part of this deployment.
 
-## HTTP implementation boundary (refactoring R2a)
+## HTTP implementation boundary (refactoring R2a/R2b)
 
 `finderlab/web_http.py` contains the narrow bounded request/header and JSON reads,
 strict POST length parsing, WebError and wire response helpers. `finderlab.web`
 explicitly re-exports WebError and keeps the public WebServer/CLI entry points.
-WebServer still owns peer/Host/Basic/Origin/token validation, URL/route handling,
-file streaming and socket/task cleanup. All gates remain before side effects;
-validation order, deadlines/limits, JSON/API and response/security header bytes
-are unchanged. Workbench operations/state/storage were not refactored in R2a.
-Route separation/source ownership remain later R2 steps; see REFACTORING.md.
+WebServer owns common peer/Host/Basic/transfer/method/relative-URL/Origin/token /
+POST-length validation, error mapping and socket/task cleanup. After these gates,
+a per-request `web_routes.py::WebRoutes` adapter handles GET/POST dispatch and
+named config/model/artifact/thumbnail/file streams, with explicit workbench,
+config/token/owned-dummy and response dependencies. Model token/identity/busy
+checks stay before geometry/cache/stream work; streaming retains30s/64KiB bounds
+and backpressure. Shared upload bounds live in web_limits.py; old web.py imports
+remain available via explicit re-exports. Validation order, limits, JSON/API and
+response/security header bytes are unchanged. Workbench operations/state/source
+ownership were not refactored in R2a/R2b. Source ownership is R2c, still pending;
+see REFACTORING.md.
 
 ## Storage, HTTP and failure boundaries
 

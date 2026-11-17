@@ -12,15 +12,16 @@ remaining work. Do not combine a structural move with a protocol/policy change.
 
 ### Checkpoint and authorization
 
-- R1 implementation checkpoint: **`0d9454c`**. **R2a is now complete** (see its
-  progress log below); the next bounded milestone is **R2b route separation**.
+- R1 implementation checkpoint: **`0d9454c`**; R2a: **`0630faa`**.
+  **R2b route separation is now complete** (see its progress log below);
+  the next bounded milestone is **R2c source/artifact ownership**.
   Use current Git HEAD/status rather than assuming the older handoff commit.
   Earlier relevant
   commits: `b4b7145` (tracked Finder2 profiles/default slicer Compose) and
   `74b6f21` (container packaging). The original handoff was documentation only;
   the later R2a implementation and its limits are recorded below.
 - The user approved continuing the incremental refactoring plan, not replacing
-  the application or adding functionality. **Continue with R2b below**, commit and
+  the application or adding functionality. **Continue with R2c below**, commit and
   report that bounded milestone, then continue through the checklist.
 - At handoff, tracked working tree was clean; unrelated untracked `result.json`
   remained. Recheck Git status first; never overwrite another agent/user's work.
@@ -29,7 +30,9 @@ remaining work. Do not combine a structural move with a protocol/policy change.
 - R1's production changes were confined to the container argv builder. R2a now
   extracts HTTP wire primitives into `finderlab/web_http.py`, keeping common
   access gates, routes, file streams and lifecycle on WebServer. Workbench/state /
-  operation/storage code is unchanged. R2b/R2c and R3–R6 are not implemented.
+  operation/storage code is unchanged. R2b now delegates routes/file streaming
+  to a per-request WebRoutes adapter; server access/error/lifecycle ownership
+  stays explicit. R2c and R3–R6 are not implemented.
 
 ### Read before implementation
 
@@ -75,12 +78,15 @@ The plan's review metrics describe the original checkpoint, not a target size.
    tests, update this log and commit with an English message. Report actual
    acceptance and gaps; a clean suite is not a browser/container/hardware trial.
 
-### R2b and R2c — after R2a
+### R2b completed / R2c next — after R2a
 
 - **R2b:** split route handlers/dispatch from transport while retaining one common
   access gate. Keep public WebServer/CLI entry points stable where practical.
   Model/artifact/thumbnail streaming must retain token/identity/busy semantics.
-- **R2c:** give source/plate/artifact storage a narrow owner/interface. Preserve
+  **Completed:** web_routes.py receives explicit request-time dependencies;
+  named config/model/artifact/thumbnail/stream methods replace the route branches
+  in handle(). The common gate remains in WebServer and runs first.
+- **R2c (next):** give source/plate/artifact storage a narrow owner/interface. Preserve
   hashes/receipt identities, immutable snapshots, quota/archive protection,
   no GET-triggered archive and cleanup after cancellation. Read the related
   model/plate/storage docs first. Do not introduce competing state dictionaries.
@@ -159,17 +165,17 @@ production workbench state or HTTP behavior changes in R1.
 
 ### R2 — Separate HTTP from workbench behavior
 
-- [ ] Separate bounded request parsing/response writing and shared access checks
-  from route dispatch. **Partial: R2a extracted parsing/response primitives;
-  common access checks and routes remain in WebServer until R2b.** All routes,
+- [x] Separate bounded request parsing/response writing and shared access checks
+  from route dispatch. **R2a extracted wire primitives; R2b extracted routes,
+  with common access checks still owned by WebServer.** All routes,
   including assets/model/thumbnail, must retain
   the same peer/Host/Basic/Origin/token/body/deadline/CSP checks and error behavior.
-- [ ] Leave `finderlab.web` as the public CLI/server entry point where practical;
+- [x] Leave `finderlab.web` as the public CLI/server entry point where practical;
   use explicit imports and update patch points deliberately, not a broad registry
   or catch-all proxy layer to keep old tests artificially passing.
 - [ ] Extract source/plate/artifact storage behind a narrow interface. Preserve
   immutable identities, cache/quota/discard cleanup and no GET-triggered archive.
-- [ ] Keep operation orchestration and Save->Start finalization gates together.
+- [x] Keep operation orchestration and Save->Start finalization gates together.
   Avoid cyclic imports or callbacks that obscure who owns busy/network locks.
 
 ### R3 — Explicit internal state and transitions
@@ -266,7 +272,7 @@ acceptance are not supplied by this refactoring's automated checks.
 - Container build/browser/GPU/hardware acceptance remains unverified here. No
   agent printer/proxy/LAN listener or native Orca trial was performed in R1.
 
-### R2a completed — next implementation stage is R2b
+### R2a completed
 
 - `finderlab/web_http.py` now owns Request header data, bounded CRLF/ASCII header
   parsing, strict POST Content-Length, bounded JSON object reads, shared WebError
@@ -299,5 +305,43 @@ acceptance are not supplied by this refactoring's automated checks.
 - No worker agent was launched because no launch tool was exposed; no hardware,
   LAN listener, service restart, native or container trial was performed.
 
-Continue R2b (routes) and R2c (source/artifact owner) as separate milestones.
-Do not mark all R2 complete or expand into state/process/frontend changes.
+### R2b completed — next implementation stage is R2c
+
+- Added per-request `finderlab/web_routes.py::WebRoutes` with explicit workbench,
+  config/token/owned-dummy and response-head/reply dependencies. GET/POST dispatch
+  and named config/model/artifact/thumbnail/file-stream handlers now live there;
+  no module imports finderlab.web or opens a listener/printer session. No dynamic
+  registry, state copy or cached startup config was introduced.
+- WebServer still owns peer/Host/Basic/transfer/method/relative-URL/Origin/token /
+  POST-length checks, exception mapping, response entry points and socket/task
+  cleanup. It constructs routes only after all applicable common gates. Model
+  token/ETag/busy checks remain route-local in their original order, before any
+  source-cache read/preparation. File streaming retains open/stat/deadline order,
+  30s bound,64KiB chunks/backpressure, exact headers and no deletion/retry.
+- Static allowlist moved with routes and is explicitly imported by finderlab.web
+  for existing readers. Print/model byte bounds moved to web_limits.py, shared
+  by workbench and routes without a circular import or duplicated constants.
+  Workbench/WebConfig/WebCapture class ASTs, profile bytes and static allowlist
+  match pre-R2b. No operation/storage/client/parser/frontend logic was modified.
+- Added10 direct route tests with fake local files/memory writers and3 ephemeral
+  loopback integration tests. They cover delegation/body-error order, named
+  model identity/no fallback, stream boundaries/error/cancel, thumbnail guards,
+  current request config, and rejection before route construction on every asset
+  and protected API. Existing tests/expectations remained unchanged.
+- Baseline full runner:313 Python tests +16 Node scripts + trace integrity passed.
+  After extraction:326 Python tests +16 Node + trace integrity passed; focused
+  route/access tests13/13 passed; diff whitespace check passed. An additional
+  in-memory old/new comparison covered960 exact response/action/close/abort
+  outcomes with synthetic ready/busy/empty/GX files, no sockets/printer sessions.
+  The comparison is an ignored scratch aid, not a required deployment artifact.
+- No subagent launch tool was exposed, so no worker ran. No agent hardware/LAN /
+  proxy/service/native/container action. A fresh staged git checkout-index copy
+  without ignored local profiles/tools also passed all326 Python +16 Node + trace
+  checks. Browser/GPU/container/hardware acceptance remains separate from these
+  automated checks.
+
+Continue R2c (source/artifact owner) as a separate milestone; read MODEL_PREVIEW,
+MODEL_TRANSFORMS, PLATE, STORAGE, GX_GENERATION and CAPTURES docs first. Preserve
+no GET-triggered archive, source/receipt/hash identity, private3MF cache quotas /
+cleanup and immutable artifact/saved facts. Do not mark all R2 complete or expand
+into R3's state objects or R4's process runtime in the same diff.

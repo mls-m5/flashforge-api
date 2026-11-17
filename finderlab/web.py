@@ -17,7 +17,7 @@ from pathlib import Path
 import secrets
 import shutil
 import signal
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import urlsplit
 import uuid
 
 from .capture import Capture, CaptureError
@@ -27,27 +27,22 @@ from .model_transform import normalize_transform
 from .plate import normalize_plate, MAX_MODELS
 from .web_storage import admit, StorageError
 from .slice_settings import normalize_settings
-from .passive_status import status_from_capture
 from .active_status import ActiveMonitor
 from .manual_controls import VirtualControls, StaleControls
 from .web_access import WebAccess, validate_listener
 from .web_http import (
-    HEADER_LIMIT, SLICE_JSON_LIMIT, WebError,
-    post_content_length, read_json_body, read_request,
+    HEADER_LIMIT, WebError,
+    post_content_length, read_request,
     write_head, write_problem, write_reply,
 )
 
-STATIC = Path(__file__).with_name("webstatic")
-PRINT_LIMIT = 8 * 1024 * 1024
-MODEL_LIMIT = 64 * 1024 * 1024
+# Explicit re-exports preserve existing CLI/test imports without a route->web cycle.
+from .web_limits import MODEL_LIMIT, PRINT_LIMIT
+from .web_routes import STATIC, STATIC_FILES, WebRoutes
+
 CAPTURE_LIMIT = 64 * 1024 * 1024
 JOB_CAPTURE_LIMIT = 1024 * 1024
 STORAGE_LIMIT = 256 * 1024 * 1024
-STATIC_FILES = {"/": ("index.html", "text/html; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
-for _name in ("app.js", "manual.js", "preview.js", "toolpath-view.js", "toolpath-worker.js", "model-preview.js", "model-worker.js", "model-transform.js", "plate-preview.js",
-              "vendor/three/three.module.min.js", "vendor/three/OrbitControls.js"):
-    STATIC_FILES["/" + _name] = (_name, "text/javascript; charset=utf-8")
-STATIC_FILES["/vendor/three/LICENSE"] = ("vendor/three/LICENSE", "text/plain; charset=utf-8")
 
 
 def suggested_name(name):
@@ -678,113 +673,19 @@ class WebServer:
                 if headers.get("origin") != "http://" + self.authority or not secrets.compare_digest(headers.get("x-finder-token", ""), self.token):
                     raise WebError(403, "Same-origin request and session token required; reload the page if the server restarted")
                 length = post_content_length(headers)
-                if uri.path == "/api/file":
-                    if headers.get("content-type") != "application/octet-stream":
-                        raise WebError(415, "Expected raw file bytes")
-                    query = parse_qs(uri.query, strict_parsing=True, max_num_fields=1)
-                    if set(query) != {"name"} or len(query["name"]) != 1:
-                        raise WebError(400, "A single filename is required")
-                    await self.work.receive(reader, length, query["name"][0])
-                else:
-                    if uri.query:
-                        raise WebError(400, "Unexpected query")
-                    if headers.get("content-type") != "application/json":
-                        raise WebError(415, "Expected JSON")
-                    if uri.path == "/api/slice":
-                        data = await read_json_body(reader, length, limit=SLICE_JSON_LIMIT)
-                    else:
-                        data = await read_json_body(reader, length)
-                    if uri.path == "/api/manual":
-                        await self.reply(writer, 200, self.work.manual_action(data))
-                        return
-                    if uri.path == "/api/monitor":
-                        self.work.toggle_monitor(data)
-                        await self.reply(writer, 200, self.work.monitor.report() if self.work.monitor else {"monitor_running": False})
-                        return
-                    if uri.path == '/api/model-remove':
-                        self.work.remove_model(data)
-                    elif uri.path == "/api/discard" and set(data) == {"confirm"} and data["confirm"] is True:
-                        self.work.discard()
-                    elif uri.path in ("/api/slice", "/api/save", "/api/start", "/api/stop", "/api/gx"):
-                        self.work.start(uri.path.removeprefix("/api/"), data)
-                    else:
-                        raise WebError(404, "Unknown operation")
-                await self.reply(writer, 200, self.work.state)
             else:
-                if (uri.query and uri.path not in ('/api/gx-thumbnail','/api/model')) or int(headers.get("content-length", "0")) != 0:
-                    raise WebError(400, "Unexpected query/body")
-                if uri.path == "/api/config":
-                    await self.reply(writer, 200, {"token": self.token, "target": f"{self.config.client.host}:{self.config.client.port}",
-                        "upload_enabled": self.config.enable_upload, "job_controls_enabled": self.config.enable_job_controls, "slicing_enabled": self.config.slicing is not None,
-                        "priming_review_enabled": bool(self.config.slicing and self.config.slicing.check_priming),
-                        "sliced_upload_enabled": self.config.allow_sliced_upload, "print_limit": PRINT_LIMIT,
-                        "model_limit": MODEL_LIMIT, "storage_limit": self.config.storage_limit, "auto_archive": self.config.auto_archive,
-                        "passive_status_enabled": self.config.status_capture is not None,
-                        "active_monitor_enabled": self.config.enable_monitor, "auto_monitor": self.config.auto_monitor,
-                        "manual_virtual_enabled": self.work.manual_controls is not None,
-                        "lan_mode": self.config.lan, "owned_dummy": self.owned_dummy is not None})
-                elif uri.path == "/api/printer-status":
-                    await self.reply(writer, 200, self.work.monitor.report() if self.work.monitor else
-                                     status_from_capture(self.config.status_capture, self.config.client.host, self.config.client.port))
-                elif uri.path == "/api/manual-state":
-                    await self.reply(writer, 200, self.work.manual_snapshot())
-                elif uri.path == "/api/state":
-                    await self.reply(writer, 200, self.work.state)
-                elif uri.path == "/api/model":
-                    # This read can prepare a bounded private 3MF derivative: require
-                    # the per-run token to prevent cross-site image/GET work triggers.
-                    if not secrets.compare_digest(headers.get("x-finder-token", ""), self.token):
-                        raise WebError(403, "Reload the page before requesting model preview")
-                    self.work.idle()
-                    chosen=None
-                    if uri.query:
-                        query=parse_qs(uri.query,strict_parsing=True,max_num_fields=1)
-                        if set(query)!={'model'} or len(query['model'])!=1:raise WebError(400,'Expected one model id')
-                        chosen=next((m for m in self.work.state['models'] if m['id']==query['model'][0]),None)
-                        if not chosen:raise WebError(404,'No such model')
-                    tag = '"' + (chosen['sha256'] if chosen else self.work.state["source_sha256"]) + '"'
-                    if "if-match" in headers and headers["if-match"] != tag:
-                        raise WebError(412, "Source model changed; reload model preview")
-                    path, skipped = (self.work.model_paths[chosen['id']],0) if chosen and self.work.model_paths[chosen['id']].suffix=='.stl' else await self.work.model_geometry()
-                    with path.open("rb") as file:
-                        async with asyncio.timeout(30):
-                            await self.head(writer, 200, "application/octet-stream", path.stat().st_size,
-                                            'ETag: ' + tag + '\r\nX-Skipped-Facets: ' + str(skipped) + '\r\n')
-                            while chunk := file.read(65536):
-                                writer.write(chunk); await writer.drain()
-                elif uri.path == '/api/gx-thumbnail':
-                    self.work.idle()
-                    if not self.work.artifact or not self.work.state['gx_generated']:
-                        raise WebError(404,'No generated GX thumbnail')
-                    # Hash-bound URL avoids showing an older slot during another tab's edits.
-                    if uri.query != 'v='+self.work.state['sha256']:
-                        raise WebError(412,'GX identity changed; refresh before viewing thumbnail')
-                    with self.work.artifact.open('rb') as source:
-                        prefix=source.read(14512)
-                    if len(prefix)!=14512 or prefix[:12]!=b'xgcode 1.0\n\0' or prefix[58:60]!=b'BM':
-                        raise WebError(422,'Generated thumbnail is unavailable')
-                    await self.reply(writer,200,prefix[58:14512],'image/bmp')
-                elif uri.path == "/api/artifact":
-                    self.work.idle()
-                    if not self.work.artifact:
-                        raise WebError(404, "No print-file artifact")
-                    etag = '"' + self.work.state["sha256"] + '"'
-                    if "if-match" in headers and headers["if-match"] != etag:
-                        raise WebError(412, "Artifact changed; refresh preview before loading")
-                    path = self.work.artifact
-                    with path.open("rb") as file:
-                        async with asyncio.timeout(30):
-                            await self.head(writer, 200, "application/octet-stream", path.stat().st_size,
-                                            'Content-Disposition: attachment; filename="' + self.work.state["suggested_name"] + '"\r\nETag: ' + etag + '\r\n')
-                            while chunk := file.read(65536):
-                                writer.write(chunk)
-                                await writer.drain()
-                elif uri.path in STATIC_FILES:
-                    name, kind = STATIC_FILES[uri.path]
-                    data = (STATIC / name).read_bytes()
-                    await self.reply(writer, 200, data, kind)
-                else:
-                    raise WebError(404, "Not found")
+                length = None
+            # Construct only after every common access/POST-length gate. Bind
+            # current config/work per request; routes never own a server/session.
+            routes = WebRoutes(
+                work=self.work, config=self.config, token=self.token,
+                owned_dummy=self.owned_dummy is not None,
+                head=self.head, reply=self.reply,
+            )
+            if method == "POST":
+                await routes.post(reader, writer, uri, headers, length)
+            else:
+                await routes.get(writer, uri, headers)
         except WebError as exc:
             await self.problem(writer, exc.status, str(exc))
         except (ValueError, UnicodeError, RecursionError, asyncio.IncompleteReadError, asyncio.LimitOverrunError):

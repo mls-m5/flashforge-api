@@ -641,15 +641,19 @@ extracts HTTP request/JSON/length reads and response bytes into web_http.py,
 retaining common access checks/routes/lifecycle on WebServer. Workbench/config /
 capture class ASTs, profile bytes, save/start and storage remain unchanged.
 All313 Python tests,16 Node checks and trace integrity passed;555 offline old/new
-HTTP wire/lifecycle comparisons were identical. Next is R2b's route separation,
-then R2c source/artifact ownership, not a broad rewrite or new framework. Commit each
+HTTP wire/lifecycle comparisons were identical. R2b is now complete: per-request
+web_routes.py dispatch/named file handlers, common access/error/lifecycle on
+WebServer, unchanged Workbench/config/capture ASTs/profile bytes/static allowlist.
+All326 Python tests +16 Node + trace integrity passed;960 in-memory old/new HTTP
+response/action/close/abort outcomes matched. Next is R2c source/artifact ownership,
+not a broad rewrite or new framework. Commit each
 stage after full regression checks; browser/container/hardware acceptance stays
 separate. See tests/README.md for test ownership and tools/check.sh for checks.
 A new-session handoff is now recorded near the top of REFACTORING.md, including
-required reads, checkpoint history, test baseline and R2a/b/c acceptance. R2a is
-complete; continue with R2b without combining state/process/frontend changes.
+required reads, checkpoint history, test baseline and R2a/b/c acceptance. R2a/R2b
+are complete; continue R2c without combining state/process/frontend changes.
 The user's preference for available worker-agent delegation is in AGENTS.md;
-no launch tool was exposed in R2a and no worker ran.
+no launch tool was exposed in R2a/R2b and no worker ran.
 
 ## Deferred work
 

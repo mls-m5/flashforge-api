@@ -210,10 +210,15 @@ HTTP/workbench scenarios by feature, and supplies one Python/Node/trace check
 command. Production HTTP/workbench state and operation orchestration are not
 moved in that stage. R2a now extracts named request/header/JSON/length reads and
 wire response writing into `finderlab/web_http.py`, without workbench imports.
-WebServer still owns common access gates, URL/route dispatch, file streams and
-connection/task lifecycle; Workbench state/operation code is unchanged. Next is
-R2b's route boundary, then R2c source/artifact ownership, explicit internal state
-and shared process primitives.
+R2b now extracts GET/POST dispatch and named config/model/artifact/thumbnail /
+file-stream handlers into a per-request `WebRoutes` adapter with explicit
+workbench/config/token/owned-dummy/response dependencies. WebServer retains
+common access gates, relative-URL validation, error mapping and connection/task
+lifecycle, constructing routes only after applicable gates. No duplicated state,
+startup-config cache, registry or route->web import cycle. Shared upload bounds
+live in web_limits.py; web.py explicitly re-exports them and the static allowlist.
+Workbench state/operation/source ownership is unchanged. Next is R2c source /
+artifact ownership, explicit internal state and shared process primitives.
 Public API, wire/capture semantics, profile bytes and no-retry/identity/priming
 policy must remain stable; do not weaken tests or unify unlike parsers merely
 to reduce duplication. No framework/dependency migration or hardware trial.
