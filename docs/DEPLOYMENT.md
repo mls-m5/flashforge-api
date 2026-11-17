@@ -17,7 +17,59 @@ binds and lets web reach a deliberately selected host-loopback proxy. There is
 no `ports:` wildcard publication, device passthrough, privileged mode or engine
 socket. Docker Desktop/Windows/macOS host networking is not supported here.
 
-## 1. Clone and run the safe default
+## 1. Real Finder workflow — one Compose command (recommended for printer use)
+
+Use **`.env.example.live`**, not the simulator example, when you want the physical
+Finder. This selects both Compose files and the bundled printer profile for you.
+Back up an existing private .env before replacing it; preserve its deliberate
+LAN/network choices. On the server, when no operation is active:
+
+```sh
+cp .env.example.live .env
+# Edit .env: set FINDER_PRINTER_HOST to the deliberately verified printer IP.
+# For another computer, also set FINDER_LISTEN_HOST to this SERVER's192.168 IP.
+podman compose up --build -d
+podman compose logs finder-web
+```
+
+`docker compose` is equivalent. No extra `--profile`/`-f` arguments or separate
+proxy command is needed: `.env` sets COMPOSE_FILE=docker-compose.yml:compose.live.yml
+and COMPOSE_PROFILES=printer. A missing printer IP fails visibly, never falls back
+to dummy or discovers a target. Do not run a second proxy on the same9000 port.
+
+The live example selects upload, generated-output saving, job controls and
+status monitoring. It uses the bundled guarded Finder2 profiles/Orca. **Save +
+start is checked by default** when job controls are enabled; uncheck for save
+only. File selection, Slice, GX and startup never start/cancel a print. Status
+polling does open a printer connection on startup; close competing control
+clients first. Network binding stays loopback unless you select the server LAN
+IP; mandatory random login/peer/Host policy remains for LAN. HTTP is unencrypted.
+
+### Proxy-first startup, without unsafe health probes
+
+`compose.live.yml` makes finder-web depend on finder-proxy's `service_healthy`.
+`docker/proxy_health.py` checks bounded local Linux /proc data only: it matches
+127.0.0.1:configured-port LISTEN and the socket inode in this container's actual
+`python -m finderlab proxy` process. An unrelated host listener is not accepted.
+**It never connects to the proxy/printer**: curl/netcat/TCP health probes would
+open upstream printer sessions and are deliberately not used. No poll, claim,
+G-code, capture change or hardware probe is injected by readiness.
+
+Health has finite bounds/timeouts; unreadable/unsupported/oversized proc data
+fails closed and keeps the dependent service from initial startup. This verifies
+only local listener readiness, not printer reachability, firmware/READY or safe
+printing. Dependencies order startup, not a permanent health/reconnect contract;
+monitor's existing stop-on-error/no-retry behavior remains. Neither health checks
+nor container restarts resume/retry uploads/Start. The Compose provider must honor
+.env COMPOSE_FILE/COMPOSE_PROFILES and conditional service_healthy dependencies.
+Actual Docker/Podman/provider acceptance remains host-run here (no runtime tool).
+If it rejects the dependency, report that error rather than removing the gate
+or adding a TCP probe. Private logs may contain UI passwords; do not publish.
+
+## 1b. Simulator rehearsal — no physical printer
+
+The base Compose without the live selection deliberately remains an owned dummy.
+Use the simulator .env.example only for a virtual rehearsal, not printer setup.
 
 ```sh
 git clone https://github.com/mls-m5/flashforge-api.git
@@ -227,12 +279,21 @@ specific LAN/password policy, explicit hardware/capability opt-ins, invalid
 settings, tracked profile hashes/lineage/license, fixed runtime paths and
 Compose/build privacy/target contracts.
 The actual existing CLI parser accepts every generated argv, without launching
-printers/listeners/native tools. Validation:280 Python tests,16 existing Node
+printers/listeners/native tools. Original packaging validation:280 Python tests,16 existing Node
 checks, reviewed-trace integrity and diff whitespace checks passed. All280 Python
 tests also passed in a fresh `git checkout-index` copy containing only staged
 tracked files, explicitly lacking local-profiles, .local-tools and result.json.
 This verifies no hidden profile/test prerequisite, not an actual image build. Native upload/plate/GX/archive regression tests
 remain ephemeral-loopback/fake or separately labelled offline evidence.
+
+Latest live-preset validation:346 Python tests,16 Node scripts and reviewed-trace
+integrity passed using `./tools/check.sh`. Eight new contracts cover preset argv,
+conditional dependency/build privacy and bounded fake-proc readiness/ownership /
+error behavior. An actual local Linux /proc smoke check also matched an owned
+fresh ephemeral proxy, rejected an unrelated listener, and performed four passive
+health reads with **zero upstream sessions/contacts** and a finalized empty capture;
+its project-local workspace was cleaned. This is not a container/provider or
+physical-printer trial. No agent real-printer/proxy service was contacted/restarted.
 
 Run `python3 -m unittest discover -s tests -v`, existing Node checks, then on the
 actual host `docker compose config` (and with the slicing/profile options),

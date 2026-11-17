@@ -661,6 +661,24 @@ and R2c are complete; continue R3 without combining process/frontend changes.
 The user's preference for available worker-agent delegation is in AGENTS.md;
 no launch tool was exposed in R2a/R2b/R2c and no worker ran.
 
+## Real-workflow Compose preset after dummy/startup confusion
+
+The user requested a working real-printer preset rather than managing flags.
+.env.example.live selects both Compose files and bundled printer profile,
+full existing workflow/status capabilities and conditional proxy-health startup.
+A required private target remains user-selected; no printer IP is shipped. The
+passive /proc health check matches actual proxy process/listener socket ownership
+without TCP/printer probes or captures; no fixed sleep hides readiness. Base
+Compose stays an explicit virtual rehearsal. LAN auth/Host/token, generated-output /
+priming/Save+start/no-retry policy unchanged. Read DEPLOYMENT.md for the one-command
+live startup and provider requirements. No agent proxy/hardware/service was run;
+Podman/Docker/provider image/startup acceptance still needs the deployment host.
+Latest checks346 Python/16 Node/trace integrity passed, including8 new live/proc
+contracts. A real local /proc smoke against an owned fresh ephemeral proxy matched
+its listener, rejected an unrelated socket and created zero upstream sessions /
+contacts; private scratch was cleaned. This is not Podman/provider/hardware
+acceptance. This is a separate user deployment request, not completion of R3.
+
 ## Deferred work
 
 Virtual print-progress simulation, additional firmware/client profiles, richer fault injection, exportable reports and optional separate print controls can follow. Print controls require a new safety/design decision rather than being added as a side effect of upload support.

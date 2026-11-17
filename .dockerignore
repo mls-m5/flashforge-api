@@ -4,6 +4,7 @@
 !docker/octoprint.Dockerfile
 !docker/web.Dockerfile
 !docker/entrypoint.py
+!docker/proxy_health.py
 !tools/
 !tools/download_orca.py
 !LICENCE

@@ -353,6 +353,17 @@ volumes/config privately, never during active raw capture mutation. See
 DEPLOYMENT.md for unchanged no-retry/start policy and unverified runtime/build
 acceptance (agent has no Docker/Podman).
 
+## Live Compose readiness is not a printer capture
+
+The live preset orders web/status startup after the bundled proxy's passive
+listener health. Its bounded Linux /proc inspection opens no socket, injects no
+command and creates no raw session/capture. Never replace it with curl/netcat /
+TCP connect through a printer proxy. Subsequent configured auto-monitoring does
+create its normal private status capture/session; all existing record limits,
+error/no-reconnect and no automatic print/retry rules remain. Readiness is not
+printer/firmware acceptance. Raw proxy volume/retention is unchanged; see
+DEPLOYMENT.md for provider/host acceptance still pending.
+
 ## Privacy and sharing
 
 Recordings can contain full uploaded models, filenames, serial numbers, IP/MAC addresses and every command sent. A mock's virtual storage is RAM-only, but **its capture files persist payload bytes on disk**. The run directory is created with private permissions where supported; also secure its parent directory and backups.

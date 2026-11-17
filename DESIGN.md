@@ -247,6 +247,20 @@ proxy evidence. See DEPLOYMENT.md for clone/up instructions, source/license and
 resource/retention constraints. Actual image/provider/native/browser acceptance
 remains unverified because agent Docker/Podman runtime is absent.
 
+### Explicit live Compose selection
+
+The user requested a real-workflow preset to avoid confusing simulator startup
+with the physical target. .env.example.live selects compose.live.yml and the
+printer profile, full existing capabilities and startup status monitoring. Only
+private printer/server addresses need configuration, not the capability matrix.
+Web initial startup depends on proxy health; a bounded Linux /proc check matches
+the actual container proxy's socket inode/listener without making TCP probes /
+printer sessions. Missing target/unreadable proc fails closed, not dummy fallback.
+No service/health/startup action starts printing; combined Save+start retains its
+existing explicit button/identity/finalization/READY gates. Base Compose remains
+a virtual rehearsal, LAN access policy unchanged. See DEPLOYMENT.md. Provider
+conditional-dependency/build/runtime acceptance remains host-run, no agent test.
+
 ### Optional private-LAN access
 
 `web_access.py` validates explicit specific-interface LAN opt-in, restricts

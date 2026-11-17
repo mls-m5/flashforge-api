@@ -6,6 +6,7 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 TMPDIR=/app/.tmp
 COPY finderlab /app/finderlab
 COPY docker/entrypoint.py /app/docker/entrypoint.py
+COPY docker/proxy_health.py /app/docker/proxy_health.py
 COPY LICENCE /app/LICENCE
 RUN useradd --create-home --uid 1000 finder \
     && mkdir -p /app/web-data /app/.tmp /app/proxy-captures \

@@ -1,0 +1,16 @@
+# Selected by .env.example.live via COMPOSE_FILE; no separate proxy command.
+# Readiness is passive /proc inspection, NEVER a TCP probe through the proxy.
+services:
+  finder-web:
+    environment:
+      FINDER_MODE: proxy
+    depends_on:
+      finder-proxy:
+        condition: service_healthy
+  finder-proxy:
+    healthcheck:
+      test: ["CMD", "python3", "/app/docker/proxy_health.py"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+      start_period: 2s

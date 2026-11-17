@@ -18,10 +18,32 @@ Implemented:
 
 Not implemented in the research CLI: UDP discovery, replay/standalone analysis tooling, or physical job dynamics. The experimental OctoPrint plugin at `plugins/octoprint-flashforge-finder2` is **paused**, not a native Finder printer driver. The standalone page is now the primary UI; browser/container acceptance remains pending. **FlashPrint connection, upload and explicit virtual start/stop have now been observed against the dummy.** The new client has also uploaded the user's 3.67 MB GX to a fresh dummy with an exact byte match and no job started. A subsequent user-run host/proxy trial confirmed the new client's real-printer upload-only flow: all blocks, final save and release acknowledged, no start/stop sent. Other firmware, errors/retries and physical job-control actions remain separately bounded; mock success alone is not hardware evidence.
 
-## Clone and run with Docker Compose
+## Run the real Finder workflow with Compose
+
+Linux x86_64, including Orca/Finder2 profiles and the recording proxy:
+
+```sh
+# In your clone (back up an existing .env before replacing it):
+cp .env.example.live .env
+# Set FINDER_PRINTER_HOST in .env to the verified printer IP.
+# For LAN access, also set FINDER_LISTEN_HOST to this SERVER's192.168 IP.
+podman compose up --build -d
+podman compose logs finder-web
+```
+
+`docker compose` also works. The live example selects/starts the proxy and waits
+for passive listener readiness before web/status startup; no separate proxy
+command or profile flag. Save, generated output, Start/Cancel and monitoring are
+enabled; **Save + start defaults checked**, uncheck for save only. Startup status
+queries do not start/cancel printing. Close other control clients first. Missing
+printer IP fails rather than guessing or falling back to dummy. No Internet
+exposure; trusted-LAN HTTP is unencrypted. Full setup/troubleshooting and remaining
+host/provider acceptance: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+## Clone and run a simulator rehearsal with Docker Compose
 
 Linux x86_64 server/local machine, including Orca and the Finder2 profiles;
-safe default owned-dummy mode:
+**owned-dummy mode below is only a rehearsal, not your physical printer**:
 
 ```sh
 git clone https://github.com/mls-m5/flashforge-api.git
