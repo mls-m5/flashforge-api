@@ -679,6 +679,22 @@ its listener, rejected an unrelated socket and created zero upstream sessions /
 contacts; private scratch was cleaned. This is not Podman/provider/hardware
 acceptance. This is a separate user deployment request, not completion of R3.
 
+## Persistent LAN password and GUI settings (explicit user request)
+
+The shared LAN login now persists as a bounded/private salted PBKDF2 verifier in
+DATA_DIR/auth.json across restarts, with atomic write and no plaintext in saved
+config/captures. First generation/reset prints a random password once; a LAN-only
+GUI form and POST /api/password require current password plus normal auth/peer /
+Host/Origin/token/confirmation/idle gates. Off-loop serialized KDF/cache operations
+join before cancellation releases locks; password changes preserve job/file state
+and invalidate old login immediately. No auto retry or printer action. A separate
+offline locked reset module runs only with web stopped. See PASSWORDS.md for
+format, recovery and cleartext HTTP/browser/provider caveats. This is separate
+from pending R3 refactoring and the user's extra-M119 status investigation.
+Clean-checkout validation passed360 Python tests,17 Node scripts and trace
+integrity, including14 password/storage/HTTP/reset/cancel checks and a Node form
+check. No real browser/container/hardware acceptance is inferred.
+
 ## Deferred work
 
 Virtual print-progress simulation, additional firmware/client profiles, richer fault injection, exportable reports and optional separate print controls can follow. Print controls require a new safety/design decision rather than being added as a side effect of upload support.

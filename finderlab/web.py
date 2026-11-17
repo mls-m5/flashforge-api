@@ -575,6 +575,7 @@ class WebServer:
         self.work = None
         self.token = secrets.token_urlsafe(32)
         self.access = WebAccess(config.host, config.lan, config.lan_network)
+        self.access_lock = asyncio.Lock()
         self.server = None
         self.clients = set()
         self.address = None
@@ -587,6 +588,7 @@ class WebServer:
         if self.owned_dummy is not None:
             self.work.manual_controls = VirtualControls()
         try:
+            self.access.initialize_password(self.work.folder / "auth.json")
             self.server = await asyncio.start_server(self.handle, self.config.host, self.config.port, limit=HEADER_LIMIT)
             self.address = self.server.sockets[0].getsockname()[:2]
             if self.config.auto_monitor:
@@ -629,7 +631,7 @@ class WebServer:
             method, target, headers = request.method, request.target, request.headers
             if headers.get("host") != self.authority:
                 raise WebError(403, "Use the exact IP URL printed by the server")
-            if not self.access.authenticated(headers.get("authorization", "")):
+            if not await self.access_call(self.access.authenticated, headers.get("authorization", "")):
                 await self.reply(writer, 401, {"error": "LAN password required"},
                                  extra='WWW-Authenticate: Basic realm="Finder workbench", charset="UTF-8"\r\n')
                 return
@@ -652,6 +654,7 @@ class WebServer:
                 work=self.work, config=self.config, token=self.token,
                 owned_dummy=self.owned_dummy is not None,
                 head=self.head, reply=self.reply,
+                change_password=self.change_password if self.config.lan else None,
             )
             if method == "POST":
                 await routes.post(reader, writer, uri, headers, length)
@@ -674,6 +677,26 @@ class WebServer:
                 writer.transport.abort()
             finally:
                 self.clients.discard(task)
+
+    async def access_call(self, operation, *args):
+        # Slow KDFs run off-loop, serialized with credential changes. Cancellation
+        # must join the worker before releasing the lock: a late old-auth cache
+        # update must never race a successful password replacement.
+        async with self.access_lock:
+            task = asyncio.create_task(asyncio.to_thread(operation, *args))
+            try:
+                return await asyncio.shield(task)
+            except asyncio.CancelledError:
+                await task
+                raise
+
+    async def change_password(self, data):
+        self.work.idle()  # Do not invalidate browser login mid-save/start/slice.
+        self.work.state["busy"] = True
+        try:
+            return await self.access_call(self.access.change_password, data)
+        finally:
+            self.work.state["busy"] = False
 
     # Explicit response entry points stay on WebServer; wire encoding belongs to
     # web_http. Connection close/abort/task ownership remains in handle().
@@ -707,7 +730,7 @@ def add_web_command(commands):
     cli = commands.add_parser("web", help="local standalone upload page; optional offline Orca slicing")
     cli.add_argument("--listen-host", default="127.0.0.1")
     cli.add_argument("--listen-port", type=int, default=8000)
-    cli.add_argument("--lan", action="store_true", help="explicit private-LAN sharing with per-run Basic password; HTTP is NOT encrypted")
+    cli.add_argument("--lan", action="store_true", help="explicit private-LAN sharing with persistent salted Basic password; HTTP is NOT encrypted")
     cli.add_argument("--lan-network", default="192.168.0.0/16", help="allowed IPv4 CIDR within 192.168/16; socket peers only")
     cli.add_argument("--data-dir", type=Path, default=Path("web-data"))
     cli.add_argument('--storage-limit-mib',type=int,help='bounded active workspace admission limit128–2048MiB (default256); not RAM or an OS disk quota')
@@ -755,7 +778,10 @@ def web_main(cli, args):
                 if config.lan:
                     print(f"LAN sharing: allowed {server.access.network} plus local IPv4. HTTP IS NOT ENCRYPTED; trusted home network only.", flush=True)
                     print("Login username: finder", flush=True)
-                    print("Login password (new each restart; share privately): " + server.access.password, flush=True)
+                    if server.access.password is not None:
+                        print("Login password (initial; saved for future restarts; share privately): " + server.access.password, flush=True)
+                    else:
+                        print("Login password: unchanged (stored salted hash; use your existing password).", flush=True)
                     print("All logged-in users share one workspace/printer and can use enabled controls. No router port forwarding/public proxy.", flush=True)
                 print("Private files/captures: " + str(server.work.folder), flush=True)
                 if server.owned_dummy:

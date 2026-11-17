@@ -297,10 +297,14 @@ Writes are flushed to local files without waiting for shutdown, but not `fsync`e
 
 ## LAN credentials versus printer captures
 
-Opt-in LAN sharing (LAN.md) uses a new random Basic password printed only to
-the foreground server console. It is not a CLI argument, API config value,
-profile, printer command or printer/slicer capture field. HTTP Authorization
-headers are not recorded. The console itself is sensitive: do not share a
+Opt-in LAN sharing (LAN.md/PASSWORDS.md) prints an initial/reset Basic password
+only to the private foreground console, then retains a salted PBKDF2 verifier
+in DATA_DIR/auth.json across restarts. GUI changes persist a fresh salted hash;
+plaintext/hash/current/new passwords and Authorization are never capture events,
+API config/state, profiles or printer commands. The credential file is outside
+slot/capture directories; Discard/record archive never removes it. It belongs
+only in private volume backups, never source releases/Git. HTTP Authorization
+headers and password-change bodies are not recorded. The console itself is sensitive: do not share a
 terminal transcript/screenshot containing the password. Basic over HTTP is
 unencrypted and network observers can still obtain credentials/model bytes;
 these capture-format choices do not provide transport encryption. All logged-in

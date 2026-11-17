@@ -81,14 +81,18 @@ The server prints:
 
 - exact URL, e.g. `http://192.168.1.20:8000` (use this on **both computers**);
 - username **finder**;
-- a strong random password, **new on every restart**. Share privately; do not
+- a strong random **initial** password on the first startup without a saved
+  verifier. It now persists across restarts; later logs say it is unchanged.
+  Set your own in the page's **LAN login password** form. Share privately; never
   put it in URLs, shell arguments, captures, screenshots or public logs.
+  See [PASSWORDS.md](PASSWORDS.md) for salted storage, change and offline reset.
 
 The browser prompts for the password before serving HTML/assets/config or any
 API/file/status response. Reopening tabs does not create another printer owner
-or auto-start a job. After a restart, reauthenticate with the new password and
-reload; stale tokens/saved identities are not silently reused. There is no
-per-user logout/revocation; restart rotates the shared password for everyone.
+or auto-start a job. After restart the same password works, but reload for the
+new per-run token; stale saved identities are not reused. There is no per-user
+logout/revocation. An authenticated GUI password change affects all users and
+survives restart; it requires the current password and no local busy operation.
 Someone at the computer must supervise physical printing/clearance; the remote
 Start confirmation acknowledges possible heating/motion. Cancel is not emergency
 stop. Old saved-file references are in-memory only and lost on web restart.

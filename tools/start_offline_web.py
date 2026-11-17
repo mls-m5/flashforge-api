@@ -174,7 +174,7 @@ def main():
     print("Profile/output review used 2.3.0; another build requires new offline output review.", flush=True)
     print("Open http://" + command[command.index("--listen-host") + 1] + ":" + str(args.port), flush=True)
     if args.lan_host:
-        print("LAN SHARING: per-run password printed by server on launch. HTTP is unencrypted; trusted network only. All users share one printer/file slot.", flush=True)
+        print("LAN SHARING: initial password printed once, persisted as a salted hash; change in GUI. HTTP is unencrypted; trusted network only. All users share one printer/file slot.", flush=True)
     print("Re-slice models for the native skirt; existing G-code/printer files are not changed.", flush=True)
     if args.check:
         print("Local file checks passed; native runtime libraries are not probed.", flush=True)

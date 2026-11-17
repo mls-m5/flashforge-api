@@ -1,8 +1,13 @@
 """Explicit private-IPv4 sharing policy. Not TLS or an Internet-facing gateway."""
 
 import base64
+import binascii
+import hmac
 import ipaddress
 import secrets
+
+from . import web_password
+from .web_http import WebError
 
 PRIVATE_LAN = ipaddress.ip_network("192.168.0.0/16")
 
@@ -27,7 +32,43 @@ class WebAccess:
         self.lan = lan
         self.network = validate_listener(host, lan, network)
         self.password = secrets.token_urlsafe(24) if lan else None
-        self._credential = base64.b64encode(("finder:" + self.password).encode()).decode() if lan else None
+        self._record = web_password.make_record(self.password) if lan else None
+        self._path = None
+        self._cache_key = secrets.token_bytes(32)
+        self._cached = None
+
+    def initialize_password(self, path):
+        """Called only under Workbench's exclusive lock, before listening."""
+        if not self.lan:
+            return
+        if path.exists() or path.is_symlink():
+            record = web_password.load(path)
+            self.password = None  # A hash cannot recover/reprint the old password.
+        else:
+            record = self._record
+            web_password.save(path, record)
+        self._record = record
+        self._path = path
+        self._cached = None
+
+    def change_password(self, data):
+        if not self.lan or self._path is None:
+            raise WebError(409, "Persistent password settings require LAN login mode")
+        if set(data) != {"confirm", "current_password", "new_password"} or data.get("confirm") is not True:
+            raise WebError(400, "Password change requires confirmation, current_password and new_password only")
+        if not web_password.verify(self._record, data["current_password"]):
+            raise WebError(403, "Current password is incorrect")
+        try:
+            candidate = web_password.make_record(data["new_password"])
+        except ValueError as exc:
+            raise WebError(400, str(exc)) from exc
+        # Publish atomically before updating memory; failed persistence cannot
+        # silently switch the running credential or invalidate its cache.
+        web_password.save(self._path, candidate)
+        self._record = candidate
+        self._cached = None
+        self.password = None
+        return {"password_changed": True, "message": "Password saved. Use the new password if your browser asks you to log in again."}
 
     def allows_peer(self, peer):
         try:
@@ -42,5 +83,20 @@ class WebAccess:
         if not self.lan:
             return True
         scheme, separator, credential = authorization.partition(" ")
-        return bool(separator and scheme.lower() == "basic" and credential.isascii() and
-                    secrets.compare_digest(credential, self._credential))
+        if not separator or scheme.lower() != "basic" or not credential.isascii() or len(credential) > 1024:
+            return False
+        fingerprint = hmac.digest(self._cache_key, credential.encode("ascii"), "sha256")
+        if self._cached is not None and secrets.compare_digest(fingerprint, self._cached):
+            return True
+        try:
+            decoded = base64.b64decode(credential, validate=True)
+            username, colon, encoded = decoded.partition(b":")
+            password = encoded.decode("utf-8")
+        except (ValueError, UnicodeError, binascii.Error):
+            return False
+        if username != b"finder" or not colon or not web_password.verify(self._record, password):
+            return False
+        # Cache one keyed fingerprint, never Basic/plaintext credentials. This
+        # avoids a slow KDF for every asset/poll and invalidates on password change.
+        self._cached = fingerprint
+        return True

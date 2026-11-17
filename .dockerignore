@@ -42,3 +42,5 @@
 **/uploads/
 **/.env
 **/.env.*
+**/auth.json
+**/.auth-*.tmp

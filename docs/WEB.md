@@ -98,12 +98,26 @@ unrecorded browser HTTP actions. Hard-reload after updating assets.
 The default remains loopback. To share the full implemented workflow, use
 `./tools/start_lan_web.sh` (no IP argument needed) after verifying the existing proxy
 and closing FlashPrint. It explicitly enables Slice / confirmed Save / Start /
-Cancel and status, with a per-run random password for every page/API route and
+Cancel and status, with mandatory persistent LAN login for every page/API route and
 a private-IPv4 peer filter. All logged-in users share one file slot/printer;
 physical manual controls stay locked. **HTTP has no encryption**: trusted home
 network only, never router port forwarding/public tunnels. See [LAN.md](LAN.md)
 for automatic local address selection, login, narrower subnet, firewall and acceptance limits. Nothing
 is opened automatically by installing this change; the operator starts it.
+
+## Persistent LAN password settings
+
+The shared finder login now persists as a private salted PBKDF2-HMAC-SHA256
+verifier under DATA_DIR/auth.json (existing Compose web-data volume). Only the
+initial password is printed once; later startups keep the same login. A separate
+LAN-only form/POST /api/password requires current password, new password, explicit
+click/confirmation, auth/Host/peer/Origin/token/body gates and an idle workbench.
+It changes no file/save/job identity or printer capability. KDF/record writes run
+serialized off-loop and are joined on cancellation before releasing locks/busy.
+No plaintext/hash/Authorization/password JSON enters public config or captures.
+HTTP is still cleartext. See PASSWORDS.md for bounds, browser reauthentication,
+private atomic storage and offline reset; older per-run-password trial descriptions
+are historical, not current startup behavior.
 
 ## 3MF models (geometry only)
 
@@ -261,7 +275,7 @@ occurs on startup or page refresh in this low-level invocation without
 `--auto-monitor`. Uploads are disabled without `--enable-upload`.
 Without explicit `--lan`, the HTTP listener is restricted to loopback IPs.
 LAN mode requires a specific192.168 interface, a private subnet peer filter and
-the mandatory per-run password described above; wildcard binds remain rejected.
+the mandatory persistent password described above; wildcard binds remain rejected.
 
 1. Drop one `.gx`, `.gcode`, `.g` or `.stl` file. This only stores it locally.
 2. A print file can be downloaded/reviewed immediately. An STL requires the

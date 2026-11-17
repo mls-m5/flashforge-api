@@ -64,8 +64,8 @@ docker compose logs -f finder-web
 ```
 
 Open `http://127.0.0.1:8000` on that server. For trusted-LAN access, set the
-server's specific192.168 address in `.env`; mandatory per-run login is printed
-in logs. No wildcard/public binding or automatic hardware connection. For the
+server's specific192.168 address in `.env`; the initial login is printed once
+in logs, then persists as a salted hash and can be changed in the GUI. No wildcard/public binding or automatic hardware connection. For the
 **STL→Slice→GX→virtual Save** workflow, Orca and the existing skirt03 configuration
 are now included by default: **no manual profile copying**. The reviewed source
 JSONs, upstream attribution and license are tracked in `profiles/finder2/`.
@@ -204,7 +204,9 @@ Run `./tools/start_lan_web.sh`—no IP argument needed. It selects this Linux
 computer's local192.168 address and prints the link to share. The printer proxy
 stays on localhost. Slice, Save, confirmed Start/Cancel and status use the
 existing proxy/profile setup. The browser asks for user
-`finder` and the random password printed by the server (new each restart).
+`finder` and the initial password printed by the server. It now survives restarts
+as a salted hash; set your own in the page's **LAN login password** form.
+See [docs/PASSWORDS.md](docs/PASSWORDS.md) for storage and offline reset.
 Only192.168 peers plus local IPv4 are allowed; an optional narrower CIDR can
 be selected. All users share one printer/file slot. **HTTP is unencrypted**;
 trusted network only, no router forwarding/public tunnels. Default/offline

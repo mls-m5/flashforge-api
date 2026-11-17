@@ -180,7 +180,7 @@ def main():
 
     print(
         "Finderlab container: explicit configuration, no discovery; LAN login "
-        "password is printed by the web process. Proxy is not a safety filter.",
+        "initial password details are printed by the web process. Proxy is not a safety filter.",
         flush=True,
     )
     os.chdir(ROOT)

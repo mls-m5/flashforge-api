@@ -25,6 +25,8 @@ dist/
 *.pcapng
 
 # Local configuration and secrets
+**/auth.json
+**/.auth-*.tmp
 .env
 .env.*
 !.env.example

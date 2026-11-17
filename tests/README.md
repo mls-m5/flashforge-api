@@ -43,6 +43,7 @@ Existing access/storage *unit* tests are separate from HTTP integration families
 | `test_web_slicing.py` | Fake Orca, quality/snapshot/guard/publication and cancellation |
 | `test_web_gx.py` | Explicit GX source/format/hash/export, errors and generated-upload gate |
 | `test_web_access.py`, `test_web_storage.py` | Independent access/archival policy unit tests |
+| `test_web_password.py`, `test_web_password_http.py` | Salted persistence/cache/atomic errors, restart/change/access/busy/cancel/reset without hardware |
 
 `web_helpers.py::WebTestCase` holds only common setup/teardown, split-header HTTP
 requests, file/JSON helpers, operation completion and fake-Orca configuration.
@@ -65,6 +66,12 @@ R2c extracts file ownership/I/O/cache into SlotFiles while Workbench keeps the
 single state, identities, admission/busy and operation policy. Its direct tests
 use synthetic files/readers/fake converters. The existing preview killpg patch
 now targets web_files, the actual converter owner; assertions remain unchanged.
+`test_password_ui.js` independently checks explicit password form intent, capability
+visibility, matching new values, clearing, no retry/double-submit and no printer
+routes. Salted record/reset tests use project-local private files; reset CLI uses
+only the existing workspace lock. No actual credential or hardware target is a
+fixture. Browser Basic-auth caching/reauthentication remains host acceptance.
+
 Node fixture consolidation, internal state and shared process refactors remain
 later stages in
 [docs/REFACTORING.md](../docs/REFACTORING.md), not already complete.

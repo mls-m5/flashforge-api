@@ -97,7 +97,7 @@ FINDER_LISTEN_HOST=192.168.1.50
 ```
 
 Replace the example with your server's address. The entrypoint automatically
-enables **mandatory per-run Basic login** for this non-loopback bind, using
+enables **mandatory persistent Basic login** for this non-loopback bind, using
 existing subnet/peer rules. It does not enumerate/probe interfaces or discover
 a printer. Optional `FINDER_LAN_NETWORK=192.168.1.0/24` narrows access. Other
 private ranges (10/8,172.16/12), domains and0.0.0.0 are deliberately not silently
@@ -109,9 +109,14 @@ docker compose up -d --force-recreate finder-web
 docker compose logs finder-web
 ```
 
-Use username **finder** and the random password printed in those private logs.
-It changes on every restart/recreate; environment files do not embed a reusable
-UI password. Console/logs contain credentials: do not publish them. **HTTP is
+Use username **finder** and the initial password printed in those private logs
+on the first startup without a saved login record. It now **survives restarts**
+as a salted PBKDF2 verifier in the persistent web-data volume. Change it in the
+page's **LAN login password** form using the current password. Later startups
+cannot reprint the plaintext; logs say the password is unchanged. See
+[PASSWORDS.md](PASSWORDS.md) for recovery and storage/HTTP limits. Environment
+files do not contain the UI password. Initial/reset console logs contain the
+credential: do not publish them. **HTTP is
 unencrypted**, including Basic credentials/models. This is not a public-service
 security design. No automatic print is triggered by opening/reloading the page.
 
@@ -260,7 +265,7 @@ and are not web-auto-archived**: proxy per-run quota remains256MiB; full/incompl
 recording stops affected connections and needs deliberate operator recovery,
 not automatic replay. There is no unlimited global raw-proxy retention policy.
 Monitor disk/volumes and archive old finalized proxy runs manually. Container
-console logs rotate10MiB×3, but can include the per-run UI password.
+console logs rotate10MiB×3, but can include an initial/reset UI password.
 
 Configuration is a fixed allowlist of `FINDER_*` variables; unknown native CLI /
 command-line arguments are not silently accepted by the entrypoint. For an

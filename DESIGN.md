@@ -277,6 +277,22 @@ workspace/login, not per-user jobs/roles. Basic HTTP is unencrypted and suitable
 only for a deliberately trusted home network, never a public tunnel/router
 forward/reverse proxy. No TLS or production-security claim. See LAN.md.
 
+### Persistent shared LAN login
+
+The explicitly requested stable login stores only a versioned salted PBKDF2
+verifier in the persistent workspace, separate from captures/slot files. First
+startup generates/prints an initial password once; later startups keep it. A
+separate LAN-only authenticated/current-password/origin/token-confirmed GUI
+change atomically persists a fresh verifier before switching memory. One keyed
+fingerprint cache supports repeated assets/polls, invalidated on change; slow
+KDFs run serialized off-loop and are joined before cancellation releases locks.
+The existing workspace lock protects creation and offline reset; no unauthenticated
+reset route, plain password env/CLI argument, HTTP logging, printer action or
+shadow job state. Workbench busy excludes overlapping local jobs while saving.
+HTTP is still unencrypted; peer/Host/Origin/token/capability and trusted-LAN
+boundaries remain. See PASSWORDS.md for format, recovery, tests and browser /
+provider acceptance. Current status protocol mismatch is a separate diagnosis.
+
 ### Passive status panel
 
 `passive_status.py` reads bounded tails of existing proxy event/raw-server

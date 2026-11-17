@@ -21,7 +21,7 @@ STATIC_FILES = {
     "/style.css": ("style.css", "text/css; charset=utf-8"),
 }
 for _name in (
-    "app.js", "manual.js", "preview.js", "toolpath-view.js", "toolpath-worker.js",
+    "app.js", "manual.js", "password.js", "preview.js", "toolpath-view.js", "toolpath-worker.js",
     "model-preview.js", "model-worker.js", "model-transform.js", "plate-preview.js",
     "vendor/three/three.module.min.js", "vendor/three/OrbitControls.js",
 ):
@@ -37,13 +37,14 @@ class WebRoutes:
     Call post/get only after the server's common method/URL/access checks.
     """
 
-    def __init__(self, *, work, config, token, owned_dummy, head, reply):
+    def __init__(self, *, work, config, token, owned_dummy, head, reply, change_password=None):
         self.work = work
         self.config = config
         self.token = token
         self.owned_dummy = owned_dummy
         self.head = head
         self.reply = reply
+        self.change_password = change_password
 
     async def post(self, reader, writer, uri, headers, length):
         if uri.path == "/api/file":
@@ -62,6 +63,12 @@ class WebRoutes:
                 data = await read_json_body(reader, length, limit=SLICE_JSON_LIMIT)
             else:
                 data = await read_json_body(reader, length)
+            if uri.path == "/api/password":
+                if self.change_password is None:
+                    raise WebError(409, "Password settings require LAN login mode")
+                result = await self.change_password(data)
+                await self.reply(writer, 200, result)
+                return
             if uri.path == "/api/manual":
                 await self.reply(writer, 200, self.work.manual_action(data))
                 return
@@ -128,6 +135,7 @@ class WebRoutes:
             "auto_monitor": self.config.auto_monitor,
             "manual_virtual_enabled": self.work.manual_controls is not None,
             "lan_mode": self.config.lan,
+            "password_change_enabled": self.config.lan and self.change_password is not None,
             "owned_dummy": self.owned_dummy,
         }
 
