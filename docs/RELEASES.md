@@ -42,6 +42,41 @@ standalone server release. This is not an OctoPrint plugin installation bundle.
 Git metadata is not in the archive, so use a new release instead of `git pull`
 on an unpacked deployment. Keep source/licenses with any distributed copy.
 
+## Full packaging diagnostics
+
+The Bash wrapper saves combined stdout/stderr, including all unittest tracebacks,
+to a unique private0600 `.tmp/package-logs/package-UTC-RANDOM.log` on **every**
+invocation, successful or failed. It prints the exact path before/after the run,
+records UTC/source commit/Python version/final exit status, and preserves a
+nonzero checker exit through tee. Log-write failure also fails the wrapper.
+No environment/credential dump, automatic retry, log deletion or target action.
+Direct `python3 tools/package_release.py` does not use this Bash log wrapper.
+
+For a full diagnostic run (not quick packaging):
+
+```sh
+./tools/package_release.sh --check --jobs 4
+```
+
+If a release already exists for that commit, packaging refuses before testing.
+To collect just the checks instead, without overwriting that archive:
+
+```sh
+mkdir -p .tmp
+(umask 077; set -o pipefail; ./tools/check.sh --jobs 4 2>&1 | tee .tmp/check-diagnostics.log)
+```
+
+The latter Bash command overwrites only that explicitly named diagnostics file;
+choose a new filename to retain an earlier one. Logs are private support data,
+not included in Git/source archives. Review before sharing. A previous terminal
+run cannot be reconstructed unless its output was saved elsewhere.
+
+The host still reports Python3.12 reset failures after the narrow HTTP cleanup
+change. Do not claim the host issue resolved based on3.11 tests. A traceback
+ending in wait_closed can involve an exception shared with the response reader;
+full diagnostics are needed before changing response handling. Do not suppress
+read failures or remove access/status/body assertions to get a green suite.
+
 ## Copy, verify, unpack and start
 
 Copy the entire output directory to your server using your usual file transfer

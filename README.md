@@ -60,7 +60,9 @@ only when no upload/Slice/start operation is active.
 Exports reviewed, committed HEAD to `dist/releases/finderlab-COMMIT/` with SHA256
 and metadata explicitly saying whether tests ran. Requires clean tracked files;
 private `.env`, passwords, models and captures are excluded. Ordinary packaging
-needs no Node/container tools and never starts services. Same-commit output is
+needs no Node/container tools and never starts services. The Bash wrapper saves
+complete output/errors to a unique private `.tmp/package-logs/*.log`, prints its
+path and preserves failures. Same-commit output is
 not overwritten. Preserve your private `.env`, Compose project name and volumes
 when upgrading, and wait until no job is active. See [docs/RELEASES.md](docs/RELEASES.md).
 
