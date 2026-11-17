@@ -40,6 +40,16 @@ printer IP fails rather than guessing or falling back to dummy. No Internet
 exposure; trusted-LAN HTTP is unencrypted. Full setup/troubleshooting and remaining
 host/provider acceptance: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
+With your working private `.env` in place, the short server launcher is:
+
+```sh
+./tools/start_server.sh
+```
+
+It runs `podman compose up --build -d` from the project directory. It refuses a
+missing `.env` rather than selecting a dummy or guessing network settings. Run
+only when no upload/Slice/start operation is active.
+
 ## Clone and run a simulator rehearsal with Docker Compose
 
 Linux x86_64 server/local machine, including Orca and the Finder2 profiles;
