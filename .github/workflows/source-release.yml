@@ -105,3 +105,38 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
+
+  release:
+    needs: package
+    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' && github.event.created == true && github.event.deleted == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download this run's source archives
+        uses: actions/download-artifact@v4
+        with:
+          name: finderlab-source-${{ github.sha }}
+          path: .tmp/release-assets
+
+      - name: Create release with verified source assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mapfile -t archives < <(find .tmp/release-assets -type f -name '*.tar.gz')
+          if [[ "${#archives[@]}" != 1 ]]; then
+            echo "Expected exactly one source tar.gz from this run" >&2
+            exit 1
+          fi
+          directory="$(dirname -- "${archives[0]}")"
+          name="$(basename -- "${archives[0]}" .tar.gz)"
+          cd "$directory"
+          sha256sum -c SHA256SUMS
+          gh release create --repo "$GITHUB_REPOSITORY" --verify-tag --draft \
+            --title "$RELEASE_TAG" --generate-notes -- "$RELEASE_TAG" \
+            "$name.tar.gz" "$name.zip" SHA256SUMS release.json
+          gh release edit --repo "$GITHUB_REPOSITORY" --draft=false -- "$RELEASE_TAG"

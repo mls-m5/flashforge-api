@@ -71,7 +71,12 @@ issue on the user's host.
 On an ordinary branch push, ZIP/tar are generated only for build validation and
 are **not uploaded**; runner cleanup discards them. Test and packaging logs can
 still be downloaded. On tag pushes or manual runs, after checks/build succeed,
-download the **finderlab-source-COMMIT** artifact at the bottom of the run. GitHub wraps artifacts in its own ZIP; inside are the actual
+download the **finderlab-source-COMMIT** artifact at the bottom of the run.
+Additionally, a **new tag push** automatically creates a GitHub Release after
+packaging succeeds, in this same workflow. It attaches the actual `.tar.gz`, ZIP,
+SHA256SUMS and release.json. Ordinary branch pushes and manual runs do not create
+Releases, and moving/deleting an existing tag does not run the release job.
+GitHub wraps Actions artifacts in its own ZIP; inside are the actual
 `finderlab-COMMIT.zip`, existing `.tar.gz`, SHA256SUMS covering both and release.json
 (metadata for the tar archive, checks.result=not_run for the packaging command
 itself; the separate CI tests job is the validation gate). Both source archives come
@@ -81,13 +86,17 @@ run before ZIP generation via the reviewed tar packager. ZIP bytes are produced
 by git archive, not by zipping the working directory.
 
 Source artifacts expire after14 days. Test diagnostics per Python version and
-packaging diagnostics are uploaded even on failure and expire after7 days. Token permissions are contents:
-read, checkout credentials are not persisted, no GitHub Release/tag/image is
-published and nothing is pushed automatically. A tag push creates an Actions
-artifact, not a permanent GitHub Releases download; publishing release assets
-would require a separate explicit workflow/permission change. Workflow upload/build execution
-still requires a real GitHub run; local checks can validate only the commands /
-archive contents, not claim hosted-run acceptance.
+packaging diagnostics are uploaded even on failure and expire after7 days.
+GitHub Release assets do not have that artifact expiry. Test/package jobs retain
+contents:read; only the tag-only release job has contents:write. It downloads only
+this run's source artifact, verifies SHA256SUMS and the existing remote tag, creates
+a draft with assets, then publishes after successful upload. It never creates /
+force-updates a tag, overwrites an existing release or retries failed publication.
+If creation/upload fails, a draft may remain for manual review; no publish follows
+a failed create command. Checkout credentials are not persisted, no image or
+printer deployment occurs, and no local push/tag/release was performed by the
+agent. GitHub-hosted execution still requires a real run; local stub-CLI checks
+are not hosted release-acceptance evidence.
 
 Local validation of the initial workflow:14 focused packaging/log/workflow tests
 and embedded Bash syntax passed. The packaging commands are also exercised locally
@@ -99,6 +108,10 @@ matrix execution; native3.12 and actual Actions acceptance remain unclaimed.
 Local push-CI validation passed392 Python tests,17 Node scripts and trace integrity
 on Python3.11/Node24, including four workflow policy/shell tests. This does not
 claim both hosted matrix jobs have executed.
+The tag-publishing update passed396 Python tests,17 Node scripts and trace
+integrity locally on3.11/Node24. Eight workflow/publisher checks include executing
+the release shell against a stub gh CLI, with checksum/duplicate/create failures
+preventing publication. No hosted GitHub Release was created by these tests.
 
 ## Full packaging diagnostics
 

@@ -55,9 +55,10 @@ only when no upload/Slice/start operation is active.
 On GitHub, ordinary branch pushes run Python3.11/3.12 + Node24 checks, then build
 ZIP/tar.gz without uploading the source archives. Tag pushes and **Actions →
 Source release → Run workflow** run the same checks and upload downloadable
-archives/checksums after success. No tools are required on your host. Push the
-updated workflow before creating/pushing its tag. No automatic GitHub Release or
-deployment. See [docs/RELEASES.md](docs/RELEASES.md).
+archives/checksums after success. A **new tag push** also creates a GitHub Release
+with `.tar.gz`, ZIP and checksums, in that same pipeline; branch/manual runs do not
+publish Releases. No tools are required on your host. Push the updated workflow
+before creating/pushing its new tag. No printer deployment occurs. See [docs/RELEASES.md](docs/RELEASES.md).
 
 ```sh
 ./tools/package_release.sh                  # Fast archive only; tests NOT RUN

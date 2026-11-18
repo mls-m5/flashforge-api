@@ -15,7 +15,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
 
     def test_readonly_packaging_is_gated_and_does_not_rerun_tests_or_deploy(self):
         source = self.source()
-        package = source.split('\n  package:\n', 1)[1]
+        package = source.split('\n  package:\n', 1)[1].split('\n  release:\n', 1)[0]
         self.assertIn('contents: read', source)
         self.assertEqual(source.count('persist-credentials: false'), 2)
         self.assertEqual(source.count('submodules: false'), 2)
@@ -28,8 +28,10 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn('if: always()', package)
         for forbidden in ('--check', 'tools/check.sh', 'unittest'):
             self.assertNotIn(forbidden, package)
-        for forbidden in ('\n  pull_request:', 'contents: write', 'pull_request_target',
-                          'secrets.', 'docker ', 'podman ', 'gh release'):
+        unprivileged = source.split('\n  release:\n', 1)[0]
+        self.assertNotIn('contents: write', unprivileged)
+        self.assertNotIn('gh release', unprivileged)
+        for forbidden in ('\n  pull_request:', 'pull_request_target', 'secrets.', 'docker ', 'podman '):
             self.assertNotIn(forbidden, source)
 
     def test_branch_and_tag_pushes_trigger_but_deleted_refs_do_not_run(self):
@@ -53,10 +55,25 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn('uses: actions/upload-artifact@v4', upload)
         self.assertIn('Branch push: ZIP built for validation only; source archives are not uploaded.', source)
 
+    def test_release_is_in_same_pipeline_only_for_new_tags_after_packaging(self):
+        release = self.source().split('\n  release:\n', 1)[1]
+        self.assertIn('needs: package', release)
+        self.assertIn("github.event_name == 'push' && github.ref_type == 'tag' && github.event.created == true && github.event.deleted == false", release)
+        self.assertIn('contents: write', release)
+        self.assertIn('uses: actions/download-artifact@v4', release)
+        self.assertIn('name: finderlab-source-${{ github.sha }}', release)
+        self.assertIn('RELEASE_TAG: ${{ github.ref_name }}', release)
+        self.assertIn('GH_TOKEN: ${{ github.token }}', release)
+        self.assertIn('sha256sum -c SHA256SUMS', release)
+        self.assertIn('--verify-tag --draft', release)
+        self.assertIn('--draft=false', release)
+        self.assertNotIn('--clobber', release)
+        self.assertNotIn('actions/checkout', release)
+
     @unittest.skipUnless(shutil.which('bash'), 'Bash syntax check')
     def test_all_embedded_shell_blocks_have_valid_syntax(self):
         blocks = self.source().split('        run: |\n')[1:]
-        self.assertEqual(len(blocks), 2)
+        self.assertEqual(len(blocks), 3)
         for block in blocks:
             block = block.split('\n      - name:', 1)[0]
             script = '\n'.join(line[10:] for line in block.splitlines())
