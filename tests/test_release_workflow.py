@@ -23,9 +23,16 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn('path: dist/releases/*/', source)
         self.assertIn('path: .tmp/package-logs/*.log', source)
         self.assertIn('if: always()', source)
-        for forbidden in ('\n  push:', '\n  pull_request:', '--check', 'tools/check.sh', 'unittest', 'contents: write',
+        for forbidden in ('\n  pull_request:', '--check', 'tools/check.sh', 'unittest', 'contents: write',
                           'pull_request_target', 'secrets.', 'docker ', 'podman ', 'gh release'):
             self.assertNotIn(forbidden, source)
+
+    def test_all_tag_pushes_trigger_but_branch_push_and_tag_deletion_do_not_package(self):
+        source = (ROOT / '.github/workflows/source-release.yml').read_text()
+        self.assertIn("  push:\n    tags:\n      - '**'", source)
+        self.assertNotIn('branches:', source)
+        self.assertIn("github.event_name != 'push' || github.event.deleted == false", source)
+        self.assertIn('workflow_dispatch:', source)
 
     @unittest.skipUnless(shutil.which('bash'), 'Bash syntax check')
     def test_embedded_packaging_shell_syntax(self):

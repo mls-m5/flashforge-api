@@ -45,8 +45,23 @@ on an unpacked deployment. Keep source/licenses with any distributed copy.
 ## GitHub: generate a ZIP without depending on your host
 
 After the workflow is committed/pushed to the default branch, open **Actions →
-Source release → Run workflow** and select the desired branch. This manual-only
-workflow uses a fresh Ubuntu24.04 runner/Python3.12 and the existing quick source
+Source release → Run workflow** and select the desired branch. GitHub also runs
+it automatically when a tag is pushed (any tag name, including names with slashes).
+Ordinary branch pushes do not trigger it; deleted tags do not package. The tagged
+commit must contain this updated workflow. Creating a tag only locally does not
+notify GitHub. For example, after committing the workflow update:
+
+```sh
+git push origin main
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+Replace vX.Y.Z with your new version; do not move/reuse existing release tags.
+The workflow is visible at [Source release in Actions](https://github.com/mls-m5/flashforge-api/actions/workflows/source-release.yml).
+A workflow_dispatch-only definition is registered on the default branch but has
+no automatic run until manually dispatched. This workflow
+uses a fresh Ubuntu24.04 runner/Python3.12 and the existing quick source
 packager. It does **not** run the test suite, Node/npm, Podman/Docker, Orca,
 printer services, or deployments. No local host setup is needed. The unresolved
 host Node ES-module test issue is separate; this workflow does not claim to fix it.
@@ -63,11 +78,13 @@ by git archive, not by zipping the working directory.
 Source artifacts expire after14 days; packaging diagnostics are separately
 uploaded even on failure and expire after7 days. Token permissions are contents:
 read, checkout credentials are not persisted, no GitHub Release/tag/image is
-published and nothing is pushed automatically. Workflow upload/build execution
+published and nothing is pushed automatically. A tag push creates an Actions
+artifact, not a permanent GitHub Releases download; publishing release assets
+would require a separate explicit workflow/permission change. Workflow upload/build execution
 still requires a real GitHub run; local checks can validate only the commands /
 archive contents, not claim hosted-run acceptance.
 
-Local validation of this workflow change:14 focused packaging/log/workflow tests
+Local validation of the initial workflow:14 focused packaging/log/workflow tests
 and embedded Bash syntax passed. The packaging commands are also exercised locally
 against committed HEAD and ZIP/tar member equality/checksums reviewed. This is not
 a hosted GitHub Actions or Podman run; neither was available/started by the agent.

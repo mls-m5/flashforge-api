@@ -2,12 +2,16 @@ name: Source release
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - '**'
 
 permissions:
   contents: read
 
 jobs:
   package:
+    if: ${{ github.event_name != 'push' || github.event.deleted == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
