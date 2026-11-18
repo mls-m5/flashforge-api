@@ -42,6 +42,37 @@ standalone server release. This is not an OctoPrint plugin installation bundle.
 Git metadata is not in the archive, so use a new release instead of `git pull`
 on an unpacked deployment. Keep source/licenses with any distributed copy.
 
+## GitHub: generate a ZIP without depending on your host
+
+After the workflow is committed/pushed to the default branch, open **Actions →
+Source release → Run workflow** and select the desired branch. This manual-only
+workflow uses a fresh Ubuntu24.04 runner/Python3.12 and the existing quick source
+packager. It does **not** run the test suite, Node/npm, Podman/Docker, Orca,
+printer services, or deployments. No local host setup is needed. The unresolved
+host Node ES-module test issue is separate; this workflow does not claim to fix it.
+
+After success, download the **finderlab-source-COMMIT** artifact at the bottom of
+the run. GitHub wraps artifacts in its own ZIP; inside are the actual
+`finderlab-COMMIT.zip`, existing `.tar.gz`, SHA256SUMS covering both and release.json
+(metadata for the tar archive, checks.result=not_run). Both source archives come
+from the same committed HEAD with a finderlab/ prefix, no submodule checkout,
+credentials, ignored models/captures or Git metadata. Source/privacy/size checks
+run before ZIP generation via the reviewed tar packager. ZIP bytes are produced
+by git archive, not by zipping the working directory.
+
+Source artifacts expire after14 days; packaging diagnostics are separately
+uploaded even on failure and expire after7 days. Token permissions are contents:
+read, checkout credentials are not persisted, no GitHub Release/tag/image is
+published and nothing is pushed automatically. Workflow upload/build execution
+still requires a real GitHub run; local checks can validate only the commands /
+archive contents, not claim hosted-run acceptance.
+
+Local validation of this workflow change:14 focused packaging/log/workflow tests
+and embedded Bash syntax passed. The packaging commands are also exercised locally
+against committed HEAD and ZIP/tar member equality/checksums reviewed. This is not
+a hosted GitHub Actions or Podman run; neither was available/started by the agent.
+No full host test-suite acceptance is claimed by this source-only workflow.
+
 ## Full packaging diagnostics
 
 The Bash wrapper saves combined stdout/stderr, including all unittest tracebacks,

@@ -52,6 +52,11 @@ only when no upload/Slice/start operation is active.
 
 ## Package source for an upgrade
 
+On GitHub: **Actions → Source release → Run workflow** creates downloadable ZIP /
+tar.gz sources and checksums without running the tests or requiring tools on your
+host. It needs the workflow pushed to the default branch first; no automatic
+GitHub Release/deployment. See [docs/RELEASES.md](docs/RELEASES.md).
+
 ```sh
 ./tools/package_release.sh                  # Fast archive only; tests NOT RUN
 ./tools/package_release.sh --check --jobs 4 # Alternative: full checks, then archive

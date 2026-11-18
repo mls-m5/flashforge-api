@@ -1,0 +1,53 @@
+name: Source release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out committed source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+
+      - name: Set up packaging Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Package source without running tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./tools/package_release.sh
+          commit="$(git rev-parse HEAD)"
+          name="finderlab-${commit:0:12}"
+          directory="dist/releases/$name"
+          git archive --format=zip --prefix=finderlab/ --output="$directory/$name.zip" HEAD
+          (cd "$directory" && sha256sum "$name.zip" >> SHA256SUMS)
+          echo "Source archives only. Tests were NOT RUN; no container was built." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload source archives and checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: finderlab-source-${{ github.sha }}
+          path: dist/releases/*/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload packaging diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaging-log-${{ github.sha }}
+          path: .tmp/package-logs/*.log
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
