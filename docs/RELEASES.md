@@ -46,8 +46,8 @@ on an unpacked deployment. Keep source/licenses with any distributed copy.
 
 After the workflow is committed/pushed to the default branch, open **Actions →
 Source release → Run workflow** and select the desired branch. GitHub also runs
-it automatically when a tag is pushed (any tag name, including names with slashes).
-Ordinary branch pushes do not trigger it; deleted tags do not package. The tagged
+it automatically on ordinary branch pushes and tag pushes (all names, including
+names with slashes). Deleted refs do not run checks or package. The pushed/tagged
 commit must contain this updated workflow. Creating a tag only locally does not
 notify GitHub. For example, after committing the workflow update:
 
@@ -59,24 +59,29 @@ git push origin vX.Y.Z
 
 Replace vX.Y.Z with your new version; do not move/reuse existing release tags.
 The workflow is visible at [Source release in Actions](https://github.com/mls-m5/flashforge-api/actions/workflows/source-release.yml).
-A workflow_dispatch-only definition is registered on the default branch but has
-no automatic run until manually dispatched. This workflow
-uses a fresh Ubuntu24.04 runner/Python3.12 and the existing quick source
-packager. It does **not** run the test suite, Node/npm, Podman/Docker, Orca,
-printer services, or deployments. No local host setup is needed. The unresolved
-host Node ES-module test issue is separate; this workflow does not claim to fix it.
+The workflow first runs Python/UI/trace checks on fresh Ubuntu24.04 runners,
+using Python3.11 and3.12 with Node24. Both matrix jobs must pass before packaging;
+fail-fast is disabled so both versions retain diagnostics. The existing quick
+packager then builds ZIP/tar without rerunning the suite. Local quick packaging
+remains unchanged and needs neither Node nor the CI runtimes. No Podman/Docker,
+native Orca, printer services, deployment or user host setup is involved. Node24
+makes the CI environment explicit; it does not fix the older host Node ES-module
+issue on the user's host.
 
-After success, download the **finderlab-source-COMMIT** artifact at the bottom of
-the run. GitHub wraps artifacts in its own ZIP; inside are the actual
+On an ordinary branch push, ZIP/tar are generated only for build validation and
+are **not uploaded**; runner cleanup discards them. Test and packaging logs can
+still be downloaded. On tag pushes or manual runs, after checks/build succeed,
+download the **finderlab-source-COMMIT** artifact at the bottom of the run. GitHub wraps artifacts in its own ZIP; inside are the actual
 `finderlab-COMMIT.zip`, existing `.tar.gz`, SHA256SUMS covering both and release.json
-(metadata for the tar archive, checks.result=not_run). Both source archives come
+(metadata for the tar archive, checks.result=not_run for the packaging command
+itself; the separate CI tests job is the validation gate). Both source archives come
 from the same committed HEAD with a finderlab/ prefix, no submodule checkout,
 credentials, ignored models/captures or Git metadata. Source/privacy/size checks
 run before ZIP generation via the reviewed tar packager. ZIP bytes are produced
 by git archive, not by zipping the working directory.
 
-Source artifacts expire after14 days; packaging diagnostics are separately
-uploaded even on failure and expire after7 days. Token permissions are contents:
+Source artifacts expire after14 days. Test diagnostics per Python version and
+packaging diagnostics are uploaded even on failure and expire after7 days. Token permissions are contents:
 read, checkout credentials are not persisted, no GitHub Release/tag/image is
 published and nothing is pushed automatically. A tag push creates an Actions
 artifact, not a permanent GitHub Releases download; publishing release assets
@@ -88,7 +93,12 @@ Local validation of the initial workflow:14 focused packaging/log/workflow tests
 and embedded Bash syntax passed. The packaging commands are also exercised locally
 against committed HEAD and ZIP/tar member equality/checksums reviewed. This is not
 a hosted GitHub Actions or Podman run; neither was available/started by the agent.
-No full host test-suite acceptance is claimed by this source-only workflow.
+The later push-CI update adds a two-Python-version test gate, with branch source
+uploads disabled. Local workflow/policy/Bash checks do not substitute for hosted
+matrix execution; native3.12 and actual Actions acceptance remain unclaimed.
+Local push-CI validation passed392 Python tests,17 Node scripts and trace integrity
+on Python3.11/Node24, including four workflow policy/shell tests. This does not
+claim both hosted matrix jobs have executed.
 
 ## Full packaging diagnostics
 

@@ -52,11 +52,12 @@ only when no upload/Slice/start operation is active.
 
 ## Package source for an upgrade
 
-On GitHub: push a new tag, or use **Actions → Source release → Run workflow**,
-to create downloadable ZIP/tar.gz sources and checksums without running tests or
-requiring tools on your host. Push the updated workflow first, then create/push
-a tag pointing to that commit or newer. Ordinary branch pushes do not run it;
-no automatic GitHub Release/deployment. See [docs/RELEASES.md](docs/RELEASES.md).
+On GitHub, ordinary branch pushes run Python3.11/3.12 + Node24 checks, then build
+ZIP/tar.gz without uploading the source archives. Tag pushes and **Actions →
+Source release → Run workflow** run the same checks and upload downloadable
+archives/checksums after success. No tools are required on your host. Push the
+updated workflow before creating/pushing its tag. No automatic GitHub Release or
+deployment. See [docs/RELEASES.md](docs/RELEASES.md).
 
 ```sh
 ./tools/package_release.sh                  # Fast archive only; tests NOT RUN

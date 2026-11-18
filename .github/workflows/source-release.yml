@@ -3,6 +3,8 @@ name: Source release
 on:
   workflow_dispatch:
   push:
+    branches:
+      - '**'
     tags:
       - '**'
 
@@ -10,7 +12,51 @@ permissions:
   contents: read
 
 jobs:
+  tests:
+    if: ${{ github.event_name != 'push' || github.event.deleted == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12']
+    steps:
+      - name: Check out committed source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+
+      - name: Set up test Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Set up test Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run Python, UI and trace checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p .tmp
+          ./tools/check.sh --jobs 4 2>&1 | tee .tmp/ci-checks.log
+
+      - name: Upload test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checks-python-${{ matrix.python }}-${{ github.sha }}
+          path: .tmp/ci-checks.log
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
+
   package:
+    needs: tests
     if: ${{ github.event_name != 'push' || github.event.deleted == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -26,7 +72,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Package source without running tests
+      - name: Package source without rerunning tests
         shell: bash
         run: |
           set -euo pipefail
@@ -36,9 +82,13 @@ jobs:
           directory="dist/releases/$name"
           git archive --format=zip --prefix=finderlab/ --output="$directory/$name.zip" HEAD
           (cd "$directory" && sha256sum "$name.zip" >> SHA256SUMS)
-          echo "Source archives only. Tests were NOT RUN; no container was built." >> "$GITHUB_STEP_SUMMARY"
+          echo "CI checks passed before packaging. Source archives only; no container was built." >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$GITHUB_REF_TYPE" != tag && "$GITHUB_EVENT_NAME" != workflow_dispatch ]]; then
+            echo "Branch push: ZIP built for validation only; source archives are not uploaded." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload source archives and checksums
+        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
         uses: actions/upload-artifact@v4
         with:
           name: finderlab-source-${{ github.sha }}
